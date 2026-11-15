@@ -91,33 +91,11 @@ Do this once on every platform you will teach from, a day or more before the eve
    ```bash
    ./tests/scenarios/docker.sh 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15
    ```
-5. The last lines are a summary, one line per scenario. All ✅ means you can tick that platform's column in the table below. Finish with `./labs.sh docker clean`.
+5. The last lines are a summary, one line per scenario. All ✅ means every scenario passed on your machine. Finish with `./labs.sh docker clean`.
 
 **If a scenario shows ❌:** run it again on its own (for example `./tests/scenarios/docker.sh 06`). A second ❌ is real. The lines just above `FAILED at step:` say which check failed. Then open that scenario's README and run it by hand to see what the room would see. The usual causes are in "Known platform-sensitive scenarios" below.
 
 **Not blocked by:** your own containers. The tests touch only names that start with `dNN-` / `dNN_` and never prune anything else.
-
-### Results
-
-Tick each cell after you have run the whole scenario (break, fix, cleanup) on that platform. The build machine tested macOS (Docker Desktop, arm64) only, which is not a column here; all 15 passed there.
-
-| Scenario | Killercoda | iximiuz | Play with Docker | Linux | WSL2 | Git Bash |
-|----------|:---:|:---:|:---:|:---:|:---:|:---:|
-| D01 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D02 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D03 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D04 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D05 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D06 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D07 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D08 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D09 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D10 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D11 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D12 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D13 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D14 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| D15 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
 
 **Known platform-sensitive scenarios.** Look at these first:
 
