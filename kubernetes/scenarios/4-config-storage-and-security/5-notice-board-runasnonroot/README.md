@@ -52,15 +52,23 @@ kubectl logs -f visitor -n k-21-nonroot
 (Times will differ.) You can stop it with Ctrl+C. We'll watch it again live when we fix things.
 
 ### 🌐 See it in your browser (do this, not only the logs)
-Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
-```bash
-kubectl port-forward -n k-21-nonroot svc/board 9221:80
-```
-Then open **http://localhost:9221**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-21-nonroot
+   ```
+   Look for `board`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-21-nonroot svc/board 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
 
 - **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
-- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9221`, or use a NodePort (`kubectl patch svc board -n k-21-nonroot -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc board -n k-21-nonroot`).
-- **Shortcut:** `python3 z2h.py open S4.5` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc board -n k-21-nonroot -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc board -n k-21-nonroot`).
+- **Shortcut:** `python3 z2h.py open S4.5` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
 
 ## 🔮 Predict first (60 seconds)
 The Deployment requires the container to run as a non-root user, and the image starts as root. Before you look:
@@ -213,21 +221,21 @@ kubectl logs visitor -n k-21-nonroot --tail=3
 ```
 Now look at the board yourself. In a **second terminal** (leave it running):
 ```bash
-kubectl port-forward -n k-21-nonroot svc/board 9221:80
+kubectl port-forward -n k-21-nonroot svc/board 8888:80
 ```
 ```
-Forwarding from 127.0.0.1:9221 -> 8080
-Forwarding from [::1]:9221 -> 8080
+Forwarding from 127.0.0.1:8888 -> 8080
+Forwarding from [::1]:8888 -> 8080
 ```
-On a playground, add `--address 0.0.0.0` and open the URL for port 9221.
+On a playground, add `--address 0.0.0.0` and open the URL for port 8888.
 Back in the first terminal:
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' localhost:9221
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8888
 ```
 ```
 200
 ```
-(The port-forward terminal also prints `Handling connection for 9221`.) Or open http://localhost:9221 in your browser: click the tabs, and claim the lost earbud. The page needs no internet. Press Ctrl+C in the second terminal to stop the port-forward.
+(The port-forward terminal also prints `Handling connection for 8888`.) Or open http://localhost:8888 in your browser: click the tabs, and claim the lost earbud. The page needs no internet. Press Ctrl+C in the second terminal to stop the port-forward.
 
 ## 🎯 Key takeaways
 - **`runAsNonRoot: true` is a guard, not a switch.** It refuses root; it never changes the user for you.

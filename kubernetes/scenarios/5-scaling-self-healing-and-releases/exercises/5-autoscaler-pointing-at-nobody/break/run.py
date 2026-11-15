@@ -14,7 +14,7 @@ SCENARIO = os.path.dirname(HERE)
 NS = "k-41-hpa-target"
 ABLE = 'jsonpath={.status.conditions[?(@.type=="AbleToScale")].status}'
 
-z.start_break(SCENARIO, [NS], port=9241)
+z.start_break(SCENARIO, [NS])
 z.say("Setting the scene…")
 z.apply_dir(HERE)
 z.must_wait("the stall to be Ready (the first download can take a minute)", 180,

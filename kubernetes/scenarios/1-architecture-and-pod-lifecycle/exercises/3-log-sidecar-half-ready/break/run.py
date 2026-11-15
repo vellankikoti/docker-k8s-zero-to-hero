@@ -21,7 +21,7 @@ def half_ready():
     return "true" in ready and "false" in ready
 
 
-z.start_break(SCENARIO, [NS], port=9229)
+z.start_break(SCENARIO, [NS])
 z.say("Deploying the Hostel Notice Board (one Pod, two containers), its Service and a visitor…")
 z.apply_dir(HERE)
 z.must_wait("the visitor to start (the first download can take a minute)", 180, lambda: z.visitor_running(NS),

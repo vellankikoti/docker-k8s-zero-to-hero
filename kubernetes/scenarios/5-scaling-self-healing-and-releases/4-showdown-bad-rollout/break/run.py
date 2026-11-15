@@ -23,7 +23,7 @@ def stuck():
     return waiting.count("CrashLoopBackOff") >= 1 and ready.splitlines().count("true") == 3
 
 
-z.start_break(SCENARIO, [NS], port=9211)
+z.start_break(SCENARIO, [NS])
 if not z.create_showdown_configmap(NS):
     z.die("Could not create the ConfigMap showdown-code.")
 z.say("Releasing v1 (3 replicas)…")

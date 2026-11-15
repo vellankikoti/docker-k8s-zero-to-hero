@@ -22,7 +22,6 @@ load_up() { [ "$(kubectl get pod load -n "$NS" -o jsonpath='{.status.phase}' 2>/
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9225 || die "Port 9225 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$NS" || die "Could not create the namespace $NS."
 
 say "Making sure the cluster can measure CPU (installing metrics-server if it is not there; this can take a minute)…"

@@ -19,7 +19,6 @@ settled() {
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9226 || die "Port 9226 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$NS" || die "Could not create the namespace $NS."
 create_showdown_configmap "$NS" || die "Could not create the ConfigMap showdown-code."
 

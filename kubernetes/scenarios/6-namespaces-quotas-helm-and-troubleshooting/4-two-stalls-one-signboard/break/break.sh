@@ -13,7 +13,6 @@ all_pods_behind_service() { kubectl get endpointslices -n "$NS" -l kubernetes.io
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9231 || die "Port 9231 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$NS" || die "Could not create the namespace $NS."
 
 say "Opening the stall(s) and sending in a visitor…"

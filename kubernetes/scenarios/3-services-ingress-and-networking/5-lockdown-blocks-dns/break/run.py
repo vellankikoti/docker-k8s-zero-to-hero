@@ -116,8 +116,6 @@ def probe_enforces():
 
 z.need_cluster()
 z.run_cleanup(SCENARIO)
-if not z.port_free(9213):
-    z.die("Port 9213 is busy, so this scenario can't start. Free it (see above) and run break again.")
 z.say("Checking that this cluster enforces NetworkPolicy (a quick check, about 15 seconds)…")
 enforced = probe_enforces()
 z.delete_ns(PROBE)

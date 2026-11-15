@@ -59,15 +59,23 @@ kubectl get pods
 Nothing. Yet the canteen is alive.
 
 ### 🌐 See it in your browser (do this, not only the logs)
-Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
-```bash
-kubectl port-forward -n k-38-night-canteen svc/night-canteen 9238:80
-```
-Then open **http://localhost:9238**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-38-night-canteen
+   ```
+   Look for `night-canteen`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-38-night-canteen svc/night-canteen 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
 
 - **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
-- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9238`, or use a NodePort (`kubectl patch svc night-canteen -n k-38-night-canteen -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc night-canteen -n k-38-night-canteen`).
-- **Shortcut:** `python3 z2h.py open S6.1` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc night-canteen -n k-38-night-canteen -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc night-canteen -n k-38-night-canteen`).
+- **Shortcut:** `python3 z2h.py open S6.1` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
 
 ## 🔍 Investigate: you drive
 **Q1. Where am I actually looking?** Which cluster, and which namespace?

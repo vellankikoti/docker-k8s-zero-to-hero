@@ -29,4 +29,4 @@ wait_for "the autoscaler to read CPU and add a replica" 240 scaled_up \
 show_next "✅ Fixed. Now verify it yourself:" \
   "kubectl get hpa -n $NS" \
   "kubectl get pods -n $NS" \
-  "kubectl port-forward -n $NS svc/showdown 9225:80   (in a second terminal; then open http://localhost:9225; on a playground add --address 0.0.0.0 and open the URL for port 9225)"
+  "kubectl port-forward -n $NS svc/showdown 8888:80   (in a second terminal; then open http://localhost:8888; on a playground add --address 0.0.0.0 and open the URL for port 8888)"

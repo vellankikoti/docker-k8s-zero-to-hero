@@ -19,7 +19,7 @@ def no_endpoints():
                          "-o", "jsonpath={..addresses}") == ""
 
 
-z.start_break(SCENARIO, [NS], port=9232)
+z.start_break(SCENARIO, [NS])
 z.say("Opening the stall(s) and sending in a visitor…")
 z.apply_dir(HERE)
 z.must_wait("the stall(s) to be Ready (the first download can take a minute)", 180,

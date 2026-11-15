@@ -99,7 +99,6 @@ YAML
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9213 || die "Port 9213 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 
 say "Checking that this cluster enforces NetworkPolicy (a quick check, about 15 seconds)…"
 probe_enforces

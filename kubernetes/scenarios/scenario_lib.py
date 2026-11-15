@@ -11,7 +11,6 @@ cluster (kind, minikube, Docker Desktop, a playground) and on Windows, macOS and
 """
 import os
 import shutil
-import socket
 import subprocess
 import sys
 import tempfile
@@ -203,17 +202,6 @@ def stop_port_forwards(*names):
                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def port_free(port):
-    """True if nothing on this computer listens on the port; otherwise explain and return False."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.settimeout(1)
-        if probe.connect_ex(("127.0.0.1", int(port))) != 0:
-            return True
-    warn("Port %s is already used by another program on your computer (maybe a kubectl port-forward)." % port)
-    print('   Stop it ("pkill -f port-forward", or Ctrl+C in the terminal running it), or close that program, then run this again.')
-    return False
-
-
 # --------------------------------------------------------------- scenarios --
 def cleanup(*names):
     """Stop port-forwards and delete the scenario's namespaces. Never fails."""
@@ -315,20 +303,18 @@ def wait_visitor(namespace):
               "The visitor Pod didn't start. Run cleanup.py and try again.")
 
 
-def start_break(scenario_dir, namespaces, port=None):
-    """The opening of every break: cluster up, clean slate, port free, fresh namespace(s)."""
+def start_break(scenario_dir, namespaces):
+    """The opening of every break: cluster up, clean slate, fresh namespace(s)."""
     need_cluster()
     run_cleanup(scenario_dir)
-    if port is not None and not port_free(port):
-        die("Port %s is busy, so this scenario can't start. Free it (see above) and run break again." % port)
     if not fresh_ns(*namespaces):
         die("Could not create the namespace %s." % " and ".join(namespaces))
 
 
-def forward_hint(namespace, service, port):
+def forward_hint(namespace, service):
     """The standard 'check it in your browser' line shown after a fix."""
-    return ("kubectl port-forward -n %s svc/%s %s:80   (in a second terminal; then open http://localhost:%s; "
-            "on a playground add --address 0.0.0.0 and open the URL for port %s)" % (namespace, service, port, port, port))
+    return ("kubectl port-forward -n %s svc/%s 8888:80   (second terminal; 8888 is just an example, any free port works; "
+            "then open http://localhost:8888. On Killercoda/iximiuz add --address 0.0.0.0)" % (namespace, service))
 
 
 def check_rollouts(*namespaces, quiet=False):

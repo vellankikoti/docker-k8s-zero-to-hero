@@ -18,7 +18,7 @@ def budget_ready():
     return z.kubectl_out("get", "pdb", "idli-pdb", "-n", NS, "-o", "jsonpath={.status.currentHealthy}") == "2"
 
 
-z.start_break(SCENARIO, [NS], port=9239)
+z.start_break(SCENARIO, [NS])
 z.say("Opening the idli stall (two Pods) and a safety rule…")
 z.apply_dir(HERE)
 z.must_wait("the idli stall to be Ready (the first download can take a minute)", 180,

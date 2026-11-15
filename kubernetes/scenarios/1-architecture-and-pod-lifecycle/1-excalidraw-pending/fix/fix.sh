@@ -18,4 +18,4 @@ wait_for "the whiteboard Pod to be Ready" 180 rolled_out \
 
 show_next "✅ Fixed. Now verify it yourself:" \
   "kubectl get pods -n $NS" \
-  "kubectl port-forward -n $NS svc/draw 9201:80   (in a second terminal; then open http://localhost:9201; on a playground add --address 0.0.0.0 and open the URL for port 9201)"
+  "kubectl port-forward -n $NS svc/draw 8888:80   (in a second terminal; then open http://localhost:8888; on a playground add --address 0.0.0.0 and open the URL for port 8888)"

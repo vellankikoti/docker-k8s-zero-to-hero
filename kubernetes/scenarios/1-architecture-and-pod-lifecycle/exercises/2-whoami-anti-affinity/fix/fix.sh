@@ -18,4 +18,4 @@ wait_for "whoami to be rolled out" 180 rolled_out \
 
 show_next "✅ Fixed. Now verify it yourself:" \
   "kubectl get pods -n $NS -o wide" \
-  "kubectl port-forward -n $NS svc/whoami 9218:80   (second terminal; then curl localhost:9218)"
+  "kubectl port-forward -n $NS svc/whoami 8888:80   (second terminal; then curl localhost:8888)"

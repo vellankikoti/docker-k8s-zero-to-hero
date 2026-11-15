@@ -21,4 +21,4 @@ if z.kubectl_show("rollout", "status", "deployment/notice", "-n", NS, "--timeout
     z.die("The notice board didn't roll out. Check: kubectl get pods -n " + NS)
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get pods -n " + NS,
-            z.forward_hint(NS, "notice", 9229))
+            z.forward_hint(NS, "notice"))

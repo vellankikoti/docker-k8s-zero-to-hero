@@ -51,15 +51,23 @@ kubectl logs -f visitor -n k-19-hackathon
 (Times will differ.) You can stop it with Ctrl+C. We'll watch it again live when we fix things. (The visitor itself *does* run: it declares its own numbers, and we'll see why.)
 
 ### 🌐 See it in your browser (do this, not only the logs)
-Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
-```bash
-kubectl port-forward -n k-19-hackathon svc/dashboard 9219:80
-```
-Then open **http://localhost:9219**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-19-hackathon
+   ```
+   Look for `dashboard`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-19-hackathon svc/dashboard 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
 
 - **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
-- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9219`, or use a NodePort (`kubectl patch svc dashboard -n k-19-hackathon -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc dashboard -n k-19-hackathon`).
-- **Shortcut:** `python3 z2h.py open S6.2` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc dashboard -n k-19-hackathon -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc dashboard -n k-19-hackathon`).
+- **Shortcut:** `python3 z2h.py open S6.2` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
 
 ## 🔮 Predict first (60 seconds)
 The namespace has a quota, and the Pod template declares no resources. Before you look:
@@ -239,21 +247,21 @@ kubectl logs visitor -n k-19-hackathon --tail=3
 ```
 Now open the page yourself. In a **second terminal** (leave it running):
 ```bash
-kubectl port-forward -n k-19-hackathon svc/dashboard 9219:80
+kubectl port-forward -n k-19-hackathon svc/dashboard 8888:80
 ```
 ```
-Forwarding from 127.0.0.1:9219 -> 8080
-Forwarding from [::1]:9219 -> 8080
+Forwarding from 127.0.0.1:8888 -> 8080
+Forwarding from [::1]:8888 -> 8080
 ```
-On a playground, add `--address 0.0.0.0` and open the URL for port 9219.
+On a playground, add `--address 0.0.0.0` and open the URL for port 8888.
 Back in the first terminal:
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' localhost:9219
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8888
 ```
 ```
 200
 ```
-(The port-forward terminal also prints `Handling connection for 9219`.) Or open http://localhost:9219 in your browser and see the "Hackathon team links" page: the teams, the judges' corner and the survival kit. Press Ctrl+C in the second terminal to stop the port-forward.
+(The port-forward terminal also prints `Handling connection for 8888`.) Or open http://localhost:8888 in your browser and see the "Hackathon team links" page: the teams, the judges' corner and the survival kit. Press Ctrl+C in the second terminal to stop the port-forward.
 
 **Try it yourself (optional).** The quota applies to *every* Pod in the namespace, even a quick test Pod:
 ```bash

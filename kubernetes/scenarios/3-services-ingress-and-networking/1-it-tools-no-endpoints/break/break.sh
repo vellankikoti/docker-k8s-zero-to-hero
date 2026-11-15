@@ -14,7 +14,6 @@ no_endpoints() { [ -z "$(kubectl get endpointslices -n "$NS" -l kubernetes.io/se
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9204 || die "Port 9204 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$NS" || die "Could not create the namespace $NS."
 
 say "Deploying IT-Tools (2 Pods), its Service and a visitor…"

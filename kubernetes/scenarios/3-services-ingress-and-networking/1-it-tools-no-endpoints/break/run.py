@@ -20,7 +20,7 @@ def no_endpoints():
                          "-o", "jsonpath={..addresses}") == ""
 
 
-z.start_break(SCENARIO, [NS], port=9204)
+z.start_break(SCENARIO, [NS])
 z.say("Deploying IT-Tools (2 Pods), its Service and a visitor…")
 z.apply_dir(HERE)
 z.must_wait("the IT-Tools Pods to be Ready (the first download can take a minute)", 180,

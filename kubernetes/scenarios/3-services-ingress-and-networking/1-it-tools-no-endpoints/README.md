@@ -47,15 +47,23 @@ kubectl logs -f visitor -n k-04-no-endpoints
 You can stop it with Ctrl+C. We'll watch it again live when we fix things.
 
 ### 🌐 See it in your browser (do this, not only the logs)
-Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
-```bash
-kubectl port-forward -n k-04-no-endpoints svc/tools 9204:80
-```
-Then open **http://localhost:9204**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-04-no-endpoints
+   ```
+   Look for `tools`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-04-no-endpoints svc/tools 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
 
 - **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
-- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9204`, or use a NodePort (`kubectl patch svc tools -n k-04-no-endpoints -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc tools -n k-04-no-endpoints`).
-- **Shortcut:** `python3 z2h.py open S3.1` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc tools -n k-04-no-endpoints -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc tools -n k-04-no-endpoints`).
+- **Shortcut:** `python3 z2h.py open S3.1` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
 
 ## 🔮 Predict first (60 seconds)
 The Pods say `Running` and `1/1`. Before you type a single command, say out loud:
@@ -125,7 +133,7 @@ No resources found in k-04-no-endpoints namespace.
 ```
 Zero Pods match, so zero endpoints.
 
-An extra clue, if you have a minute to spare: `kubectl port-forward -n k-04-no-endpoints svc/tools 9204:80` has no Pod to connect to, so it hangs for about a minute and then gives up (here with `error: timed out waiting for the condition`; the exact wording varies by version). Press Ctrl+C if you don't want to wait.
+An extra clue, if you have a minute to spare: `kubectl port-forward -n k-04-no-endpoints svc/tools 8888:80` has no Pod to connect to, so it hangs for about a minute and then gives up (here with `error: timed out waiting for the condition`; the exact wording varies by version). Press Ctrl+C if you don't want to wait.
 
 **5. Do the Pods ever hear the visitor?** The strongest evidence is what the app itself never sees. In a **second terminal**, follow one of the `tools` Pods' own logs, and keep the visitor's log open next to it:
 ```bash
@@ -202,23 +210,23 @@ kubectl logs visitor -n k-04-no-endpoints --tail=3
 ```
 Now open it yourself. In a **second terminal** (leave it running):
 ```bash
-kubectl port-forward -n k-04-no-endpoints svc/tools 9204:80
+kubectl port-forward -n k-04-no-endpoints svc/tools 8888:80
 ```
 ```
-Forwarding from 127.0.0.1:9204 -> 80
-Forwarding from [::1]:9204 -> 80
+Forwarding from 127.0.0.1:8888 -> 80
+Forwarding from [::1]:8888 -> 80
 ```
-On a playground, add `--address 0.0.0.0` and open the URL for port 9204.
+On a playground, add `--address 0.0.0.0` and open the URL for port 8888.
 Back in the first terminal:
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' localhost:9204
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8888
 ```
 ```
 200
 ```
 Look back at the Pod log from step 5: with the endpoints filled in, the visitor's requests now arrive and new request lines appear every few seconds (the two Pods share the visitor's requests). The Pods were never the problem, they were just never asked.
 
-Or open http://localhost:9204 in your browser and try a tool, like the token generator. Press Ctrl+C in the second terminal to stop the port-forward.
+Or open http://localhost:8888 in your browser and try a tool, like the token generator. Press Ctrl+C in the second terminal to stop the port-forward.
 
 ## 🎯 Key takeaways
 - **A Service finds Pods by labels.** It sends traffic only to Ready Pods that match *all* of its selector.

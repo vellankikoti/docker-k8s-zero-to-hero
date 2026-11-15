@@ -19,4 +19,4 @@ z.must_wait("both dashboard Pods to be Ready", 180, lambda: z.rolled_out(NS, "da
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get deployment,pods -n " + NS,
             "kubectl describe quota -n " + NS,
-            z.forward_hint(NS, "dashboard", 9219))
+            z.forward_hint(NS, "dashboard"))

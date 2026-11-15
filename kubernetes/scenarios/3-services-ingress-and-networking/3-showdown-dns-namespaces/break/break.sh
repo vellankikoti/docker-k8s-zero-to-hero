@@ -19,7 +19,6 @@ visitor_up() { [ "$(kubectl get pod visitor -n "$APP" -o jsonpath='{.status.phas
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9212 || die "Port 9212 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$APP" "$DATA" || die "Could not create the namespaces $APP and $DATA."
 create_showdown_configmap "$APP" || die "Could not create the ConfigMap showdown-code."
 

@@ -21,4 +21,4 @@ z.must_wait("the old crashing Pods to be removed", 60, lambda: z.pod_count(NS, "
             "Extra Pods are still there. Check: kubectl get pods -n " + NS)
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get pods -n " + NS,
-            z.forward_hint(NS, "showdown", 9220))
+            z.forward_hint(NS, "showdown"))

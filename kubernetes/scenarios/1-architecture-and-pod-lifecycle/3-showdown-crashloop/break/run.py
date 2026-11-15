@@ -21,7 +21,7 @@ def looping():
             and z.logs_contain(NS, "ValueError", "-l", "app=showdown", "--previous"))
 
 
-z.start_break(SCENARIO, [NS], port=9203)
+z.start_break(SCENARIO, [NS])
 if not z.create_showdown_configmap(NS):
     z.die("Could not create the ConfigMap showdown-code.")
 z.say("Deploying the Cats vs Dogs app and a visitor…")

@@ -13,7 +13,7 @@ SCENARIO = os.path.dirname(HERE)
 
 NS = "k-09-missing-secret"
 
-z.start_break(SCENARIO, [NS], port=9209)
+z.start_break(SCENARIO, [NS])
 z.say("Deploying Adminer, its Service and a visitor…")
 z.apply_dir(HERE)
 z.must_wait("the visitor to start (the first download can take a minute)", 180, lambda: z.visitor_running(NS),

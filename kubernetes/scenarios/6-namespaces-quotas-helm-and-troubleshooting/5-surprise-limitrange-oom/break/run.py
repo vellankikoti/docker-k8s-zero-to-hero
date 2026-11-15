@@ -22,7 +22,7 @@ def killed():
     return "OOMKilled" in reasons or "137" in codes
 
 
-z.start_break(SCENARIO, [NS], port=9220)
+z.start_break(SCENARIO, [NS])
 if not z.create_showdown_configmap(NS):
     z.die("Could not create the ConfigMap showdown-code.")
 z.say("Deploying the Cats vs Dogs app and a visitor…")

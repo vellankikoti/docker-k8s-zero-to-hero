@@ -1,35 +1,35 @@
-id	port	namespace	service
-S1.1	9201	k-01-pending	draw
-S1.2	9202	k-02-image-typo	draw
-S1.3	9203	k-03-crashloop	showdown
-S1.4	9226	k-26-init-stuck	showdown
-S1.x2	9218	k-18-anti-affinity	whoami
-S1.x3	9229	k-29-sidecar	notice
-S2.1	9232	k-32-wrong-object	samosa
-S3.1	9204	k-04-no-endpoints	tools
-S3.2	9205	k-05-wrong-port	draw
-S3.3	9212	k-12-dns-app	showdown
-S3.5	9213	k-13-lockdown	showdown
-S4.1	9223	k-23-dark-mode	theme
-S4.2	9209	k-09-missing-secret	adminer
-S4.3	9210	k-10-pvc-pending	board
-S4.5	9221	k-21-nonroot	board
-S4.x1	9222	k-22-readonly-fs	board
-S4.x2	9243	k-43-van	van
-S4.x3	9244	k-44-checklist	cart
-S4.x4	9245	k-45-lockdown	kitchen
-S5.1	9206	k-06-never-ready	board
-S5.2	9207	k-07-slow-start	showdown
-S5.3	9225	k-25-hpa	showdown
-S5.4	9211	k-11-bad-rollout	showdown
-S5.x1	9234	k-34-doorbell	dosa
-S5.x2	9235	k-35-slow-biryani	biryani
-S5.x3	9236	k-36-two-probes	thali
-S5.x4	9239	k-39-idli-robot	idli
-S5.x5	9241	k-41-hpa-target	lassi
-S6.1	9238	k-38-night-canteen	night-canteen
-S6.2	9219	k-19-hackathon	dashboard
-S6.4	9231	k-31-two-stalls	chai
-S6.5	9220	k-20-limitrange	showdown
-S6.x1	9240	k-40-limit-max	chaat
-S6.x5	9230	k-30-friday	showdown
+id	namespace	service
+S1.1	k-01-pending	draw
+S1.2	k-02-image-typo	draw
+S1.3	k-03-crashloop	showdown
+S1.4	k-26-init-stuck	showdown
+S1.x2	k-18-anti-affinity	whoami
+S1.x3	k-29-sidecar	notice
+S2.1	k-32-wrong-object	samosa
+S3.1	k-04-no-endpoints	tools
+S3.2	k-05-wrong-port	draw
+S3.3	k-12-dns-app	showdown
+S3.5	k-13-lockdown	showdown
+S4.1	k-23-dark-mode	theme
+S4.2	k-09-missing-secret	adminer
+S4.3	k-10-pvc-pending	board
+S4.5	k-21-nonroot	board
+S4.x1	k-22-readonly-fs	board
+S4.x2	k-43-van	van
+S4.x3	k-44-checklist	cart
+S4.x4	k-45-lockdown	kitchen
+S5.1	k-06-never-ready	board
+S5.2	k-07-slow-start	showdown
+S5.3	k-25-hpa	showdown
+S5.4	k-11-bad-rollout	showdown
+S5.x1	k-34-doorbell	dosa
+S5.x2	k-35-slow-biryani	biryani
+S5.x3	k-36-two-probes	thali
+S5.x4	k-39-idli-robot	idli
+S5.x5	k-41-hpa-target	lassi
+S6.1	k-38-night-canteen	night-canteen
+S6.2	k-19-hackathon	dashboard
+S6.4	k-31-two-stalls	chai
+S6.5	k-20-limitrange	showdown
+S6.x1	k-40-limit-max	chaat
+S6.x5	k-30-friday	showdown

@@ -54,15 +54,23 @@ kubectl logs -f visitor -n k-34-doorbell
 Expect ❌ lines: the counter is closed. Stop with Ctrl+C. Note what is *not* happening: no crashes, no restarts, no angry red `Error`. It is a very quiet failure.
 
 ### 🌐 See it in your browser (do this, not only the logs)
-Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
-```bash
-kubectl port-forward -n k-34-doorbell svc/dosa 9234:80
-```
-Then open **http://localhost:9234**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-34-doorbell
+   ```
+   Look for `dosa`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-34-doorbell svc/dosa 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
 
 - **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
-- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9234`, or use a NodePort (`kubectl patch svc dosa -n k-34-doorbell -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc dosa -n k-34-doorbell`).
-- **Shortcut:** `python3 z2h.py open S5.x1` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc dosa -n k-34-doorbell -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc dosa -n k-34-doorbell`).
+- **Shortcut:** `python3 z2h.py open S5.x1` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
 
 ## 🔍 Investigate: you drive
 Three questions. Try each yourself, and open a hint only when stuck.

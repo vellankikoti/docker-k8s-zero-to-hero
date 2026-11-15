@@ -25,4 +25,4 @@ z.must_wait("the Adminer Pod to start by itself (the kubelet retries)", 180, pod
             "The Pod didn't become Ready. Check: kubectl get pods -n " + NS)
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get pods -n " + NS,
-            z.forward_hint(NS, "adminer", 9209))
+            z.forward_hint(NS, "adminer"))

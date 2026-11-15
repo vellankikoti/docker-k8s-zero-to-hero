@@ -31,4 +31,4 @@ z.must_wait("the autoscaler to read CPU and add a replica", 240, scaled_up,
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get hpa -n " + NS,
             "kubectl get pods -n " + NS,
-            z.forward_hint(NS, "showdown", 9225))
+            z.forward_hint(NS, "showdown"))

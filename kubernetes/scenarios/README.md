@@ -189,22 +189,40 @@ A scenario is more fun (and more convincing) when you **see** it: the page that 
 | **Killercoda** | NodePort **or** `port-forward --address 0.0.0.0` | open the **Traffic / Ports** menu and enter the number |
 | **iximiuz Labs** | NodePort **or** `port-forward --address 0.0.0.0` | use the platform's port/traffic link for that port |
 
-**Option 1: port-forward (works everywhere).** Every web scenario has its own line in its README (a "🌐 See it in your browser" box). In a second terminal:
-```bash
-kubectl port-forward -n k-05-wrong-port svc/draw 9205:80
-# open http://localhost:9205   (Ctrl+C stops it)
-```
-On Killercoda or iximiuz add `--address 0.0.0.0`, and open the platform's link for that port. Do not use `--address 0.0.0.0` on a shared Wi-Fi (venue, college): anyone on the network could open your app.
+### Option 1: port-forward (works everywhere), step by step
 
-**Option 2: NodePort (Killercoda and iximiuz, or any cluster where you can reach the node).**
-```bash
-kubectl patch svc draw -n k-05-wrong-port -p '{"spec":{"type":"NodePort"}}'
-kubectl get svc draw -n k-05-wrong-port        # PORT(S) shows 80:3xxxx/TCP, so 3xxxx is the NodePort
-kubectl get nodes -o wide                      # the node's INTERNAL-IP
-```
-Then open `http://<INTERNAL-IP>:3xxxx` from inside the playground, or enter `3xxxx` in the platform's port menu.
+1. **Find the Service and its port.** Every scenario's namespace is named in its README.
+   ```bash
+   kubectl get svc -n <namespace>
+   ```
+   Note the Service's name and its `PORT(S)` (for example `80/TCP`: the port is 80).
+2. **In a second terminal, forward a free port on your laptop to the Service.** Leave it running; Ctrl+C stops it.
+   ```bash
+   kubectl port-forward -n <namespace> svc/<service> <free-port-on-your-laptop>:<service-port>
+   ```
+   For example `kubectl port-forward -n k-05-wrong-port svc/draw 8888:80`.
+   - The left number is **yours to choose**: any free port. `8888` in the READMEs is only an example. If you see `address already in use`, pick another (8889, 8890, ...) or stop the older port-forward with Ctrl+C.
+   - The right number must be the **Service's port** from step 1.
+3. **Open `http://localhost:<free-port>`** in your browser (`http://localhost:8888` in the example).
 
-**The short way for both:** `python3 z2h.py open S3.2` runs the port-forward for you and prints the address to open. Add `--public` on a playground (listens on all interfaces) or `--nodeport` to switch the Service to NodePort and print the port. `python3 z2h.py open` with no id lists every scenario that has a page.
+On Killercoda or iximiuz add `--address 0.0.0.0` (`kubectl port-forward --address 0.0.0.0 -n ...`) and open the platform's port link for the port you chose. Do not use `--address 0.0.0.0` on a shared Wi-Fi (venue, college): anyone on the network could open your app.
+
+### Option 2: NodePort (Killercoda and iximiuz, or any cluster where you can reach the node)
+
+1. **Turn the Service into a NodePort.**
+   ```bash
+   kubectl patch svc <service> -n <namespace> -p '{"spec":{"type":"NodePort"}}'
+   ```
+2. **Read the NodePort** (the number after the colon in `PORT(S)`, for example `80:31234/TCP`) **and the node's address.**
+   ```bash
+   kubectl get svc <service> -n <namespace>
+   kubectl get nodes -o wide        # the INTERNAL-IP column
+   ```
+3. **Open it** with `http://<INTERNAL-IP>:<NodePort>` from inside the playground, or enter the NodePort in the platform's port menu.
+
+### The short way for both
+
+`python3 z2h.py open <id>` does the steps for you: it looks up the Service, picks a **free** port on your laptop (starting at 8888) and prints the address to open. Add `--port 9000` to choose the port yourself, `--public` on a playground (listens on all interfaces), or `--nodeport` to switch the Service to NodePort and print the port. `python3 z2h.py open` with no id lists every scenario that has a page.
 
 Scenarios without a page (a Job, a CronJob, a Gateway test, a Pod that never starts) have no box: you check them in the terminal.
 
@@ -226,7 +244,7 @@ Every `break/run.py` cleans up first, so you can run it again and again.
 | kind | Works. The default network add-on of recent kind versions enforces NetworkPolicy, so S3.5 runs. The default StorageClass is `standard`. |
 | minikube | Works with a default StorageClass (`standard`). A plain `minikube start` may **not enforce NetworkPolicy**, so S3.5 stops with a clear message: start it with `minikube start --cni=calico` for S3.5. |
 | Docker Desktop (Kubernetes enabled) | Works. The StorageClass is called `hostpath`. NetworkPolicy is often **not enforced**, so S3.5 may stop with its message (that is the check working, not a bug). |
-| Killercoda, iximiuz | Supported. Open the apps through the platform's "traffic / ports" link for `92NN`. Both should enforce NetworkPolicy (S3.5's `break/run.py` checks before it breaks anything). |
+| Killercoda, iximiuz | Supported. Open the apps through the platform's "traffic / ports" link for the port you forwarded. Both should enforce NetworkPolicy (S3.5's `break/run.py` checks before it breaks anything). |
 | Windows | Use **WSL2** (Ubuntu) and run everything inside it. Git Bash is not enough: the scripts use `pkill` and `pgrep`, which it lacks. |
 | Play with Docker | **No Kubernetes there.** Use the Docker scenarios instead, or a Kubernetes playground. |
 

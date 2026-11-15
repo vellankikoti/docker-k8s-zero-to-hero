@@ -24,7 +24,7 @@ def killed_twice():
     return z.logs_contain(NS, "simulating slow startup", "-l", "app=showdown", "--previous")
 
 
-z.start_break(SCENARIO, [NS], port=9207)
+z.start_break(SCENARIO, [NS])
 if not z.create_showdown_configmap(NS):
     z.die("Could not create the ConfigMap showdown-code.")
 z.say("Deploying the Cats vs Dogs app and a visitor…")

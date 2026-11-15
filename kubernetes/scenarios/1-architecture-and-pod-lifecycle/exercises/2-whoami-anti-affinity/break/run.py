@@ -12,7 +12,6 @@ import scenario_lib as z  # noqa: E402
 SCENARIO = os.path.dirname(HERE)
 
 NS = "k-18-anti-affinity"
-PORT = 9218
 
 
 def nodes_settled():
@@ -34,8 +33,6 @@ def one_waiting(replicas):
 
 z.need_cluster()
 z.run_cleanup(SCENARIO)
-if not z.port_free(PORT):
-    z.die("Port %s is busy, so this scenario can't start. Free it (see above) and run break again." % PORT)
 if z.taint_left_over():
     z.die("The nodes still carry the z2h-vip taint from S2.3. Run its cleanup first, or: kubectl taint nodes --all z2h-vip-")
 # Replicas = nodes that accept new Pods + 1 (kind: 3 nodes, control-plane tainted -> 2 -> 3 replicas).

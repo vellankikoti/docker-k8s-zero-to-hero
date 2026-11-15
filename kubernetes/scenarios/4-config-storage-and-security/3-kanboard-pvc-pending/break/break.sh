@@ -17,7 +17,6 @@ visitor_failing() { kubectl logs visitor -n "$NS" --tail=3 2>/dev/null | grep -q
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9210 || die "Port 9210 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$NS" || die "Could not create the namespace $NS."
 
 say "Deploying Kanboard with its disk request, a Service and a visitor…"

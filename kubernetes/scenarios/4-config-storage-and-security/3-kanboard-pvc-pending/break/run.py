@@ -23,7 +23,7 @@ def pod_pending():
     return z.kubectl_out("get", "pod", "-n", NS, "-l", "app=board", "-o", "jsonpath={.items[0].status.phase}") == "Pending"
 
 
-z.start_break(SCENARIO, [NS], port=9210)
+z.start_break(SCENARIO, [NS])
 z.say("Deploying Kanboard with its disk request, a Service and a visitor…")
 z.apply_dir(HERE)
 # NOT "rollout status": it waits for Ready, which never happens here (that is the bug).

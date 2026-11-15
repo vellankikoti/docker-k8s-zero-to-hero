@@ -27,4 +27,4 @@ z.must_wait("the Service to find its Pods", 60, has_endpoints,
             "The Service still has no endpoints. Check: kubectl get endpointslices -n " + NS)
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get endpointslices -n %s -l kubernetes.io/service-name=tools" % NS,
-            z.forward_hint(NS, "tools", 9204))
+            z.forward_hint(NS, "tools"))

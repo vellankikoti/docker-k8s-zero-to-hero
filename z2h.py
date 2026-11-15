@@ -8,7 +8,8 @@
     python3 z2h.py fix    S1.2           apply the fix
     python3 z2h.py cleanup S1.2          remove everything the scenario created
     python3 z2h.py test   S1.2           run the automated break/fix test (throwaway cluster only)
-    python3 z2h.py open   S1.2           open the app in your browser (kubectl port-forward, works everywhere)
+    python3 z2h.py open   S1.2           open the app in your browser (kubectl port-forward on a free port)
+    python3 z2h.py open   S1.2 --port 9000  choose the port on your laptop yourself
     python3 z2h.py open   S1.2 --public  same, but on all interfaces (Killercoda, iximiuz)
     python3 z2h.py open   S1.2 --nodeport  switch its Service to NodePort and print the port (Killercoda, iximiuz)
     python3 z2h.py open                  list the scenarios that have a page
@@ -21,6 +22,7 @@ This file only finds the right script and runs it, so you never have to remember
 import csv
 import os
 import shutil
+import socket
 import subprocess
 import sys
 
@@ -98,13 +100,13 @@ def show_list(which):
 
 
 def web_rows():
-    """Scenarios with a web page: {id: (port, namespace, service)}, from web.tsv."""
+    """Scenarios with a web page: {id: (namespace, service)}, from web.tsv."""
     rows = {}
     with open(os.path.join(K8S, "web.tsv"), encoding="utf-8", newline="") as f:
         reader = csv.reader(f, delimiter="\t")
         next(reader)
-        for sid, port, namespace, service in reader:
-            rows[sid.upper()] = (port, namespace, service)
+        for sid, namespace, service in reader:
+            rows[sid.upper()] = (namespace, service)
     return rows
 
 
@@ -113,21 +115,39 @@ def kubectl_text(*args):
     return done.returncode, done.stdout.strip()
 
 
+def free_port(start=8888):
+    """The first port from `start` upwards that nothing on this computer is listening on."""
+    for port in range(start, start + 100):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.settimeout(0.5)
+            if probe.connect_ex(("127.0.0.1", port)) != 0:
+                return port
+    sys.exit("Could not find a free port near %d. Close something, or choose one with --port." % start)
+
+
 def open_app(args):
     """Open a scenario's page: port-forward by default, NodePort on request."""
     flags = [a for a in args if a.startswith("--")]
-    ids = [a for a in args if not a.startswith("--")]
+    plain = [a for a in args if not a.startswith("--")]
+    wanted_port = None
+    if "--port" in args:                      # --port 9000 (the number follows the flag)
+        at = args.index("--port")
+        if at + 1 >= len(args) or not args[at + 1].isdigit():
+            sys.exit("--port needs a number, for example:  python3 z2h.py open S1.2 --port 9000")
+        wanted_port = int(args[at + 1])
+        plain = [a for a in plain if a != args[at + 1]]
     web = web_rows()
-    if not ids:
+    if not plain:
         print("Scenarios with a page (python3 z2h.py open <id>):")
         for sid in web:
-            print("  %-7s http://localhost:%s" % (sid, web[sid][0]))
+            print("  %-7s %s" % (sid, web[sid][1]))
         return 0
-    sid = find(ids[0])[0].upper()
+    sid = find(plain[0])[0].upper()
     if sid not in web:
         sys.exit("%s has no web page: check it in the terminal (see its README)." % sid)
-    port, namespace, service = web[sid]
-    if kubectl_text("get", "svc", service, "-n", namespace)[0] != 0:
+    namespace, service = web[sid]
+    code, service_port = kubectl_text("get", "svc", service, "-n", namespace, "-o", "jsonpath={.spec.ports[0].port}")
+    if code != 0:
         sys.exit("The Service %s/%s is not there yet. Set the scene first:  python3 z2h.py break %s" % (namespace, service, sid))
     if "--nodeport" in flags:
         kubectl_text("patch", "svc", service, "-n", namespace, "-p", '{"spec":{"type":"NodePort"}}')
@@ -139,13 +159,15 @@ def open_app(args):
         print("  In the browser: open the platform's Traffic / Ports menu and enter %s" % (node_port or "the NodePort"))
         print("  On kind, minikube or Docker Desktop this address is not your laptop: use port-forward instead.")
         return 0
-    command = ["kubectl", "port-forward", "-n", namespace, "svc/" + service, "%s:80" % port]
+    port = wanted_port or free_port()
+    command = ["kubectl", "port-forward", "-n", namespace, "svc/" + service, "%d:%s" % (port, service_port or "80")]
     if "--public" in flags:
         command[2:2] = ["--address", "0.0.0.0"]
         print("Listening on ALL interfaces: anyone on this network can open the app. Ctrl+C when you are done.")
-        print("On Killercoda or iximiuz open the platform's port link for %s." % port)
+        print("On Killercoda or iximiuz open the platform's port link for %d." % port)
     else:
-        print("Open  http://localhost:%s   (Ctrl+C to stop)" % port)
+        print("Open  http://localhost:%d   (Ctrl+C to stop)" % port)
+    print("Running: " + " ".join(command))
     try:
         return subprocess.call(command)
     except KeyboardInterrupt:

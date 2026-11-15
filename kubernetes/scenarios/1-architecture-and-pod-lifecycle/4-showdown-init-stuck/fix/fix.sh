@@ -23,4 +23,4 @@ wait_for "the old Pod to be removed" 60 one_pod \
 
 show_next "✅ Fixed. Now verify it yourself:" \
   "kubectl get pods -n $NS" \
-  "kubectl port-forward -n $NS svc/showdown 9226:80   (in a second terminal; then open http://localhost:9226; on a playground add --address 0.0.0.0 and open the URL for port 9226)"
+  "kubectl port-forward -n $NS svc/showdown 8888:80   (in a second terminal; then open http://localhost:8888; on a playground add --address 0.0.0.0 and open the URL for port 8888)"
