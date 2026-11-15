@@ -107,7 +107,7 @@ open http://localhost:8080            # 🐱 vs 🐶  (Linux: xdg-open; or just 
 ```
 
 ## 🧪 Tested, not just written
-Every Kubernetes break-and-fix scenario has an automated test that runs against a real [kind](https://kind.sigs.k8s.io/) cluster (Kubernetes v1.37); the read-and-answer question exercises have none. One command (`./tests/scenarios/k8s.sh`) runs each scenario twice: break it, check the symptom, fix it, check it is fixed, clean up, and make sure nothing is left behind. The harness lives in [`tests/scenarios/`](tests/scenarios/); it needs a throwaway cluster and refuses to run against any other. The lab manifests (K02 to K18) have a lighter check: `./tests/labs/validate-labs.sh` asks the cluster's API server to validate every file, without starting a single Pod. The platform table in the [scenario guide](kubernetes/scenarios/README.md) says honestly what has been run where.
+Every Kubernetes break-and-fix scenario has an automated test that runs against a real [kind](https://kind.sigs.k8s.io/) cluster (Kubernetes v1.37); the read-and-answer question exercises have none. One command (`./tests/scenarios/k8s.sh`) runs each scenario twice: break it, check the symptom, fix it, check it is fixed, clean up, and make sure nothing is left behind. The harness lives in [`tests/scenarios/`](tests/scenarios/); it needs a throwaway cluster and refuses to run against any other. The lab manifests (K02 to K18) have a lighter check: `./tests/labs/validate-labs.sh` asks the cluster's API server to validate every file, without starting a single Pod.
 
 ## 🔥 The Troubleshooting Arena
 ```bash

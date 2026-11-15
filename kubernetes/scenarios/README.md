@@ -327,7 +327,7 @@ Do this once on every platform you will teach from, a day or more before the eve
    ```bash
    ./tests/scenarios/k8s.sh S3.4
    ```
-7. All ✅ in the summaries means you can tick that platform's column in the table below. Lock the harness again and clean up:
+7. All ✅ in the summaries means every scenario passed on your cluster. Lock the harness again and clean up:
    ```bash
    unset Z2H_DRY_RUN_CONTEXT
    ```
@@ -338,58 +338,6 @@ Do this once on every platform you will teach from, a day or more before the eve
 **If you see `Refusing to run`:** step 4 was skipped, or the current context changed since. Repeat steps 3 and 4. The harness only runs when `Z2H_DRY_RUN_CONTEXT` equals the current context exactly.
 
 **If a scenario shows ❌:** run it again on its own (for example `./tests/scenarios/k8s.sh 13`). A second ❌ is real. The lines just above `FAILED at step:` say which check failed. Then run that scenario by hand from its README to see what the room would see. The usual causes are in "Known platform-sensitive scenarios" below (for example, S3.5 needs a cluster that enforces NetworkPolicy).
-
-### Results
-
-Tick each cell after you have run the whole scenario (break, fix, cleanup) on that platform. The build machine tested **kind only** (3 nodes and 1 node, on macOS arm64), so the kind column is ticked; every other cell is still to be ticked by an instructor.
-
-| Scenario | kind | minikube | Docker Desktop | Killercoda | iximiuz | WSL2 |
-|----------|:---:|:---:|:---:|:---:|:---:|:---:|
-| S1.1 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S1.2 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S1.3 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S1.4 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S1.5 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S1.x1 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S1.x2 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S1.x3 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S2.1 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S2.2 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S2.3 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S2.4 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S2.5 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S3.1 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S3.2 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S3.3 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S3.4 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S3.5 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S4.1 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S4.2 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S4.3 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S4.4 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S4.5 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S4.x1 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S4.x2 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S4.x3 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S4.x4 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S5.1 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S5.2 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S5.3 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S5.4 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S5.5 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S5.x1 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S5.x2 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S5.x3 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S5.x4 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S5.x5 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S6.1 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S6.2 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S6.3 | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S6.4 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S6.5 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S6.x1 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S6.x2 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| S6.x5 | ✅ | ☐ | ☐ | ☐ | ☐ | ☐ |
 
 **Known platform-sensitive scenarios.** Look at these first:
 
