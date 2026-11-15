@@ -84,10 +84,12 @@ Option B, **NodePort**:
 kubectl apply -f kubernetes/05-services/nodeport.yaml
 kubectl get svc frontend-nodeport
 ```
-- **Docker Desktop:** http://localhost:30080
-- **minikube:** `http://$(minikube ip):30080`
-- **Killercoda:** use the **Traffic / Ports** menu → port 30080
+- **Killercoda / iximiuz:** this is where NodePort shines: use the **Traffic / Ports** menu → port 30080
+- **minikube:** `http://$(minikube ip):30080` works on some drivers; the safe way is `minikube service frontend-nodeport --url` (or Option A)
+- **Docker Desktop:** `http://localhost:30080` works on some versions and settings and not on others. If nothing answers, use Option A
 - **kind:** node ports live inside the node container; use port-forward, or create the cluster with `extraPortMappings` ([setup](../../00-setup/README.md))
+
+Rule of thumb: on a laptop cluster (kind, minikube, Docker Desktop) use **port-forward**. NodePort is for playgrounds where you are on the node.
 
 Option C, **LoadBalancer** (on Docker Desktop it's published on `localhost`):
 ```bash

@@ -50,6 +50,17 @@ kubectl logs -f visitor -n k-19-hackathon
 ```
 (Times will differ.) You can stop it with Ctrl+C. We'll watch it again live when we fix things. (The visitor itself *does* run: it declares its own numbers, and we'll see why.)
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
+```bash
+kubectl port-forward -n k-19-hackathon svc/dashboard 9219:80
+```
+Then open **http://localhost:9219**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9219`, or use a NodePort (`kubectl patch svc dashboard -n k-19-hackathon -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc dashboard -n k-19-hackathon`).
+- **Shortcut:** `python3 z2h.py open S6.2` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first (60 seconds)
 The namespace has a quota, and the Pod template declares no resources. Before you look:
 1. Does the Deployment have any Pods?

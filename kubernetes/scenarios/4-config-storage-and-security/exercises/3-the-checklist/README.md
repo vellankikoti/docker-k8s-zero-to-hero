@@ -53,6 +53,17 @@ kubectl logs -f visitor -n k-44-checklist
 ```
 Stop the logs with Ctrl+C.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
+```bash
+kubectl port-forward -n k-44-checklist svc/cart 9244:80
+```
+Then open **http://localhost:9244**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9244`, or use a NodePort (`kubectl patch svc cart -n k-44-checklist -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc cart -n k-44-checklist`).
+- **Shortcut:** `python3 z2h.py open S4.x3` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔍 Investigate: you drive
 **What is the first thing you look at?**
 <details><summary>💡 Tier 1: a nudge</summary>

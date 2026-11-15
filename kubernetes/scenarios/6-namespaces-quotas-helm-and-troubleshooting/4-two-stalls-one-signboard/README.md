@@ -58,6 +58,17 @@ kubectl logs -f visitor -n k-31-two-stalls
 ```
 (An illustration: the order and times will differ. Notice there is no ❌ here. Everything "works". That is what makes this one sneaky.) Stop it with Ctrl+C.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
+```bash
+kubectl port-forward -n k-31-two-stalls svc/chai 9231:80
+```
+Then open **http://localhost:9231**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9231`, or use a NodePort (`kubectl patch svc chai -n k-31-two-stalls -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc chai -n k-31-two-stalls`).
+- **Shortcut:** `python3 z2h.py open S6.4` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔍 Investigate: you drive
 Three questions. Try each one yourself first, and open a hint only when you are stuck. The commands are in the hints, but the thinking is yours.
 

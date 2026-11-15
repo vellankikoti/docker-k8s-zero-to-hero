@@ -48,6 +48,17 @@ kubectl logs -f visitor -n k-01-pending
 ```
 You can stop it with Ctrl+C. We'll watch it again live when we fix things.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
+```bash
+kubectl port-forward -n k-01-pending svc/draw 9201:80
+```
+Then open **http://localhost:9201**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9201`, or use a NodePort (`kubectl patch svc draw -n k-01-pending -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc draw -n k-01-pending`).
+- **Shortcut:** `python3 z2h.py open S1.1` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first (60 seconds)
 The Deployment asks for one replica. Before you look:
 1. What will `STATUS` say, and will `RESTARTS` ever go up?

@@ -175,19 +175,46 @@ These are plain Python 3 (no packages): they run the same `kubectl` commands you
 
 From the repo root, `python3 z2h.py list` shows every scenario and `python3 z2h.py break S1.2` runs one.
 
+## 🌐 Opening the app: port-forward or NodePort, by environment
+
+A scenario is more fun (and more convincing) when you **see** it: the page that will not load, then the page that does. Which way you open it depends on where your cluster runs, and picking the wrong way is the most common reason "it does not open for me".
+
+**Why it differs.** A NodePort opens a port on the **node's own address**. On Killercoda and iximiuz you are *on* the node, so that address works. On kind, minikube and Docker Desktop the node is a container or a small VM inside your laptop, so `localhost:<NodePort>` is not the node and nothing answers. `kubectl port-forward` does not care: it tunnels through `kubectl`, so it works everywhere.
+
+| Where your cluster runs | Open the app with | Notes |
+|---|---|---|
+| **kind** | `kubectl port-forward` | NodePort only works if the cluster was created with `extraPortMappings` |
+| **minikube** | `kubectl port-forward` | or `minikube service <svc> -n <ns> --url` (it opens a tunnel for you); `localhost:<NodePort>` does not work |
+| **Docker Desktop** | `kubectl port-forward` | `localhost:<NodePort>` often does not answer, so do not rely on it |
+| **Killercoda** | NodePort **or** `port-forward --address 0.0.0.0` | open the **Traffic / Ports** menu and enter the number |
+| **iximiuz Labs** | NodePort **or** `port-forward --address 0.0.0.0` | use the platform's port/traffic link for that port |
+
+**Option 1: port-forward (works everywhere).** Every web scenario has its own line in its README (a "🌐 See it in your browser" box). In a second terminal:
+```bash
+kubectl port-forward -n k-05-wrong-port svc/draw 9205:80
+# open http://localhost:9205   (Ctrl+C stops it)
+```
+On Killercoda or iximiuz add `--address 0.0.0.0`, and open the platform's link for that port. Do not use `--address 0.0.0.0` on a shared Wi-Fi (venue, college): anyone on the network could open your app.
+
+**Option 2: NodePort (Killercoda and iximiuz, or any cluster where you can reach the node).**
+```bash
+kubectl patch svc draw -n k-05-wrong-port -p '{"spec":{"type":"NodePort"}}'
+kubectl get svc draw -n k-05-wrong-port        # PORT(S) shows 80:3xxxx/TCP, so 3xxxx is the NodePort
+kubectl get nodes -o wide                      # the node's INTERNAL-IP
+```
+Then open `http://<INTERNAL-IP>:3xxxx` from inside the playground, or enter `3xxxx` in the platform's port menu.
+
+**The short way for both:** `python3 z2h.py open S3.2` runs the port-forward for you and prints the address to open. Add `--public` on a playground (listens on all interfaces) or `--nodeport` to switch the Service to NodePort and print the port. `python3 z2h.py open` with no id lists every scenario that has a page.
+
+Scenarios without a page (a Job, a CronJob, a Gateway test, a Pod that never starts) have no box: you check them in the terminal.
+
 ## How a session runs
 
 1. **Instructor explains**: read the story and the concept in the scenario's `README.md`.
 2. **Break it**: `cd break && python3 run.py`
 3. **Predict, then investigate by hand.** Every scenario opens its investigation with a **predict-first** box (a few seconds in a 4-minute demo, a full minute in an exercise): say what you expect before you type anything. Then the class types the commands from the README. `break/run.py` never explains the cause, that is the class's job. In scenarios with a small `visitor` Pod (most of them; the README says when) open a **second terminal** and run `kubectl logs -f visitor -n <namespace>` (the README gives the exact line) to watch the app fail as a user sees it. (S5.3 has no visitor: watch the autoscaler instead with `kubectl get hpa -n k-25-hpa -w`.)
 4. **Meet the tempting wrong fix.** Each scenario names the fix everyone reaches for first (restart it, scale it up, switch the rule off) and shows why it does not work. Then **fix it**: `cd ../fix && python3 run.py`. If the visitor log is open, the live ❌ → ✅ moment is the best part of the demo.
-5. **Verify by hand**: the class checks it really works. `fix/run.py` does not verify for you. To open an app, use a **second terminal**:
-   ```bash
-   kubectl port-forward -n <namespace> svc/<service> 92NN:<port>
-   ```
-   The scenario README prints the exact line (for example S5.2: `kubectl port-forward -n k-07-slow-start svc/showdown 9207:80`). Then open `http://localhost:92NN` on a laptop. On a playground, add `--address 0.0.0.0` and open the URL for port `92NN`. Press **Ctrl+C** in that terminal to stop it. Several scenarios (for example S5.5, S4.4, S2.3, S2.5 and S2.4) have no web page: you verify them in the terminal.
-
-   **Why the laptop command has no `--address 0.0.0.0`:** without it, `port-forward` listens on `localhost` only. With it, anyone on the same network (venue Wi-Fi) could open your app, and Kanboard's default login is `admin` / `admin`. A playground needs `--address 0.0.0.0` because its URL proxy reaches the app from outside the terminal. Keep `-n <namespace>` right after `port-forward`: `cleanup.py` finds leftovers by that text.
+5. **Verify by hand**: the class checks it really works. `fix/run.py` does not verify for you. Open the app in the browser (the scenario's "🌐 See it in your browser" box has the exact command, and [Opening the app](#-opening-the-app-port-forward-or-nodeport-by-environment) explains which way to use on kind, minikube, Docker Desktop, Killercoda and iximiuz), or run `python3 z2h.py open <id>`.
 6. **Clean up**: `cd .. && python3 cleanup.py`
 
 Every `break/run.py` cleans up first, so you can run it again and again.

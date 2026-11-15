@@ -34,6 +34,8 @@ kubectl version
 kubectl get nodes                  # every node should say Ready
 kubectl config current-context     # which cluster you are talking to
 ```
+> 🌐 **Opening an app in your browser depends on where your cluster runs.** On kind, minikube and Docker Desktop use `kubectl port-forward` (NodePort will not answer on `localhost`). On Killercoda and iximiuz NodePort works. The [scenario guide](scenarios/README.md#-opening-the-app-port-forward-or-nodeport-by-environment) has the table and every scenario has its own ready-made command.
+
 > ℹ️ **Honest note:** the labs and scenarios are tested on **kind**. The others should work, and the [scenario guide](scenarios/README.md) lists the known differences, but kind is the one with a passing test run behind it.
 
 ### 2. Autocompletion and the `k` alias: type less, make fewer typos

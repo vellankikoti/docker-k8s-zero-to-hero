@@ -61,6 +61,17 @@ kubectl logs -f visitor -n k-39-idli-robot
 ```
 (Ctrl+C to stop.)
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
+```bash
+kubectl port-forward -n k-39-idli-robot svc/idli 9239:80
+```
+Then open **http://localhost:9239**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9239`, or use a NodePort (`kubectl patch svc idli -n k-39-idli-robot -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc idli -n k-39-idli-robot`).
+- **Shortcut:** `python3 z2h.py open S5.x4` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔍 Investigate: you drive
 **Q1. What did the robot actually say?** Read the refusal slowly, to the end.
 <details><summary>💡 Hint</summary>

@@ -46,6 +46,17 @@ kubectl logs -f visitor -n k-04-no-endpoints
 ```
 You can stop it with Ctrl+C. We'll watch it again live when we fix things.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
+```bash
+kubectl port-forward -n k-04-no-endpoints svc/tools 9204:80
+```
+Then open **http://localhost:9204**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9204`, or use a NodePort (`kubectl patch svc tools -n k-04-no-endpoints -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc tools -n k-04-no-endpoints`).
+- **Shortcut:** `python3 z2h.py open S3.1` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first (60 seconds)
 The Pods say `Running` and `1/1`. Before you type a single command, say out loud:
 1. Is the *app* broken?

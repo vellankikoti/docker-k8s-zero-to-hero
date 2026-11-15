@@ -8,6 +8,10 @@
     python3 z2h.py fix    S1.2           apply the fix
     python3 z2h.py cleanup S1.2          remove everything the scenario created
     python3 z2h.py test   S1.2           run the automated break/fix test (throwaway cluster only)
+    python3 z2h.py open   S1.2           open the app in your browser (kubectl port-forward, works everywhere)
+    python3 z2h.py open   S1.2 --public  same, but on all interfaces (Killercoda, iximiuz)
+    python3 z2h.py open   S1.2 --nodeport  switch its Service to NodePort and print the port (Killercoda, iximiuz)
+    python3 z2h.py open                  list the scenarios that have a page
 
 Ids: S1.2 = Kubernetes section 1, scenario 2 (S1.x1 = exercise 1). D02 = Docker scenario 2.
 Kubernetes break, fix and cleanup are Python (they run kubectl for you). check.sh and the
@@ -93,6 +97,61 @@ def show_list(which):
         print("  %-7s %s%s" % (sid, title, label))
 
 
+def web_rows():
+    """Scenarios with a web page: {id: (port, namespace, service)}, from web.tsv."""
+    rows = {}
+    with open(os.path.join(K8S, "web.tsv"), encoding="utf-8", newline="") as f:
+        reader = csv.reader(f, delimiter="\t")
+        next(reader)
+        for sid, port, namespace, service in reader:
+            rows[sid.upper()] = (port, namespace, service)
+    return rows
+
+
+def kubectl_text(*args):
+    done = subprocess.run(["kubectl", *args], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    return done.returncode, done.stdout.strip()
+
+
+def open_app(args):
+    """Open a scenario's page: port-forward by default, NodePort on request."""
+    flags = [a for a in args if a.startswith("--")]
+    ids = [a for a in args if not a.startswith("--")]
+    web = web_rows()
+    if not ids:
+        print("Scenarios with a page (python3 z2h.py open <id>):")
+        for sid in web:
+            print("  %-7s http://localhost:%s" % (sid, web[sid][0]))
+        return 0
+    sid = find(ids[0])[0].upper()
+    if sid not in web:
+        sys.exit("%s has no web page: check it in the terminal (see its README)." % sid)
+    port, namespace, service = web[sid]
+    if kubectl_text("get", "svc", service, "-n", namespace)[0] != 0:
+        sys.exit("The Service %s/%s is not there yet. Set the scene first:  python3 z2h.py break %s" % (namespace, service, sid))
+    if "--nodeport" in flags:
+        kubectl_text("patch", "svc", service, "-n", namespace, "-p", '{"spec":{"type":"NodePort"}}')
+        _, node_port = kubectl_text("get", "svc", service, "-n", namespace, "-o", "jsonpath={.spec.ports[0].nodePort}")
+        _, node_ip = kubectl_text("get", "nodes", "-o",
+                                  'jsonpath={.items[0].status.addresses[?(@.type=="InternalIP")].address}')
+        print("The Service %s is now a NodePort: %s" % (service, node_port or "(could not read it)"))
+        print("  In a Killercoda or iximiuz terminal:  curl http://%s:%s" % (node_ip or "<node-ip>", node_port or "<nodeport>"))
+        print("  In the browser: open the platform's Traffic / Ports menu and enter %s" % (node_port or "the NodePort"))
+        print("  On kind, minikube or Docker Desktop this address is not your laptop: use port-forward instead.")
+        return 0
+    command = ["kubectl", "port-forward", "-n", namespace, "svc/" + service, "%s:80" % port]
+    if "--public" in flags:
+        command[2:2] = ["--address", "0.0.0.0"]
+        print("Listening on ALL interfaces: anyone on this network can open the app. Ctrl+C when you are done.")
+        print("On Killercoda or iximiuz open the platform's port link for %s." % port)
+    else:
+        print("Open  http://localhost:%s   (Ctrl+C to stop)" % port)
+    try:
+        return subprocess.call(command)
+    except KeyboardInterrupt:
+        return 0
+
+
 def run(action, scenario_id):
     sid, folder, kind = find(scenario_id)
     if kind == "question" and action != "cleanup":
@@ -114,6 +173,8 @@ def main(argv):
         print(__doc__)
         return 0
     action = argv[1]
+    if action == "open":
+        return open_app(argv[2:])
     if action == "list":
         show_list(argv[2] if len(argv) > 2 else "k8s")
         return 0

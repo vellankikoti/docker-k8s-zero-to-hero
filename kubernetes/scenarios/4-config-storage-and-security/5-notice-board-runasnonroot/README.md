@@ -51,6 +51,17 @@ kubectl logs -f visitor -n k-21-nonroot
 ```
 (Times will differ.) You can stop it with Ctrl+C. We'll watch it again live when we fix things.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
+```bash
+kubectl port-forward -n k-21-nonroot svc/board 9221:80
+```
+Then open **http://localhost:9221**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9221`, or use a NodePort (`kubectl patch svc board -n k-21-nonroot -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc board -n k-21-nonroot`).
+- **Shortcut:** `python3 z2h.py open S4.5` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first (60 seconds)
 The Deployment requires the container to run as a non-root user, and the image starts as root. Before you look:
 1. What will `STATUS` say?

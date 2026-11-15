@@ -51,6 +51,17 @@ kubectl logs -f visitor -n k-45-lockdown
 ```
 Stop the logs with Ctrl+C.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
+```bash
+kubectl port-forward -n k-45-lockdown svc/kitchen 9245:80
+```
+Then open **http://localhost:9245**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9245`, or use a NodePort (`kubectl patch svc kitchen -n k-45-lockdown -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc kitchen -n k-45-lockdown`).
+- **Shortcut:** `python3 z2h.py open S4.x4` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔍 Investigate: you drive
 **What is the first thing you look at?**
 <details><summary>💡 Tier 1: a nudge</summary>

@@ -40,6 +40,17 @@ showdown   Deployment/showdown   cpu: <unknown>/50%   1         4         1     
 ```
 (Your `AGE` will differ.) `-w` prints the current line once, and after that **only when the autoscaler's record changes**. While it is stuck, that can mean nothing new for a minute or two, so a quiet watch is not a frozen one. Leave it running; it comes back to life in the Fix step.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
+```bash
+kubectl port-forward -n k-25-hpa svc/showdown 9225:80
+```
+Then open **http://localhost:9225**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9225`, or use a NodePort (`kubectl patch svc showdown -n k-25-hpa -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc showdown -n k-25-hpa`).
+- **Shortcut:** `python3 z2h.py open S5.3` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first (60 seconds)
 The HPA targets a percentage of the CPU request, and the Deployment has no request. Before you look:
 1. What will the HPA show under `TARGETS`?

@@ -51,6 +51,17 @@ kubectl logs -f visitor -n k-07-slow-start
 ```
 You can stop it with Ctrl+C. We'll watch it again live when we fix things.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. In a **second terminal**, leave this running (Ctrl+C stops it):
+```bash
+kubectl port-forward -n k-07-slow-start svc/showdown 9207:80
+```
+Then open **http://localhost:9207**. Before the fix you will see an error or nothing (if the Pod is not running, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for `9207`, or use a NodePort (`kubectl patch svc showdown -n k-07-slow-start -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc showdown -n k-07-slow-start`).
+- **Shortcut:** `python3 z2h.py open S5.2` (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first: do the maths
 The app needs about 20 seconds to wake up. The liveness probe starts checking after `initialDelaySeconds: 5`, and gives up after `failureThreshold: 1` miss.
 1. Roughly when will the first restart happen?
