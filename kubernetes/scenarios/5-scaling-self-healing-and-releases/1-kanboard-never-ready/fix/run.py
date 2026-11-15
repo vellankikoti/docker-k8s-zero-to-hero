@@ -19,4 +19,4 @@ z.must_wait("the Kanboard Deployment to be Ready", 180, lambda: z.rolled_out(NS,
             "The Pod didn't become Ready. Check: kubectl get pods -n " + NS)
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get pods -n " + NS,
-            z.forward_hint(NS, "board", 9206))
+            z.forward_hint(NS, "board"))

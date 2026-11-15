@@ -21,4 +21,4 @@ z.must_wait("the old restarting Pod to be removed", 60, lambda: z.only_one_pod(N
             "The old Pod is still there. Check: kubectl get pods -n " + NS)
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get pods -n " + NS,
-            z.forward_hint(NS, "showdown", 9207))
+            z.forward_hint(NS, "showdown"))

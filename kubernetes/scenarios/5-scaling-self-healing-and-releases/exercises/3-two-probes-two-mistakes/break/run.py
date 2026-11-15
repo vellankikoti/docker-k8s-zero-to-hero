@@ -13,7 +13,7 @@ SCENARIO = os.path.dirname(HERE)
 
 NS = "k-36-two-probes"
 
-z.start_break(SCENARIO, [NS], port=9236)
+z.start_break(SCENARIO, [NS])
 z.say("Opening the stall and sending in a visitor…")
 z.apply_dir(HERE)
 z.must_wait("the stall's Pods to be created (the first download can take a minute)", 180,

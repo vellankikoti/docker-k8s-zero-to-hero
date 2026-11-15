@@ -17,7 +17,6 @@ one_waiting() {
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9218 || die "Port 9218 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 
 die_if_k16_taint
 

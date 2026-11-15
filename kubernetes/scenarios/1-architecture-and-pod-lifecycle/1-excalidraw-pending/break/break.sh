@@ -16,7 +16,6 @@ visitor_up() { [ "$(kubectl get pod visitor -n "$NS" -o jsonpath='{.status.phase
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9201 || die "Port 9201 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$NS" || die "Could not create the namespace $NS."
 
 say "Deploying the whiteboard (Excalidraw) and a visitor…"

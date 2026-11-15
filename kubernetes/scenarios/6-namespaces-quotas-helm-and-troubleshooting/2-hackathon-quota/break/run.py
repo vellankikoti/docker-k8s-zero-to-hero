@@ -21,7 +21,7 @@ def quota_live():
                          r"jsonpath={.status.hard.requests\.cpu}") != ""
 
 
-z.start_break(SCENARIO, [NS], port=9219)
+z.start_break(SCENARIO, [NS])
 z.say("Setting up the hackathon namespace…")
 z.apply_files(os.path.join(HERE, "setup.yaml"))
 z.must_wait("the namespace setup to finish", 60, quota_live,

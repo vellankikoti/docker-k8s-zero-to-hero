@@ -11,6 +11,7 @@ commands must be identical.
 import csv
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -63,7 +64,24 @@ def run(cmd, env, cwd):
         return [normal(json.loads(line)) for line in f if line.strip()]
 
 
+def missing_helpers():
+    """Every z.<name>() a scenario script calls must exist in scenario_lib.py."""
+    with open(os.path.join(SC, "scenario_lib.py"), encoding="utf-8") as f:
+        have = set(re.findall(r"^def (\w+)\(", f.read(), re.M))
+    used = set()
+    for folder, _dirs, files in os.walk(SC):
+        for name in files:
+            if name.endswith(".py") and name != "scenario_lib.py":
+                with open(os.path.join(folder, name), encoding="utf-8") as f:
+                    used |= set(re.findall(r"\bz\.([a-z_]+)\(", f.read()))
+    return sorted(used - have)
+
+
 def main(argv):
+    gone = missing_helpers()
+    if gone:
+        print("scenario scripts call helpers that scenario_lib.py does not have: %s" % ", ".join(gone))
+        return 1
     wanted = {a.upper().lstrip("S") for a in argv[1:]}
     tmp = tempfile.mkdtemp(prefix="z2h-fake-")
     try:

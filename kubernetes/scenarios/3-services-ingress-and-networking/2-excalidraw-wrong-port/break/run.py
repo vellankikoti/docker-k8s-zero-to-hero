@@ -24,7 +24,7 @@ def visitor_failing():
     return z.logs_contain(NS, "❌", "visitor", "--tail=3")
 
 
-z.start_break(SCENARIO, [NS], port=9205)
+z.start_break(SCENARIO, [NS])
 z.say("Deploying Excalidraw (2 Pods), its Service and a visitor…")
 z.apply_dir(HERE)
 z.must_wait("the Excalidraw Pods to be Ready (the first download can take a minute)", 180,

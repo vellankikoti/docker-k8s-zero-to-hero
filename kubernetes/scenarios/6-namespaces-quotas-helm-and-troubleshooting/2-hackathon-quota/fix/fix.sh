@@ -19,4 +19,4 @@ wait_for "both dashboard Pods to be Ready" 180 rolled_out \
 show_next "✅ Fixed. Now verify it yourself:" \
   "kubectl get deployment,pods -n $NS" \
   "kubectl describe quota -n $NS" \
-  "kubectl port-forward -n $NS svc/dashboard 9219:80   (in a second terminal; then open http://localhost:9219; on a playground add --address 0.0.0.0 and open the URL for port 9219)"
+  "kubectl port-forward -n $NS svc/dashboard 8888:80   (in a second terminal; then open http://localhost:8888; on a playground add --address 0.0.0.0 and open the URL for port 8888)"

@@ -19,7 +19,7 @@ def stuck():
     return z.pod_reason(NS, "app=draw") == "Pending" and z.events_contain(NS, "Insufficient memory")
 
 
-z.start_break(SCENARIO, [NS], port=9201)
+z.start_break(SCENARIO, [NS])
 z.say("Deploying the whiteboard (Excalidraw) and a visitor…")
 z.apply_dir(HERE)
 z.must_wait("the Pod to be refused by the scheduler", 180, stuck,

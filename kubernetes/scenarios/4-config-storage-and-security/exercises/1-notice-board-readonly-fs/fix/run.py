@@ -20,4 +20,4 @@ if z.kubectl_show("rollout", "status", "deployment/board", "-n", NS, "--timeout=
     z.die("The board didn't roll out. Check: kubectl get pods -n " + NS)
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get pods -n " + NS,
-            z.forward_hint(NS, "board", 9222))
+            z.forward_hint(NS, "board"))

@@ -12,7 +12,6 @@ cfgerr() { kubectl get pods -n "$NS" -l app=kitchen -o jsonpath='{.items[*].stat
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9245 || die "Port 9245 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$NS" || die "Could not create the namespace $NS."
 kubectl label namespace "$NS" pod-security.kubernetes.io/enforce=restricted --overwrite >/dev/null || die "Could not label the namespace."
 say "Setting the scene…"

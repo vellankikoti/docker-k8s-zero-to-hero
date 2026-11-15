@@ -19,4 +19,4 @@ if z.kubectl("rollout", "status", "deployment/showdown", "-n", APP, "--timeout=1
     z.die("The app didn't roll out. Check: kubectl get pods -n " + APP)
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get pods -n " + APP,
-            z.forward_hint(APP, "showdown", 9212))
+            z.forward_hint(APP, "showdown"))

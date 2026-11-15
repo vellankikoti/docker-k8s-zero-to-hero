@@ -28,4 +28,4 @@ z.must_wait("the Service to forward to port 80", 60, port_is_80,
             "The Service still forwards to the wrong port. Check: kubectl get endpointslices -n " + NS)
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get endpointslices -n %s -l kubernetes.io/service-name=draw" % NS,
-            z.forward_hint(NS, "draw", 9205))
+            z.forward_hint(NS, "draw"))

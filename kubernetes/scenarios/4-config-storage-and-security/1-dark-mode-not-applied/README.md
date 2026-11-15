@@ -55,6 +55,25 @@ kubectl logs -f visitor -n k-23-dark-mode
 ```
 (Times will differ.) You can stop it with Ctrl+C. We'll watch it again live when we fix things.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-23-dark-mode
+   ```
+   Look for `theme`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-23-dark-mode svc/theme 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc theme -n k-23-dark-mode -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc theme -n k-23-dark-mode`).
+- **Shortcut:** `python3 z2h.py open S4.1` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first (60 seconds)
 Dark mode is set in the ConfigMap after the Pod started. Before you look:
 1. Will the running Pod pick up the change?
@@ -229,21 +248,21 @@ kubectl logs visitor -n k-23-dark-mode --tail=3
 ```
 Now open the page yourself. In a **second terminal** (leave it running):
 ```bash
-kubectl port-forward -n k-23-dark-mode svc/theme 9223:80
+kubectl port-forward -n k-23-dark-mode svc/theme 8888:80
 ```
 ```
-Forwarding from 127.0.0.1:9223 -> 8080
-Forwarding from [::1]:9223 -> 8080
+Forwarding from 127.0.0.1:8888 -> 8080
+Forwarding from [::1]:8888 -> 8080
 ```
-On a playground, add `--address 0.0.0.0` and open the URL for port 9223.
+On a playground, add `--address 0.0.0.0` and open the URL for port 8888.
 Back in the first terminal:
 ```bash
-curl -s localhost:9223/theme
+curl -s localhost:8888/theme
 ```
 ```
 dark
 ```
-(The port-forward terminal also prints `Handling connection for 9223`.) Or open http://localhost:9223 in your browser: a dark navy "Campus Today" page with a moon and a pink title, instead of the white page with a sun. Press Ctrl+C in the second terminal to stop the port-forward.
+(The port-forward terminal also prints `Handling connection for 8888`.) Or open http://localhost:8888 in your browser: a dark navy "Campus Today" page with a moon and a pink title, instead of the white page with a sun. Press Ctrl+C in the second terminal to stop the port-forward.
 
 ## 🎯 Key takeaways
 - **A ConfigMap is not a live feed.** Used as environment variables, its values are copied into the container once, when it starts.

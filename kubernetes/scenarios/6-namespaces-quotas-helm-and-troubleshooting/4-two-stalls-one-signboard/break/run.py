@@ -24,7 +24,7 @@ def all_pods_behind_service():
     return len([line for line in out.splitlines() if line.strip()]) == 3
 
 
-z.start_break(SCENARIO, [NS], port=9231)
+z.start_break(SCENARIO, [NS])
 z.say("Opening the stall(s) and sending in a visitor…")
 z.apply_dir(HERE)
 z.must_wait("the stall(s) to be Ready (the first download can take a minute)", 180, both_stalls_ready,

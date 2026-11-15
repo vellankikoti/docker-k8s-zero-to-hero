@@ -42,6 +42,25 @@ kubectl logs -f visitor -n k-20-limitrange
 ```
 (Press Ctrl+C to stop.) Red, and staying red.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-20-limitrange
+   ```
+   Look for `showdown`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-20-limitrange svc/showdown 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc showdown -n k-20-limitrange -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc showdown -n k-20-limitrange`).
+- **Shortcut:** `python3 z2h.py open S6.5` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first (60 seconds)
 The YAML sets no memory limit, but the app is killed for exceeding one. Before you look:
 1. Does the Deployment's YAML show a limit?
@@ -242,21 +261,21 @@ kubectl logs visitor -n k-20-limitrange --tail=3
 ```
 Now open it yourself. In a **second terminal** (leave it running):
 ```bash
-kubectl port-forward -n k-20-limitrange svc/showdown 9220:80
+kubectl port-forward -n k-20-limitrange svc/showdown 8888:80
 ```
 ```
-Forwarding from 127.0.0.1:9220 -> 8080
-Forwarding from [::1]:9220 -> 8080
+Forwarding from 127.0.0.1:8888 -> 8080
+Forwarding from [::1]:8888 -> 8080
 ```
-On a playground, add `--address 0.0.0.0` and open the URL for port 9220.
+On a playground, add `--address 0.0.0.0` and open the URL for port 8888.
 Back in the first terminal:
 ```bash
-curl -s localhost:9220/healthz
+curl -s localhost:8888/healthz
 ```
 ```
 {"status": "alive", "served_by": "showdown-5bfb9c79c-lhkzh"}
 ```
-Or open http://localhost:9220 in your browser and cast a vote. Press Ctrl+C in the second terminal to stop the port-forward.
+Or open http://localhost:8888 in your browser and cast a vote. Press Ctrl+C in the second terminal to stop the port-forward.
 
 ## 👀 See it in monitoring (optional)
 If you installed the monitoring stack ([lab K19](../../../19-observability/README.md)), watch a limit nobody wrote as a number. In Prometheus (`kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090`, then http://localhost:9090) run:

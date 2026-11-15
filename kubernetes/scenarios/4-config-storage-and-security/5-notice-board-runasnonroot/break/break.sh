@@ -13,7 +13,6 @@ board_stuck() { [ "$(pod_reason "$NS" app=board)" = "CreateContainerConfigError"
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9221 || die "Port 9221 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$NS" || die "Could not create the namespace $NS."
 
 say "Deploying the Campus notice board (2 Pods), its Service and a visitor…"

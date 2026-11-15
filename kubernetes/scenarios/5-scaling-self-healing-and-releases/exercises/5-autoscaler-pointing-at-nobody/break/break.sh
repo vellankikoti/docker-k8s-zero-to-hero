@@ -13,7 +13,6 @@ hpa_complains() { [ "$(kubectl get hpa lassi -n "$NS" -o jsonpath='{.status.cond
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9241 || die "Port 9241 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$NS" || die "Could not create the namespace $NS."
 
 say "Setting the scene…"

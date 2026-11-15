@@ -35,4 +35,4 @@ wait_for "the old app Pods to be removed" 60 two_pods \
 
 show_next "✅ Fixed. Now verify it yourself:" \
   "kubectl logs visitor -n $NS --tail=3" \
-  "kubectl port-forward -n $NS svc/showdown 9230:80   (in a second terminal; then open http://localhost:9230; on a playground add --address 0.0.0.0 and open the URL for port 9230)"
+  "kubectl port-forward -n $NS svc/showdown 8888:80   (in a second terminal; then open http://localhost:8888; on a playground add --address 0.0.0.0 and open the URL for port 8888)"

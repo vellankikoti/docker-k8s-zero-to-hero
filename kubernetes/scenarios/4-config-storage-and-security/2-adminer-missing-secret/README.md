@@ -49,6 +49,25 @@ kubectl logs -f visitor -n k-09-missing-secret
 ```
 You can stop it with Ctrl+C. We'll watch it again live when we fix things.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-09-missing-secret
+   ```
+   Look for `adminer`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-09-missing-secret svc/adminer 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc adminer -n k-09-missing-secret -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc adminer -n k-09-missing-secret`).
+- **Shortcut:** `python3 z2h.py open S4.2` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first (60 seconds)
 The Deployment asks for a Secret that does not exist. Before you look:
 1. Will there be any logs?
@@ -208,21 +227,21 @@ kubectl logs visitor -n k-09-missing-secret --tail=3
 ```
 Now open it yourself. In a **second terminal** (leave it running):
 ```bash
-kubectl port-forward -n k-09-missing-secret svc/adminer 9209:80
+kubectl port-forward -n k-09-missing-secret svc/adminer 8888:80
 ```
 ```
-Forwarding from 127.0.0.1:9209 -> 8080
-Forwarding from [::1]:9209 -> 8080
+Forwarding from 127.0.0.1:8888 -> 8080
+Forwarding from [::1]:8888 -> 8080
 ```
-On a playground, add `--address 0.0.0.0` and open the URL for port 9209.
+On a playground, add `--address 0.0.0.0` and open the URL for port 8888.
 Back in the first terminal:
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" localhost:9209
+curl -s -o /dev/null -w "%{http_code}\n" localhost:8888
 ```
 ```
 200
 ```
-(The port-forward terminal also prints `Handling connection for 9209`. It shows `8080` because the Service's port 80 leads to Adminer's port 8080 inside the Pod.) Or open http://localhost:9209 in your browser: you should see the Adminer login page, with the server field already set to `db`. There is no database behind it in this demo, so just admire the page. Press Ctrl+C in the second terminal to stop the port-forward.
+(The port-forward terminal also prints `Handling connection for 8888`. It shows `8080` because the Service's port 80 leads to Adminer's port 8080 inside the Pod.) Or open http://localhost:8888 in your browser: you should see the Adminer login page, with the server field already set to `db`. There is no database behind it in this demo, so just admire the page. Press Ctrl+C in the second terminal to stop the port-forward.
 
 ## 👀 See it in monitoring (optional)
 If you installed the monitoring stack ([lab K19](../../../19-observability/README.md)), watch a container that was never created as a number. In Prometheus (`kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090`, then http://localhost:9090) run:

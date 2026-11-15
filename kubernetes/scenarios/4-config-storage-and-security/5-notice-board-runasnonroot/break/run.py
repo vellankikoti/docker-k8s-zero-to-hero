@@ -13,7 +13,7 @@ SCENARIO = os.path.dirname(HERE)
 
 NS = "k-21-nonroot"
 
-z.start_break(SCENARIO, [NS], port=9221)
+z.start_break(SCENARIO, [NS])
 z.say("Deploying the Campus notice board (2 Pods), its Service and a visitor…")
 z.apply_dir(HERE)
 z.must_wait("the visitor to start", 180, lambda: z.visitor_running(NS),

@@ -31,7 +31,7 @@ def settled():
     return z.kubectl_out("logs", "-n", NS, "-l", "app=showdown", "-c", "wait-for-redis") != ""
 
 
-z.start_break(SCENARIO, [NS], port=9226)
+z.start_break(SCENARIO, [NS])
 if not z.create_showdown_configmap(NS):
     z.die("Could not create the ConfigMap showdown-code.")
 z.say("Deploying Redis, the Cats vs Dogs app and a visitor…")

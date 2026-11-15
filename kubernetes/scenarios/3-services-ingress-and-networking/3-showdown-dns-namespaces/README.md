@@ -49,6 +49,25 @@ kubectl logs -f visitor -n k-12-dns-app
 ```
 You can stop it with Ctrl+C. We'll watch it again live when we fix things.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-12-dns-app
+   ```
+   Look for `showdown`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-12-dns-app svc/showdown 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc showdown -n k-12-dns-app -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc showdown -n k-12-dns-app`).
+- **Shortcut:** `python3 z2h.py open S3.3` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first (60 seconds)
 The app is configured with the short name `redis`. Before you look:
 1. In which namespace is a short name looked up first?
@@ -209,18 +228,18 @@ kubectl exec -n k-12-dns-app deploy/showdown -- python -c "import socket;print(s
 ```
 Now open it yourself. In a **second terminal** (leave it running):
 ```bash
-kubectl port-forward -n k-12-dns-app svc/showdown 9212:80
+kubectl port-forward -n k-12-dns-app svc/showdown 8888:80
 ```
 ```
-Forwarding from 127.0.0.1:9212 -> 8080
-Forwarding from [::1]:9212 -> 8080
+Forwarding from 127.0.0.1:8888 -> 8080
+Forwarding from [::1]:8888 -> 8080
 ```
-On a playground, add `--address 0.0.0.0` and open the URL for port 9212.
+On a playground, add `--address 0.0.0.0` and open the URL for port 8888.
 Back in the first terminal: ask if it is ready, cast a vote, and read the results:
 ```bash
-curl -s localhost:9212/readyz; echo
-curl -s "localhost:9212/api/vote?option=cats"; echo
-curl -s localhost:9212/api/results; echo
+curl -s localhost:8888/readyz; echo
+curl -s "localhost:8888/api/vote?option=cats"; echo
+curl -s localhost:8888/api/results; echo
 ```
 ```
 {"status": "ready", "storage": "redis"}
@@ -235,7 +254,7 @@ kubectl exec -n k-12-dns-data deploy/redis -- redis-cli hgetall votes
 cats
 1
 ```
-Or open http://localhost:9212 in your browser and vote. Press Ctrl+C in the second terminal to stop the port-forward.
+Or open http://localhost:8888 in your browser and vote. Press Ctrl+C in the second terminal to stop the port-forward.
 
 ## 🎯 Key takeaways
 - **A Service name is only short inside its own namespace.** `redis` means `redis.<my-namespace>.svc.cluster.local`.

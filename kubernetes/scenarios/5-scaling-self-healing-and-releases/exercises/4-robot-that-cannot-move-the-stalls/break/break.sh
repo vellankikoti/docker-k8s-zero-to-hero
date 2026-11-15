@@ -13,7 +13,6 @@ budget_ready() { [ "$(kubectl get pdb idli-pdb -n "$NS" -o jsonpath='{.status.cu
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9239 || die "Port 9239 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$NS" || die "Could not create the namespace $NS."
 
 say "Opening the idli stall (two Pods) and a safety rule…"

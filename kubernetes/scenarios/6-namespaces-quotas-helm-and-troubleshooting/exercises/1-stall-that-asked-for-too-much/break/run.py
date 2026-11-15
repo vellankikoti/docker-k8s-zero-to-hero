@@ -20,7 +20,7 @@ def refused():
                          'jsonpath={.items[*].status.conditions[?(@.type=="ReplicaFailure")].message}') != ""
 
 
-z.start_break(SCENARIO, [NS], port=9240)
+z.start_break(SCENARIO, [NS])
 z.say("Setting the scene…")
 z.apply_dir(HERE)
 z.must_wait("the ReplicaSet to be refused (the Deployment shows 0 Pods)", 90, refused,

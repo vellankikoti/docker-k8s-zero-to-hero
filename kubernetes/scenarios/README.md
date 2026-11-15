@@ -175,19 +175,64 @@ These are plain Python 3 (no packages): they run the same `kubectl` commands you
 
 From the repo root, `python3 z2h.py list` shows every scenario and `python3 z2h.py break S1.2` runs one.
 
+## 🌐 Opening the app: port-forward or NodePort, by environment
+
+A scenario is more fun (and more convincing) when you **see** it: the page that will not load, then the page that does. Which way you open it depends on where your cluster runs, and picking the wrong way is the most common reason "it does not open for me".
+
+**Why it differs.** A NodePort opens a port on the **node's own address**. On Killercoda and iximiuz you are *on* the node, so that address works. On kind, minikube and Docker Desktop the node is a container or a small VM inside your laptop, so `localhost:<NodePort>` is not the node and nothing answers. `kubectl port-forward` does not care: it tunnels through `kubectl`, so it works everywhere.
+
+| Where your cluster runs | Open the app with | Notes |
+|---|---|---|
+| **kind** | `kubectl port-forward` | NodePort usually needs the cluster created with `extraPortMappings` (the node is a Docker container) |
+| **minikube** | `kubectl port-forward` | `localhost:<NodePort>` does not work. `minikube service <svc> -n <ns> --url` also works, but only on a NodePort Service, and the scenario Services are ClusterIP: switch first with `python3 z2h.py open <id> --nodeport`. Simplest is port-forward |
+| **Docker Desktop** | `kubectl port-forward` | `localhost:<NodePort>` often does not answer, so do not rely on it |
+| **Killercoda** | NodePort **or** `port-forward --address 0.0.0.0` | open the **Traffic / Ports** menu and enter the number |
+| **iximiuz Labs** | NodePort **or** `port-forward --address 0.0.0.0` | use the platform's port/traffic link for that port |
+
+### Option 1: port-forward (works everywhere), step by step
+
+1. **Find the Service and its port.** Every scenario's namespace is named in its README.
+   ```bash
+   kubectl get svc -n <namespace>
+   ```
+   Note the Service's name and its `PORT(S)` (for example `80/TCP`: the port is 80).
+2. **In a second terminal, forward a free port on your laptop to the Service.** Leave it running; Ctrl+C stops it.
+   ```bash
+   kubectl port-forward -n <namespace> svc/<service> <free-port-on-your-laptop>:<service-port>
+   ```
+   For example `kubectl port-forward -n k-05-wrong-port svc/draw 8888:80`.
+   - The left number is **yours to choose**: any free port. `8888` in the READMEs is only an example. If you see `address already in use`, pick another (8889, 8890, ...) or stop the older port-forward with Ctrl+C.
+   - The right number must be the **Service's port** from step 1.
+3. **Open `http://localhost:<free-port>`** in your browser (`http://localhost:8888` in the example).
+
+On Killercoda or iximiuz add `--address 0.0.0.0` (`kubectl port-forward --address 0.0.0.0 -n ...`) and open the platform's port link for the port you chose. Do not use `--address 0.0.0.0` on a shared Wi-Fi (venue, college): anyone on the network could open your app.
+
+### Option 2: NodePort (Killercoda and iximiuz, or any cluster where you can reach the node)
+
+1. **Turn the Service into a NodePort.**
+   ```bash
+   kubectl patch svc <service> -n <namespace> -p '{"spec":{"type":"NodePort"}}'
+   ```
+2. **Read the NodePort** (the number after the colon in `PORT(S)`, for example `80:31234/TCP`) **and the node's address.**
+   ```bash
+   kubectl get svc <service> -n <namespace>
+   kubectl get nodes -o wide        # the INTERNAL-IP column
+   ```
+3. **Open it** with `http://<INTERNAL-IP>:<NodePort>` from inside the playground, or enter the NodePort in the platform's port menu.
+
+### The short way for both
+
+`python3 z2h.py open <id>` does the steps for you: it looks up the Service, picks a **free** port on your laptop (starting at 8888) and prints the address to open. Add `--port 9000` to choose the port yourself, `--public` on a playground (listens on all interfaces), or `--nodeport` to switch the Service to NodePort and print the port. `python3 z2h.py open` with no id lists every scenario that has a page.
+
+Scenarios without a page (a Job, a CronJob, a Gateway test, a Pod that never starts) have no box: you check them in the terminal.
+
 ## How a session runs
 
 1. **Instructor explains**: read the story and the concept in the scenario's `README.md`.
 2. **Break it**: `cd break && python3 run.py`
 3. **Predict, then investigate by hand.** Every scenario opens its investigation with a **predict-first** box (a few seconds in a 4-minute demo, a full minute in an exercise): say what you expect before you type anything. Then the class types the commands from the README. `break/run.py` never explains the cause, that is the class's job. In scenarios with a small `visitor` Pod (most of them; the README says when) open a **second terminal** and run `kubectl logs -f visitor -n <namespace>` (the README gives the exact line) to watch the app fail as a user sees it. (S5.3 has no visitor: watch the autoscaler instead with `kubectl get hpa -n k-25-hpa -w`.)
 4. **Meet the tempting wrong fix.** Each scenario names the fix everyone reaches for first (restart it, scale it up, switch the rule off) and shows why it does not work. Then **fix it**: `cd ../fix && python3 run.py`. If the visitor log is open, the live ❌ → ✅ moment is the best part of the demo.
-5. **Verify by hand**: the class checks it really works. `fix/run.py` does not verify for you. To open an app, use a **second terminal**:
-   ```bash
-   kubectl port-forward -n <namespace> svc/<service> 92NN:<port>
-   ```
-   The scenario README prints the exact line (for example S5.2: `kubectl port-forward -n k-07-slow-start svc/showdown 9207:80`). Then open `http://localhost:92NN` on a laptop. On a playground, add `--address 0.0.0.0` and open the URL for port `92NN`. Press **Ctrl+C** in that terminal to stop it. Several scenarios (for example S5.5, S4.4, S2.3, S2.5 and S2.4) have no web page: you verify them in the terminal.
-
-   **Why the laptop command has no `--address 0.0.0.0`:** without it, `port-forward` listens on `localhost` only. With it, anyone on the same network (venue Wi-Fi) could open your app, and Kanboard's default login is `admin` / `admin`. A playground needs `--address 0.0.0.0` because its URL proxy reaches the app from outside the terminal. Keep `-n <namespace>` right after `port-forward`: `cleanup.py` finds leftovers by that text.
+5. **Verify by hand**: the class checks it really works. `fix/run.py` does not verify for you. Open the app in the browser (the scenario's "🌐 See it in your browser" box has the exact command, and [Opening the app](#-opening-the-app-port-forward-or-nodeport-by-environment) explains which way to use on kind, minikube, Docker Desktop, Killercoda and iximiuz), or run `python3 z2h.py open <id>`.
 6. **Clean up**: `cd .. && python3 cleanup.py`
 
 Every `break/run.py` cleans up first, so you can run it again and again.
@@ -199,7 +244,7 @@ Every `break/run.py` cleans up first, so you can run it again and again.
 | kind | Works. The default network add-on of recent kind versions enforces NetworkPolicy, so S3.5 runs. The default StorageClass is `standard`. |
 | minikube | Works with a default StorageClass (`standard`). A plain `minikube start` may **not enforce NetworkPolicy**, so S3.5 stops with a clear message: start it with `minikube start --cni=calico` for S3.5. |
 | Docker Desktop (Kubernetes enabled) | Works. The StorageClass is called `hostpath`. NetworkPolicy is often **not enforced**, so S3.5 may stop with its message (that is the check working, not a bug). |
-| Killercoda, iximiuz | Supported. Open the apps through the platform's "traffic / ports" link for `92NN`. Both should enforce NetworkPolicy (S3.5's `break/run.py` checks before it breaks anything). |
+| Killercoda, iximiuz | Supported. Open the apps through the platform's "traffic / ports" link for the port you forwarded. Both should enforce NetworkPolicy (S3.5's `break/run.py` checks before it breaks anything). |
 | Windows | Use **WSL2** (Ubuntu) and run everything inside it. Git Bash is not enough: the scripts use `pkill` and `pgrep`, which it lacks. |
 | Play with Docker | **No Kubernetes there.** Use the Docker scenarios instead, or a Kubernetes playground. |
 

@@ -58,6 +58,25 @@ kubectl logs -f visitor -n k-30-friday
 ```
 It shows three kinds of line: ❌ (no answer at all), ⚠️ (the app answers, but not everything is right yet) and ✅ (all good).
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-30-friday
+   ```
+   Look for `showdown`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-30-friday svc/showdown 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc showdown -n k-30-friday -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc showdown -n k-30-friday`).
+- **Shortcut:** `python3 z2h.py open S6.x5` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔍 Investigate: the incident
 ### 🚨 Triage: everyone, together
 Before anyone splits up, the whole room takes one look at everything we deployed.
@@ -345,7 +364,7 @@ cd ../fix && python3 run.py
 
 👉 Next
    kubectl logs visitor -n k-30-friday --tail=3
-   kubectl port-forward -n k-30-friday svc/showdown 9230:80   (in a second terminal; then open http://localhost:9230; on a playground add --address 0.0.0.0 and open the URL for port 9230)
+   kubectl port-forward -n k-30-friday svc/showdown 8888:80   (in a second terminal; then open http://localhost:8888; on a playground add --address 0.0.0.0 and open the URL for port 8888)
 ```
 It changed nothing, because nothing needed changing: no new Pods, and the visitor stayed ✅. Short on time on stage? Skip the by-hand fixes, keep `kubectl logs -f visitor -n k-30-friday` open in the second terminal, and run `python3 run.py` straight after the triage. The ❌ lines turn ✅ within about 20 seconds (longer the first time, while the Redis image downloads). The three fixes land so close together that you may not see the ⚠️ stage at all.
 
@@ -404,28 +423,28 @@ Found 2 pods, using pod/showdown-7b7cb4db6d-m9hqz
 ```
 (Shortened: the `vote for dogs` lines go on.) Now open it yourself. In a **second terminal** (stop the visitor log with Ctrl+C first, or open a third):
 ```bash
-kubectl port-forward -n k-30-friday svc/showdown 9230:80
+kubectl port-forward -n k-30-friday svc/showdown 8888:80
 ```
 ```
-Forwarding from 127.0.0.1:9230 -> 8080
-Forwarding from [::1]:9230 -> 8080
+Forwarding from 127.0.0.1:8888 -> 8080
+Forwarding from [::1]:8888 -> 8080
 ```
-On a playground, run the same command with `--address 0.0.0.0` added, and open the URL for port 9230.
+On a playground, run the same command with `--address 0.0.0.0` added, and open the URL for port 8888.
 Back in the first terminal, check the page and the storage, then cast a vote:
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' localhost:9230
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8888
 ```
 ```
 200
 ```
 ```bash
-curl -s localhost:9230/api/info
+curl -s localhost:8888/api/info
 ```
 ```
 {"app": "z2h-showdown", "title": "Friday Finals: Cats vs Dogs", "version": "3.0.0", "hostname": "showdown-7b7cb4db6d-m9hqz", "options": [{"id": "cats", "emoji": "🐱", "label": "Cats"}, {"id": "dogs", "emoji": "🐶", "label": "Dogs"}], "storage": "redis", "theme": "#ff5a5f", "uptime_seconds": 33}
 ```
 ```bash
-curl -s 'localhost:9230/api/vote?option=cats'
+curl -s 'localhost:8888/api/vote?option=cats'
 ```
 ```
 {"voted": "cats", "results": {"cats": 1, "dogs": 18}, "total": 19, "storage": "redis", "served_by": "showdown-7b7cb4db6d-m9hqz", "version": "3.0.0"}
@@ -445,7 +464,7 @@ kubectl exec visitor -n k-30-friday -- wget -qO- "http://$P2:8080/api/results"; 
 ```
 {"results": {"cats": 2, "dogs": 23}, "total": 25, "storage": "redis", "served_by": "showdown-7b7cb4db6d-m9hqz", "version": "3.0.0"}
 ```
-Both Pods agree, `"cats": 2`: your port-forward vote plus the one at Pod 1, now shared through Redis. (The dog count keeps climbing because the visitor votes every 2 seconds. If you vote in the browser, your counts will be higher.) Open http://localhost:9230 and watch the dogs pull ahead live. Press Ctrl+C in the port-forward terminal when you're done.
+Both Pods agree, `"cats": 2`: your port-forward vote plus the one at Pod 1, now shared through Redis. (The dog count keeps climbing because the visitor votes every 2 seconds. If you vote in the browser, your counts will be higher.) Open http://localhost:8888 and watch the dogs pull ahead live. Press Ctrl+C in the port-forward terminal when you're done.
 
 ## 🔁 Incident retro (blameless)
 On Monday the team meets for 20 minutes. Nobody asks "who broke it?". They ask "how did three small mistakes get all the way to production, and what catches them next time?"

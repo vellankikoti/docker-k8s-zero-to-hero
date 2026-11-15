@@ -27,5 +27,5 @@
 <rect x="40" y="420" width="920" height="62" rx="12" fill="#f4f7fb" stroke="#c4cfdf" stroke-width="2"/>
 <text x="62" y="440" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#55637a" text-anchor="start">YOU WILL LEARN</text>
 <text x="62" y="462" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="14" font-weight="500" fill="#0f1f3d" text-anchor="start">readiness vs liveness, probes, Service endpoints</text>
-<text x="938" y="440" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#55637a" text-anchor="end">12 min   ·   beginner   ·   open http://localhost:9206 (port-forward)</text>
+<text x="938" y="440" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#55637a" text-anchor="end">12 min   ·   beginner   ·   open http://localhost:8888 (port-forward)</text>
 </svg>

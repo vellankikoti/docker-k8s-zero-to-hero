@@ -19,7 +19,7 @@ def not_ready():
     return z.kubectl_out(*BOARD, "jsonpath={.items[0].status.containerStatuses[0].ready}") == "false"
 
 
-z.start_break(SCENARIO, [NS], port=9206)
+z.start_break(SCENARIO, [NS])
 z.say("Deploying Kanboard, its Service and a visitor…")
 z.apply_dir(HERE)
 # NOT "rollout status": it waits for Ready, which never happens here (that is the bug).

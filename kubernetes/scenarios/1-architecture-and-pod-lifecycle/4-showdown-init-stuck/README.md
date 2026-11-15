@@ -48,6 +48,25 @@ kubectl logs visitor -n k-26-init-stuck --tail=3
 ```
 You can follow it live with `kubectl logs -f visitor -n k-26-init-stuck` (Ctrl+C to stop). We'll watch it again when we fix things.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-26-init-stuck
+   ```
+   Look for `showdown`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-26-init-stuck svc/showdown 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc showdown -n k-26-init-stuck -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc showdown -n k-26-init-stuck`).
+- **Shortcut:** `python3 z2h.py open S1.4` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first (60 seconds)
 An init container waits for a service whose name is mistyped. Before you look:
 1. Will the app container start?
@@ -262,33 +281,33 @@ Defaulted container "showdown" out of: showdown, wait-for-redis (init)
 ```
 Now open it yourself. In a **second terminal** (leave it running):
 ```bash
-kubectl port-forward -n k-26-init-stuck svc/showdown 9226:80
+kubectl port-forward -n k-26-init-stuck svc/showdown 8888:80
 ```
 ```
-Forwarding from 127.0.0.1:9226 -> 8080
-Forwarding from [::1]:9226 -> 8080
+Forwarding from 127.0.0.1:8888 -> 8080
+Forwarding from [::1]:8888 -> 8080
 ```
-On a playground, run the same command with `--address 0.0.0.0` added, and open the URL for port 9226.
+On a playground, run the same command with `--address 0.0.0.0` added, and open the URL for port 8888.
 Back in the first terminal, check the page, then cast a vote and read it back. The count comes from Redis, not from the app's memory:
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' localhost:9226
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8888
 ```
 ```
 200
 ```
 ```bash
-curl -s 'localhost:9226/api/vote?option=cats'
+curl -s 'localhost:8888/api/vote?option=cats'
 ```
 ```
 {"voted": "cats", "results": {"cats": 1, "dogs": 0}, "total": 1, "storage": "redis", "served_by": "showdown-857dfb5d55-k779h", "version": "1.0.0"}
 ```
 ```bash
-curl -s localhost:9226/api/results
+curl -s localhost:8888/api/results
 ```
 ```
 {"results": {"cats": 1, "dogs": 0}, "total": 1, "storage": "redis", "served_by": "showdown-857dfb5d55-k779h", "version": "1.0.0"}
 ```
-(If you vote in the browser first, your counts will be higher.) Or open http://localhost:9226 in your browser and cast a vote. Press Ctrl+C in the second terminal to stop the port-forward.
+(If you vote in the browser first, your counts will be higher.) Or open http://localhost:8888 in your browser and cast a vote. Press Ctrl+C in the second terminal to stop the port-forward.
 
 ## 🎯 Key takeaways
 - **`Init:N/M` means N of M init containers have finished.** The app container hasn't started, so the app's own logs don't exist yet. Look at the init container.

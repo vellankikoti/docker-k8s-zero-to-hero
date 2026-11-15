@@ -18,7 +18,7 @@ def page_ready():
     return z.kubectl_out("get", "deployment", "theme", "-n", NS, "-o", "jsonpath={.status.readyReplicas}") == "1"
 
 
-z.start_break(SCENARIO, [NS], port=9223)
+z.start_break(SCENARIO, [NS])
 z.say("Deploying the Campus Today page and a visitor…")
 z.apply_files(os.path.join(HERE, "code.yaml"), os.path.join(HERE, "config.yaml"))
 z.apply_files(os.path.join(HERE, "app.yaml"), os.path.join(HERE, "visitor.yaml"))

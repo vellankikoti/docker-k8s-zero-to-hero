@@ -12,7 +12,6 @@ refused() { [ -n "$(kubectl get rs -n "$NS" -l app=chaat -o jsonpath='{.items[*]
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9240 || die "Port 9240 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$NS" || die "Could not create the namespace $NS."
 
 say "Setting the scene…"

@@ -20,7 +20,7 @@ def stuck():
     return z.pod_reason(NS, "app=draw") in ("ErrImagePull", "ImagePullBackOff") and z.events_contain(NS, "pull")
 
 
-z.start_break(SCENARIO, [NS], port=9202)
+z.start_break(SCENARIO, [NS])
 z.say("Deploying the whiteboard (Excalidraw) and a visitor…")
 z.apply_dir(HERE)
 z.must_wait("the image pull to fail", 180, stuck,

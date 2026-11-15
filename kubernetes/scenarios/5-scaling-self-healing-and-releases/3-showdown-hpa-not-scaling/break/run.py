@@ -25,7 +25,7 @@ def hpa_cannot_read():
     return "did not receive metrics" not in message and "no metrics returned" not in message
 
 
-z.start_break(SCENARIO, [NS], port=9225)
+z.start_break(SCENARIO, [NS])
 z.say("Making sure the cluster can measure CPU (installing metrics-server if it is not there; this can take a minute)…")
 if not z.ensure_metrics_server("k25"):
     z.die("metrics-server did not become ready. Check: kubectl -n kube-system get pods")

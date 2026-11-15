@@ -45,6 +45,25 @@ kubectl logs -f visitor -n k-05-wrong-port
 ```
 You can stop it with Ctrl+C. We'll watch it again live when we fix things.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-05-wrong-port
+   ```
+   Look for `draw`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-05-wrong-port svc/draw 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc draw -n k-05-wrong-port -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc draw -n k-05-wrong-port`).
+- **Shortcut:** `python3 z2h.py open S3.2` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first (60 seconds)
 The Service has endpoints and the Pods are Ready. Before you look:
 1. Will a request to the Service work?
@@ -122,7 +141,7 @@ pod k-05-wrong-port/tmp terminated (Error)
 ```
 There it is: **refused** on 8080 (the exact wording of the last two lines varies by kubectl version). The Pod is healthy; the Service is knocking on the wrong door.
 
-An extra clue, if you have a minute to spare: `kubectl port-forward -n k-05-wrong-port svc/draw 9205:80` also follows the Service's `targetPort`. It starts happily, but the first time you open the page it fails (the terminal prints something like `Forwarding from 127.0.0.1:9205 -> 8080`, then `an error occurred forwarding 9205 -> 8080 … connection refused` and `error: lost connection to pod`; the wording varies by version). Notice the `-> 8080` in the first line. Press Ctrl+C to stop it.
+An extra clue, if you have a minute to spare: `kubectl port-forward -n k-05-wrong-port svc/draw 8888:80` also follows the Service's `targetPort`. It starts happily, but the first time you open the page it fails (the terminal prints something like `Forwarding from 127.0.0.1:8888 -> 8080`, then `an error occurred forwarding 8888 -> 8080 … connection refused` and `error: lost connection to pod`; the wording varies by version). Notice the `-> 8080` in the first line. Press Ctrl+C to stop it.
 
 ## 🪤 The tempting wrong fix: scale it up
 "More Pods, more chances."
@@ -193,21 +212,21 @@ kubectl logs visitor -n k-05-wrong-port --tail=3
 ```
 Now open it yourself. In a **second terminal** (leave it running):
 ```bash
-kubectl port-forward -n k-05-wrong-port svc/draw 9205:80
+kubectl port-forward -n k-05-wrong-port svc/draw 8888:80
 ```
 ```
-Forwarding from 127.0.0.1:9205 -> 80
-Forwarding from [::1]:9205 -> 80
+Forwarding from 127.0.0.1:8888 -> 80
+Forwarding from [::1]:8888 -> 80
 ```
-On a playground, add `--address 0.0.0.0` and open the URL for port 9205.
+On a playground, add `--address 0.0.0.0` and open the URL for port 8888.
 Back in the first terminal:
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' localhost:9205
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8888
 ```
 ```
 200
 ```
-(The port-forward terminal also prints `Handling connection for 9205`.) Or open http://localhost:9205 in your browser and draw something. Press Ctrl+C in the second terminal to stop the port-forward.
+(The port-forward terminal also prints `Handling connection for 8888`.) Or open http://localhost:8888 in your browser and draw something. Press Ctrl+C in the second terminal to stop the port-forward.
 
 ## 🎯 Key takeaways
 - **`port` is the Service's door; `targetPort` is the container's door.** They only match if you make them match.

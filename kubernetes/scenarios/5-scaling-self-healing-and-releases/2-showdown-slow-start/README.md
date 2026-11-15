@@ -51,6 +51,25 @@ kubectl logs -f visitor -n k-07-slow-start
 ```
 You can stop it with Ctrl+C. We'll watch it again live when we fix things.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-07-slow-start
+   ```
+   Look for `showdown`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-07-slow-start svc/showdown 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc showdown -n k-07-slow-start -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc showdown -n k-07-slow-start`).
+- **Shortcut:** `python3 z2h.py open S5.2` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first: do the maths
 The app needs about 20 seconds to wake up. The liveness probe starts checking after `initialDelaySeconds: 5`, and gives up after `failureThreshold: 1` miss.
 1. Roughly when will the first restart happen?
@@ -208,21 +227,21 @@ kubectl describe pod -n k-07-slow-start -l app=showdown | grep -E 'Startup:|Live
 ```
 (`kubectl describe` may also list a few `Startup probe failed` events from the first 20 seconds. They are harmless: the app was still waking up, and the startup probe is allowed 12 failures.) Now open it yourself. In a **second terminal** (leave it running):
 ```bash
-kubectl port-forward -n k-07-slow-start svc/showdown 9207:80
+kubectl port-forward -n k-07-slow-start svc/showdown 8888:80
 ```
 ```
-Forwarding from 127.0.0.1:9207 -> 8080
-Forwarding from [::1]:9207 -> 8080
+Forwarding from 127.0.0.1:8888 -> 8080
+Forwarding from [::1]:8888 -> 8080
 ```
-On a playground, add `--address 0.0.0.0` and open the URL for port 9207.
+On a playground, add `--address 0.0.0.0` and open the URL for port 8888.
 Back in the first terminal:
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' localhost:9207
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8888
 ```
 ```
 200
 ```
-Or open http://localhost:9207 in your browser and cast a vote. Press Ctrl+C in the second terminal to stop the port-forward.
+Or open http://localhost:8888 in your browser and cast a vote. Press Ctrl+C in the second terminal to stop the port-forward.
 
 ## 👀 See it in monitoring (optional)
 If you installed the monitoring stack ([lab K19](../../../19-observability/README.md)), watch a liveness probe that kills a healthy app as a number. In Prometheus (`kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090`, then http://localhost:9090) run:

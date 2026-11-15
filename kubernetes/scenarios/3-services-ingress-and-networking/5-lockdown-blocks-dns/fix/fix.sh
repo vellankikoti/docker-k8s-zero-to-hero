@@ -17,4 +17,4 @@ kubectl rollout status deployment/showdown -n "$NS" --timeout=180s >/dev/null \
 
 show_next "✅ Fixed. Now verify it yourself:" \
   "kubectl get networkpolicy lockdown -n $NS -o yaml" \
-  "kubectl port-forward -n $NS svc/showdown 9213:80   (in a second terminal; then open http://localhost:9213; on a playground add --address 0.0.0.0 and open the URL for port 9213)"
+  "kubectl port-forward -n $NS svc/showdown 8888:80   (in a second terminal; then open http://localhost:8888; on a playground add --address 0.0.0.0 and open the URL for port 8888)"

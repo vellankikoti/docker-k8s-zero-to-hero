@@ -24,7 +24,7 @@ def db_settled():
     return z.pod_reason(NS, "app=redis") in ("ImagePullBackOff", "ErrImagePull")
 
 
-z.start_break(SCENARIO, [NS], port=9230)
+z.start_break(SCENARIO, [NS])
 if not z.create_showdown_configmap(NS):
     z.die("Could not create the ConfigMap showdown-code.")
 z.say("Shipping the Friday release: the Cats vs Dogs app, its database, its Service and a visitor…")

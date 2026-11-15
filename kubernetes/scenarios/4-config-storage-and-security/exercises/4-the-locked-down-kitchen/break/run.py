@@ -21,7 +21,7 @@ def cfgerr():
         "jsonpath={.items[*].status.containerStatuses[*].state.waiting.reason}")
 
 
-z.start_break(SCENARIO, [NS], port=9245)
+z.start_break(SCENARIO, [NS])
 if z.kubectl("label", "namespace", NS, "pod-security.kubernetes.io/enforce=restricted", "--overwrite")[0] != 0:
     z.die("Could not label the namespace.")
 z.say("Setting the scene…")

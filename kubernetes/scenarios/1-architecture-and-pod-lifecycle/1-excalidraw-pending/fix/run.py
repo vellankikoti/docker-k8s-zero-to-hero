@@ -18,4 +18,4 @@ z.must_wait("the whiteboard Pod to be Ready", 180, lambda: z.rolled_out(NS, "dra
             "The Pod didn't become Ready. Check: kubectl get pods -n " + NS)
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get pods -n " + NS,
-            z.forward_hint(NS, "draw", 9201))
+            z.forward_hint(NS, "draw"))

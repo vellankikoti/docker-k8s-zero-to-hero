@@ -32,8 +32,6 @@ def app_cannot_find_redis():
 
 z.need_cluster()
 z.run_cleanup(SCENARIO)
-if not z.port_free(9212):
-    z.die("Port 9212 is busy, so this scenario can't start. Free it (see above) and run break again.")
 if not z.fresh_ns(APP, DATA):
     z.die("Could not create the namespaces %s and %s." % (APP, DATA))
 if not z.create_showdown_configmap(APP):

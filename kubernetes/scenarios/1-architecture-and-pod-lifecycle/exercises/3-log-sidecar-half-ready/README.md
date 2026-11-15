@@ -52,6 +52,25 @@ kubectl logs visitor -n k-29-sidecar --tail=3
 ```
 (Times will differ.) You can follow it live with `kubectl logs -f visitor -n k-29-sidecar` and stop it with Ctrl+C. We'll watch it again live when we fix things.
 
+### 🌐 See it in your browser (do this, not only the logs)
+Open the page now, while it is broken, and again after the fix: watching it change is half the lesson. Three steps:
+
+1. **Find the Service and its port.**
+   ```bash
+   kubectl get svc -n k-29-sidecar
+   ```
+   Look for `notice`. The `PORT(S)` column says `80/TCP`, so the Service's port is 80.
+2. **In a second terminal, forward a free port on your laptop to it.** Leave it running (Ctrl+C stops it).
+   ```bash
+   kubectl port-forward -n k-29-sidecar svc/notice 8888:80
+   ```
+   The pattern is `<a free port on your laptop>:<the Service's port from step 1>`. `8888` is only an example: **any free port works**. If you see `address already in use`, pick another one (say 8889).
+3. **Open it:** http://localhost:8888. Before the fix you will see an error or nothing (if no Pod is ready, port-forward says so: that is also the symptom). After the fix, refresh.
+
+- **kind, minikube, Docker Desktop:** use exactly this. Do **not** try `localhost:<NodePort>`: the node lives inside a container or VM, so that address is not your laptop.
+- **Killercoda, iximiuz:** add `--address 0.0.0.0` and open the platform's port link for the port you chose, or use a NodePort (`kubectl patch svc notice -n k-29-sidecar -p '{"spec":{"type":"NodePort"}}'`, then `kubectl get svc notice -n k-29-sidecar`).
+- **Shortcut:** `python3 z2h.py open S1.x3` picks a free port for you and prints the address (add `--public` on a playground, `--nodeport` for NodePort). Full guide: [Opening the app](../../../README.md#-opening-the-app-port-forward-or-nodeport-by-environment).
+
 ## 🔮 Predict first (60 seconds)
 A helper container waits for a log file with the wrong name. Before you look:
 1. What will `READY` show for the Pod?
@@ -263,28 +282,28 @@ kubectl logs visitor -n k-29-sidecar --tail=3
 ```
 Now look at the board yourself. In a **second terminal** (leave it running):
 ```bash
-kubectl port-forward -n k-29-sidecar svc/notice 9229:80
+kubectl port-forward -n k-29-sidecar svc/notice 8888:80
 ```
 ```
-Forwarding from 127.0.0.1:9229 -> 8080
-Forwarding from [::1]:9229 -> 8080
+Forwarding from 127.0.0.1:8888 -> 8080
+Forwarding from [::1]:8888 -> 8080
 ```
-On a playground, add `--address 0.0.0.0` and open the URL for port 9229.
+On a playground, add `--address 0.0.0.0` and open the URL for port 8888.
 Back in the first terminal:
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' localhost:9229
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8888
 ```
 ```
 200
 ```
-(The port-forward terminal also prints `Handling connection for 9229`.) That visit is now in the helper's log too:
+(The port-forward terminal also prints `Handling connection for 8888`.) That visit is now in the helper's log too:
 ```bash
 kubectl logs notice-578487d68c-7qj2z -n k-29-sidecar -c log-shipper | grep curl
 ```
 ```
 127.0.0.1 - - [09/Nov/2026:00:30:40 +0000] "GET / HTTP/1.1" 200 4747 "-" "curl/8.7.1"
 ```
-(The `curl/…` version will differ on your computer.) Or open http://localhost:9229 in your browser: pick a day on the mess menu, book a laundry slot, and watch the quiet-hours countdown. The page needs no internet. Each reload adds a line to the helper's log. Press Ctrl+C in the second terminal to stop the port-forward.
+(The `curl/…` version will differ on your computer.) Or open http://localhost:8888 in your browser: pick a day on the mess menu, book a laundry slot, and watch the quiet-hours countdown. The page needs no internet. Each reload adds a line to the helper's log. Press Ctrl+C in the second terminal to stop the port-forward.
 
 ## 👀 See it in monitoring (optional)
 If you installed the monitoring stack ([lab K19](../../../../19-observability/README.md)), watch a Pod that is half ready as a number. In Prometheus (`kubectl port-forward -n monitoring svc/kube-prometheus-stack-prometheus 9090:9090`, then http://localhost:9090) run:

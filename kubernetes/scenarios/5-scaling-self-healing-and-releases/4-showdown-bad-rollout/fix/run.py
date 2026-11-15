@@ -25,4 +25,4 @@ z.must_wait("only the 3 good Pods to remain", 60, lambda: z.pod_count(NS, "app=s
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl rollout history deployment/showdown -n " + NS,
             "kubectl get pods -n " + NS,
-            z.forward_hint(NS, "showdown", 9211))
+            z.forward_hint(NS, "showdown"))

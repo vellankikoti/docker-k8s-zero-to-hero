@@ -22,4 +22,4 @@ wait_for "the old crashing Pods to be removed" 60 two_pods \
 
 show_next "✅ Fixed. Now verify it yourself:" \
   "kubectl get pods -n $NS" \
-  "kubectl port-forward -n $NS svc/showdown 9220:80   (in a second terminal; then open http://localhost:9220; on a playground add --address 0.0.0.0 and open the URL for port 9220)"
+  "kubectl port-forward -n $NS svc/showdown 8888:80   (in a second terminal; then open http://localhost:8888; on a playground add --address 0.0.0.0 and open the URL for port 8888)"

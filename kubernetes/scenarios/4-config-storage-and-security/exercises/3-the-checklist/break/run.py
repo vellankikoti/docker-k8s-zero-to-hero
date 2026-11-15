@@ -20,7 +20,7 @@ def refused():
                          'jsonpath={.items[*].status.conditions[?(@.type=="ReplicaFailure")].message}') != ""
 
 
-z.start_break(SCENARIO, [NS], port=9244)
+z.start_break(SCENARIO, [NS])
 if z.kubectl("label", "namespace", NS, "pod-security.kubernetes.io/enforce=restricted", "--overwrite")[0] != 0:
     z.die("Could not label the namespace.")
 z.say("Setting the scene…")

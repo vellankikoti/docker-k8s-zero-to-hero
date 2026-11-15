@@ -13,7 +13,6 @@ board_stuck() { [ "$(pod_reason "$NS" app=board)" = "CrashLoopBackOff" ]; }
 
 need_cluster
 bash "$HERE/../cleanup.sh"
-port_free 9222 || die "Port 9222 is busy, so this scenario can't start. Free it (see above) and run break.sh again."
 fresh_ns "$NS" || die "Could not create the namespace $NS."
 
 say "Deploying the Exam Week Board (2 Pods), its Service and a visitor…"

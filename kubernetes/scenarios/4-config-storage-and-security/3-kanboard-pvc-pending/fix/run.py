@@ -32,4 +32,4 @@ z.must_wait("the disk (PVC) to be Bound", 60, pvc_bound,
             "The PVC isn't Bound. Check: kubectl get pvc -n " + NS)
 z.show_next("✅ Fixed. Now verify it yourself:",
             "kubectl get pods,pvc -n " + NS,
-            z.forward_hint(NS, "board", 9210))
+            z.forward_hint(NS, "board"))
