@@ -183,8 +183,8 @@ A scenario is more fun (and more convincing) when you **see** it: the page that 
 
 | Where your cluster runs | Open the app with | Notes |
 |---|---|---|
-| **kind** | `kubectl port-forward` | NodePort only works if the cluster was created with `extraPortMappings` |
-| **minikube** | `kubectl port-forward` | or `minikube service <svc> -n <ns> --url` (it opens a tunnel for you); `localhost:<NodePort>` does not work |
+| **kind** | `kubectl port-forward` | NodePort usually needs the cluster created with `extraPortMappings` (the node is a Docker container) |
+| **minikube** | `kubectl port-forward` | `localhost:<NodePort>` does not work. `minikube service <svc> -n <ns> --url` also works, but only on a NodePort Service, and the scenario Services are ClusterIP: switch first with `python3 z2h.py open <id> --nodeport`. Simplest is port-forward |
 | **Docker Desktop** | `kubectl port-forward` | `localhost:<NodePort>` often does not answer, so do not rely on it |
 | **Killercoda** | NodePort **or** `port-forward --address 0.0.0.0` | open the **Traffic / Ports** menu and enter the number |
 | **iximiuz Labs** | NodePort **or** `port-forward --address 0.0.0.0` | use the platform's port/traffic link for that port |
