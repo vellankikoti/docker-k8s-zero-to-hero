@@ -8,7 +8,8 @@
 #   - kind           (kind load docker-image)
 #   - minikube       (minikube image load)
 #   - any cluster whose nodes are local Docker containers
-#   - Killercoda / kubeadm VMs: imports into containerd on THIS node via ctr (run on every node)
+#   - Killercoda / kubeadm VMs: imports into containerd on this node via ctr, then on every other
+#     node over ssh (Killercoda's controlplane can ssh to node01 without a password)
 set -euo pipefail
 
 if [ $# -eq 0 ]; then
@@ -67,13 +68,35 @@ for img in "$@"; do
       if command -v docker >/dev/null && import_into_node_containers "$img" 2>/dev/null; then
         ok "$img loaded into node containers"
       elif command -v ctr >/dev/null; then
-        # e.g. Killercoda / kubeadm VMs where you are root on the node
+        # e.g. Killercoda / kubeadm VMs where you are root on the node.
+        # A Pod can land on ANY node, so the image must be in containerd on every one of them.
+        tarball="$(mktemp "${TMPDIR:-/tmp}/z2h-image.XXXXXX")"
         if command -v docker >/dev/null && docker image inspect "$img" >/dev/null 2>&1; then
-          docker save "$img" | ctr -n k8s.io images import -
+          docker save "$img" -o "$tarball"
+        elif ctr -n k8s.io images ls -q | grep -qE "(^|/)${img}\$"; then
+          ctr -n k8s.io images export "$tarball" "$(ctr -n k8s.io images ls -q | grep -E "(^|/)${img}\$" | head -1)"
         else
-          die "No local Docker image $img to import. Build it on this node first (see 00-setup, Killercoda section)."
+          rm -f "$tarball"
+          die "No local image $img to import. Build it on this node first (see 00-setup, Killercoda section)."
         fi
-        ok "$img imported into containerd on $(hostname). Repeat on every node that may run the Pod."
+        ctr -n k8s.io images import "$tarball" >/dev/null
+        ok "$img imported into containerd on $(hostname)"
+        missed=""
+        for node in $NODES; do
+          [ "$node" = "$(hostname)" ] && continue
+          if ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "$node" true 2>/dev/null; then
+            say "copying $img to $node over ssh"
+            ssh -o BatchMode=yes "$node" 'ctr -n k8s.io images import -' < "$tarball" >/dev/null
+            ok "$img imported into containerd on $node"
+          else
+            missed="$missed $node"
+          fi
+        done
+        rm -f "$tarball"
+        if [ -n "$missed" ]; then
+          printf '\033[1;33m! could not reach%s over ssh: Pods scheduled there will be stuck in ErrImagePull.\033[0m\n' "$missed"
+          printf '  Copy it by hand:  docker save %s | ssh <node> ctr -n k8s.io images import -\n' "$img"
+        fi
       else
         die "Unknown cluster type. Push $img to a registry the cluster can pull from (see Lab D10)."
       fi
