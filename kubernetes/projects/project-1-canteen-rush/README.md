@@ -99,7 +99,23 @@ Open http://localhost:8080. Order a few things and refresh a few times.
 
 > 🌐 **On Killercoda or iximiuz** add `--address 0.0.0.0` to the `port-forward` line, then open the platform's port link for 8080 (Killercoda: top-right menu → **Traffic / Ports**). Without it the forward listens only inside the VM, and the link shows **502 Bad Gateway**. `port-forward` keeps running in that terminal, so open a second terminal tab for the next commands.
 
-**What is odd? Look at the numbers and the coloured chips.** Each refresh may show different totals. Each Pod keeps orders in *its own memory*, and the Service spreads you across two Pods. That is a bug you will fix in Phase 4.
+**Why the page only ever shows one counter chip.** `port-forward` is a debugging tunnel to **one** Pod: when it starts it picks a Pod behind the Service and sends every request there, however often you refresh. To see what the Service really does, ask it from *inside* the cluster, the way another app would. This is the **counter check**, and you will reuse it in later phases:
+```bash
+kubectl run counters -n canteen --rm -i --restart=Never --image=curlimages/curl:8.11.1 -- sh -c 'sleep 2; for i in 1 2 3 4 5 6 7 8; do r=$(curl -s -m 2 http://canteen/api/stats) && echo "$r" | sed -E "s/.*\"total_orders\": ([0-9]+).*\"served_by\": \"([^\"]+)\".*/\2  orders=\1/" || echo "no answer"; done'
+```
+Eight answers (kubectl prints a line or two of notices first, and `pod "counters" deleted` at the end: ignore them), with both Pod names mixed together: the Service spreads requests across its Pods.
+
+**What is odd? Look at the `orders=` numbers.** The Pod your browser talks to has your orders, and the other Pod says `orders=0`. Each Pod keeps orders in *its own memory*, and the Service spreads customers across both Pods, so what a customer sees depends on which counter answers. That is a bug you will fix in Phase 4.
+
+<details><summary>See it in the browser too (Killercoda, iximiuz)</summary>
+
+Send the browser through the Service instead of a tunnel, with a NodePort:
+```bash
+kubectl patch svc canteen -n canteen -p '{"spec":{"type":"NodePort"}}'
+kubectl get svc canteen -n canteen          # the port after 80: is the NodePort, e.g. 80:31234/TCP
+```
+Open that port number in **Traffic / Ports**. Every request is a new connection, so the Service spreads them: click Order a few times and watch the chips and the totals change from click to click. Use this link instead of the port-forward from now on (it also survives every Pod replacement in the next phases). On a laptop cluster, stick with the counter check.
+</details>
 
 **Follow the apply: who did what?** This is the architecture lesson, from real evidence:
 ```bash
@@ -129,11 +145,15 @@ kubectl apply -f $P/10-redis.yaml
 kubectl apply -f $P/21-canteen.yaml
 kubectl rollout status deployment/canteen -n canteen
 ```
-`21-canteen.yaml` is the same app, with orders sent to Redis, probes added, resources declared and a safe update strategy. Applying it to the existing Deployment is your first **rolling update**. Refresh the page: every counter now shows the **same** numbers. Prove they survive:
+`21-canteen.yaml` is the same app, with orders sent to Redis, probes added, resources declared and a safe update strategy. Applying it to the existing Deployment is your first **rolling update**.
+
+> **Your `port-forward` just stopped working**, even if it still looks like it is running: the rolling update replaced the Pod it was tied to. Press Ctrl+C and start it again. Every step that replaces Pods does this, because a tunnel goes to one Pod and that Pod is gone. (The NodePort link, if you made one, keeps working: it goes through the Service.)
+
+Order a few things on the page, then run the counter check from Phase 3 again: every Pod now reports the **same** `orders=`. Prove they survive:
 ```bash
 kubectl delete pod -n canteen -l app=canteen
 ```
-Order again: the totals did not reset.
+Start the port-forward again and order once more: the totals did not reset.
 
 ✅ **Done when** the totals survive deleting every Pod.
 📸 **Evidence:** screenshot the page showing Redis storage and the same totals before and after.
@@ -141,7 +161,7 @@ Order again: the totals did not reset.
 ## Phase 5 · Self-healing and probes (8 min)
 Two terminals: `kubectl get pods -n canteen -w` in one.
 
-1. **Crash a counter.** Press the 💥 button on the page. Watch `RESTARTS` go up by one and a new container start. `kubectl describe pod -n canteen <name>` shows `Last State: Terminated, Exit Code: 1`.
+1. **Crash a counter.** Press the 💥 button on the page. Watch `RESTARTS` go up by one and a new container start. `kubectl describe pod -n canteen <name>` shows `Last State: Terminated, Exit Code: 1`. (If the counter you crashed was the one your `port-forward` uses, the forward stops working too: Ctrl+C and start it again.)
 2. **Delete a Pod.** `kubectl delete pod -n canteen <name>`. Another appears *before* you finish typing: the ReplicaSet notices the gap.
 3. **Make the app "not ready".** The readiness probe also checks Redis. Take Redis away:
    ```bash
@@ -149,7 +169,7 @@ Two terminals: `kubectl get pods -n canteen -w` in one.
    kubectl get pods -n canteen
    kubectl get endpointslices -n canteen
    ```
-   Pods turn `0/1`, restarts stay `0`, and the Service has **no endpoints**: the page stops answering. Bring Redis back (`--replicas=1`) and the Pods become Ready *by themselves*, with no restart.
+   Pods turn `0/1`, restarts stay `0`, and the Service has **no endpoints**. Run the counter check from Phase 3: every line says `no answer`, because nothing behind the Service is ready for customers. (A `port-forward` may still load the page: it goes straight to a Pod and skips the Service, which is one more reason it is a debugging tool, not how customers arrive.) Bring Redis back (`--replicas=1`) and the Pods become Ready *by themselves*, with no restart; the counter check answers again.
 
 **Say it in plain words:** *liveness restarts a container that is stuck. Readiness only stops sending it customers.*
 
@@ -160,7 +180,7 @@ Two terminals: `kubectl get pods -n canteen -w` in one.
 kubectl scale deployment canteen -n canteen --replicas=5
 kubectl get pods -n canteen
 ```
-Refresh the page: more coloured chips appear, one per counter that answered you. Now let Kubernetes decide:
+Run the counter check from Phase 3 again: several different Pod names now answer, all with the same `orders=`. (With the NodePort link the page shows a chip for each counter that answered you.) Now let Kubernetes decide:
 ```bash
 kubectl apply -f $P/30-hpa.yaml
 kubectl get hpa -n canteen -w                 # in a second terminal

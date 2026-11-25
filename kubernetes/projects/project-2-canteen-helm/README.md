@@ -88,7 +88,7 @@ The **file** is up to date. The **environment variable** is still the old value:
 ✅ **Done when** you can say which of the two needs a restart, and why.
 
 ## Phase 4 · The protected button (6 min)
-The app has an endpoint that closes the day: it saves the report and resets the counts. Only someone holding the token may call it.
+The app has an endpoint that closes the day: it saves the report and resets the counts. Only someone holding the token may call it. These commands go through your `port-forward` from Phase 2. If you ran the environment-variable exercise in Phase 3, that rollout replaced the Pods and the forward stopped working (even if it still looks like it is running): Ctrl+C and start it again first.
 ```bash
 curl -s -X POST localhost:8080/api/admin/close-day; echo                                # no token
 curl -s -X POST -H 'X-Admin-Token: wrong' localhost:8080/api/admin/close-day; echo       # wrong token
