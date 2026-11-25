@@ -21,7 +21,7 @@ spec:
           type: RuntimeDefault                 # block dangerous syscalls
       containers:
         - name: api
-          image: z2h/api:1.0
+          image: vellankikoti/z2h-api:1.0
           imagePullPolicy: IfNotPresent
           ports: [ { containerPort: 8080 } ]
           readinessProbe:

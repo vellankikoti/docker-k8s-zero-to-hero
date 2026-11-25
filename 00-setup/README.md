@@ -72,12 +72,7 @@ cd docker-k8s-zero-to-hero
 ```
 4. To open a web page (port-forward, NodePort), use the top-right menu **Traffic / Ports** and enter the port number.
 
-**Getting the course image onto Killercoda Kubernetes nodes.** The nodes run containerd, not Docker. Build with whatever is available and import, **on each node** (`ssh node01` for the worker):
-```bash
-# if docker exists on the node:
-docker build -t z2h/api:1.0 apps/api && ./scripts/load-image.sh z2h/api:1.0
-```
-If no builder is available, push the image from your laptop to a registry the cluster can pull from (Lab D10), then change `image:` in the manifests, or run the Docker labs in the Ubuntu playground and the Kubernetes labs with public images only. ⏳ Killercoda sessions expire after about 1 hour (longer on paid plans): save your work in Git.
+**Course images on Killercoda.** Nothing to build or copy: The Kubernetes labs pull the course images from Docker Hub (`vellankikoti/z2h-api`, `vellankikoti/z2h-frontend`, `vellankikoti/canteen-rush`), built for both amd64 and arm64. Every node pulls what it needs, `node01` included. ⏳ Killercoda sessions expire after about 1 hour (longer on paid plans): save your work in Git.
 
 ---
 
@@ -97,19 +92,14 @@ It installs the pinned upstream release (minikube: turns on its own addon), allo
 ```
 It checks Docker, kubectl, the cluster, free resources, and pre-pulls every image the course uses, so nothing has to download over conference Wi-Fi. 📶
 
-Then build the course images (used in almost every lab):
-```bash
-docker build -t z2h/api:1.0 apps/api
-docker build -t z2h/frontend:1.0 apps/frontend
-./scripts/load-image.sh z2h/api:1.0 z2h/frontend:1.0
-```
+**Course images:** nothing to do. The Kubernetes labs pull the course images from Docker Hub (`vellankikoti/z2h-api`, `vellankikoti/z2h-frontend`, `vellankikoti/canteen-rush`), built for both amd64 and arm64. Any cluster with internet access (Docker Desktop, kind, minikube, Killercoda, a cloud cluster) pulls them on first use. You build the same images yourself in the Docker labs; to run *your* build on Kubernetes instead, see [K01 Step 8](../kubernetes/01-cluster-tour/README.md).
 
 ## 🆘 Common setup problems
 | Symptom | Fix |
 |---|---|
 | `Cannot connect to the Docker daemon` | Docker Desktop isn't running. Start it and wait. |
 | `kubectl: connection refused` / `localhost:8080` | No cluster or wrong context: `kubectl config get-contexts` |
-| Pods `ErrImageNeverPull` / `ImagePullBackOff` for `z2h/api` | The image isn't on the cluster nodes: `./scripts/load-image.sh z2h/api:1.0` |
+| Pods `ErrImagePull` / `ImagePullBackOff` for `vellankikoti/...` | The node can't reach Docker Hub: check its internet access and the exact image name and tag (`kubectl describe pod` shows the pull error) |
 | `port is already allocated` | Something else uses that port: pick another (`-p 8081:8080`) |
 | Apple Silicon: `platform (linux/amd64) does not match` | Only a warning for Intel-only images; Docker emulates them |
 | Very slow first run | It's downloading images. Run `./scripts/check-prereqs.sh --pull` beforehand |

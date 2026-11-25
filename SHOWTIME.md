@@ -14,9 +14,10 @@
 ## 🧰 Stage setup (the night before)
 ```bash
 ./scripts/check-prereqs.sh --pull      # everything cached: no Wi-Fi drama on stage
-docker build -t z2h/api:1.0 apps/api && docker build -t z2h/frontend:1.0 apps/frontend
-./scripts/load-image.sh z2h/api:1.0 z2h/frontend:1.0
+docker build -t z2h/api:1.0 apps/api                       # for the live Docker demo
+kubectl run warm --image=vellankikoti/z2h-api:1.0 --restart=Never && kubectl wait --for=condition=Ready pod/warm --timeout=120s && kubectl delete pod warm
 ```
+(The Kubernetes part pulls `vellankikoti/z2h-api` and `vellankikoti/z2h-frontend` from Docker Hub; the `warm` Pod caches it on the node before you go on stage.)
 - Terminal font **≥ 20pt**, dark theme. Browser zoom 125%.
 - Two terminals side by side + browser on the right half of the screen.
 - Find your laptop IP (`ipconfig getifaddr en0`) and write `http://<ip>:8080` on the whiteboard or slide, or turn it into a QR code.

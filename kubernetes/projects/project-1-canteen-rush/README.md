@@ -64,17 +64,26 @@ Open [`apps/canteen/Dockerfile`](../../../apps/canteen/Dockerfile) and answer in
 
 > **Container runtime, in one line.** Docker built this image, but your cluster does not use Docker to run it. Nodes use a runtime such as **containerd**. The image is a standard OCI image, so both run the same bytes.
 
-Build version 2 now, so it is ready for Phase 7 (same code, a different version label):
+Build version 2 too (same code, a different version label). Kubernetes will use the published copy of both, `vellankikoti/canteen-rush`, from Phase 2:
 ```bash
 docker build -t canteen-rush:2.0.0 --build-arg VERSION=2.0.0 apps/canteen
 ```
 ✅ **Done when** you can explain the difference between an image and a container.
 
 ## Phase 2 · Get the image to the cluster (3 min)
+Your cluster's nodes cannot see images on your laptop. Real teams solve that with a **registry**: build once, push, and every node pulls. This course has already done it. The same image you just built is public on Docker Hub as **`vellankikoti/canteen-rush:1.0.0`** and **`:2.0.0`** (amd64 and arm64), and the manifests use that name. Check that your cluster can reach it:
 ```bash
-./scripts/load-image.sh canteen-rush:1.0.0 canteen-rush:2.0.0
+docker pull vellankikoti/canteen-rush:1.0.0     # optional, from your laptop
+kubectl run pull-test --image=vellankikoti/canteen-rush:1.0.0 --restart=Never
+kubectl wait --for=condition=Ready pod/pull-test --timeout=120s
+kubectl delete pod pull-test
 ```
-Your cluster nodes cannot see images on your laptop, so this copies them in. (In a company you would push to a registry instead; the Deployment would not change.)
+This works the same on Docker Desktop, kind, minikube, Killercoda (both nodes) and a cloud cluster.
+
+<details><summary>Optional: run <em>your</em> build instead of the published one</summary>
+
+Either push it to your own Docker Hub account (`docker tag canteen-rush:1.0.0 <you>/canteen-rush:1.0.0 && docker push <you>/canteen-rush:1.0.0`) and change `image:` in the manifests, or copy it straight onto every node: `./scripts/load-image.sh canteen-rush:1.0.0 canteen-rush:2.0.0` (on Killercoda it also copies to `node01` over ssh), then use `image: canteen-rush:1.0.0`.
+</details>
 
 ## Phase 3 · ⭐ First deployment (10 min)
 A namespace with a budget, then the app:
@@ -176,7 +185,7 @@ kubectl logs -f watcher -n canteen
 ```
 Keep that log visible. In another terminal, **release 2.0.0**:
 ```bash
-kubectl set image deployment/canteen canteen=canteen-rush:2.0.0 -n canteen
+kubectl set image deployment/canteen canteen=vellankikoti/canteen-rush:2.0.0 -n canteen
 kubectl annotate deployment/canteen -n canteen kubernetes.io/change-cause="v2.0.0: new menu banner" --overwrite
 kubectl rollout status deployment/canteen -n canteen
 kubectl get rs -n canteen
@@ -186,7 +195,7 @@ The watcher flips from `1.0.0` to `2.0.0` with **no FAILED line**. Refresh the p
 
 **Now ship a bad release** (the one every team ships):
 ```bash
-kubectl set image deployment/canteen canteen=canteen-rush:9.9.9 -n canteen
+kubectl set image deployment/canteen canteen=vellankikoti/canteen-rush:9.9.9 -n canteen
 kubectl get pods -n canteen
 ```
 The new Pod sits in `ErrImagePull` / `ImagePullBackOff`, the rollout is stuck, **and the old Pods keep serving**: check the watcher. Undo it:
@@ -197,12 +206,12 @@ kubectl rollout status deployment/canteen -n canteen
 **Compare strategies.** Switch to `Recreate` (stop everything, then start) and downgrade:
 ```bash
 kubectl patch deployment canteen -n canteen -p '{"spec":{"strategy":{"type":"Recreate","rollingUpdate":null}}}'
-kubectl set image deployment/canteen canteen=canteen-rush:1.0.0 -n canteen
+kubectl set image deployment/canteen canteen=vellankikoti/canteen-rush:1.0.0 -n canteen
 ```
 The watcher prints **FAILED** lines: that gap is the cost of `Recreate`. Restore the safe strategy and the new version:
 ```bash
 kubectl patch deployment canteen -n canteen -p '{"spec":{"strategy":{"type":"RollingUpdate","rollingUpdate":{"maxSurge":1,"maxUnavailable":0}}}}'
-kubectl set image deployment/canteen canteen=canteen-rush:2.0.0 -n canteen
+kubectl set image deployment/canteen canteen=vellankikoti/canteen-rush:2.0.0 -n canteen
 kubectl delete pod watcher -n canteen
 ```
 <details><summary>Where do blue/green and canary fit?</summary>
@@ -296,7 +305,7 @@ Swap these in the manifests: the image name, the port, the env, the probe paths.
 ## 🧯 If something goes wrong
 | Symptom | Fix |
 |---|---|
-| `ErrImageNeverPull` or `ImagePullBackOff` on `canteen-rush:1.0.0` | the image is not on the nodes: `./scripts/load-image.sh canteen-rush:1.0.0` |
+| `ErrImagePull` or `ImagePullBackOff` on `vellankikoti/canteen-rush:1.0.0` | the node cannot reach Docker Hub, or the name or tag has a typo: `kubectl describe pod` shows the exact pull error (`9.9.9` fails on purpose in Phase 7) |
 | Pods stay `Pending` and the ReplicaSet says `exceeded quota` | the namespace budget is full: `kubectl describe quota -n canteen`, scale something down |
 | `kubectl get hpa` shows `<unknown>` | metrics-server is not working: `kubectl top nodes`, then `./scripts/install-metrics-server.sh` |
 | The page loads but numbers differ per refresh | you are still on `20-canteen-memory.yaml`: apply `10-redis.yaml` and `21-canteen.yaml` |

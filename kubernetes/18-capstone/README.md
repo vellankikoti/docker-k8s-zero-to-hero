@@ -44,10 +44,8 @@ For every block in [`manifests/`](manifests/), name the lab where you learned it
 | [`kustomization.yaml`](manifests/kustomization.yaml) | one command applies everything |
 
 ## Part 2: Deploy (15 min)
+The images (`vellankikoti/z2h-api:1.0`, `vellankikoti/z2h-frontend:1.0`) come from Docker Hub, so there is nothing to build first.
 ```bash
-docker build -t z2h/api:1.0 apps/api && docker build -t z2h/frontend:1.0 apps/frontend
-./scripts/load-image.sh z2h/api:1.0 z2h/frontend:1.0
-
 kubectl kustomize kubernetes/18-capstone/manifests | less       # preview
 kubectl apply -k kubernetes/18-capstone/manifests
 
@@ -80,7 +78,7 @@ Run each experiment **while the room is voting**. Before each one, ask the audie
 | 2 | 🪓 Kill every app Pod | `kubectl -n shop delete pod -l app.kubernetes.io/name=api --wait=false` | New tiles on the Pod wall within seconds |
 | 3 | 🗄️ Restart the database | `kubectl -n shop delete pod redis-0` | Brief red bar; **every vote survives** (PVC) |
 | 4 | 🦄 "One more thing…" | `kubectl -n shop patch cm api-config --type merge -p '{"data":{"APP_VERSION":"2.0.0","VOTE_OPTIONS":"cats:🐱:Cats,dogs:🐶:Dogs,unicorns:🦄:Unicorns"}}'` then `kubectl -n shop rollout restart deploy/api` | Banner, unicorns appear, failed counter stays at 0 (or a rare one-off) |
-| 5 | 🙈 Bad release | `kubectl -n shop set image deploy/api api=z2h/api:broken` | Rollout stalls; voting continues. Then `kubectl -n shop rollout undo deploy/api` |
+| 5 | 🙈 Bad release | `kubectl -n shop set image deploy/api api=vellankikoti/z2h-api:broken` | Rollout stalls; voting continues. Then `kubectl -n shop rollout undo deploy/api` |
 | 6 | 📈 The crowd arrives | `kubectl -n shop run load --image=busybox:1.36 --restart=Never --labels=app.kubernetes.io/name=frontend --overrides='{"spec":{"securityContext":{"runAsNonRoot":true,"runAsUser":1000,"seccompProfile":{"type":"RuntimeDefault"}},"containers":[{"name":"load","image":"busybox:1.36","command":["sh","-c","while true; do wget -qO- http://api:8080/api/burn?seconds=1 >/dev/null; done"],"securityContext":{"allowPrivilegeEscalation":false,"capabilities":{"drop":["ALL"]}}}]}}'` | HPA adds Pods; the Pod wall grows by itself (needs metrics-server, K13) |
 | 7 | 🕵️ Intruder | same as #6 but without `--labels`, running `nc -zv -w 3 redis 6379` | Blocked by NetworkPolicy |
 | 8 | 👮 Insecure Pod | `kubectl -n shop run root --image=nginx:1.27-alpine` | Rejected by Pod Security |

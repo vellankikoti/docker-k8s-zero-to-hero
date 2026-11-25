@@ -22,7 +22,7 @@ metadata: { name: api, namespace: netpol-lab, labels: { app: api } }
 spec:
   containers:
     - name: api
-      image: z2h/api:1.0
+      image: vellankikoti/z2h-api:1.0
       imagePullPolicy: IfNotPresent
       env: [ { name: REDIS_HOST, value: redis } ]
       ports: [ { containerPort: 8080 } ]

@@ -138,18 +138,22 @@ kubectl get --raw /api/v1/namespaces | head -c 400; echo
 kubectl get pods -n kube-system -v=6 2>&1 | grep -E 'GET|Response' | head -3   # the HTTP calls kubectl makes
 ```
 
-### Step 8: Prepare the course image for the cluster ⭐
-Most later labs use the course API image `z2h/api:1.0`. Build it and make it available to your cluster's nodes:
+### Step 8: Where the course image comes from ⭐
+Most later labs use the course API image `vellankikoti/z2h-api:1.0` (and `vellankikoti/z2h-frontend:1.0`). They are public on Docker Hub, built from [`apps/api`](../../apps/api) and [`apps/frontend`](../../apps/frontend) for amd64 and arm64, so **every node pulls them by itself**: nothing to build, nothing to copy, on any cluster. This is how real teams ship: build once, push to a registry, and every cluster pulls. ([More on registries](../../docker/10-registry-tags/README.md#-checkpoint))
+
+<details><summary>Optional: run your own build instead</summary>
+
+Build it, then either push it to your own registry account and change `image:` in the manifest, or copy it straight onto the nodes:
 ```bash
 docker build -t z2h/api:1.0 apps/api
-docker build -t z2h/frontend:1.0 apps/frontend
-./scripts/load-image.sh z2h/api:1.0 z2h/frontend:1.0
+./scripts/load-image.sh z2h/api:1.0        # Docker Desktop, kind, minikube; on Killercoda it also copies to node01 over ssh
 ```
-The script detects Docker Desktop, kind, or minikube and does the right thing. ([Why is this needed?](../../docker/10-registry-tags/README.md#-checkpoint))
+Then use `image: z2h/api:1.0` with `imagePullPolicy: IfNotPresent`.
+</details>
 
 Smoke test:
 ```bash
-kubectl run smoke --image=z2h/api:1.0 --image-pull-policy=IfNotPresent --restart=Never
+kubectl run smoke --image=vellankikoti/z2h-api:1.0 --image-pull-policy=IfNotPresent --restart=Never
 kubectl get pod smoke -w            # wait for Running, then Ctrl+C
 kubectl logs smoke
 kubectl delete pod smoke

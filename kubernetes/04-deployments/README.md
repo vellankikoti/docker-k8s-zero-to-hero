@@ -34,7 +34,7 @@ kubectl delete deployment web
 ```
 
 ### Step 2: 🎬 The Showdown on Kubernetes
-> Prerequisite: images loaded into your cluster ([K01 Step 8](../01-cluster-tour/README.md#step-8-prepare-the-course-image-for-the-cluster-)).
+> The image `vellankikoti/z2h-api:1.0` is pulled from Docker Hub ([K01 Step 8](../01-cluster-tour/README.md#step-8-where-the-course-image-comes-from-)): nothing to load first.
 
 ```bash
 kubectl apply -f kubernetes/04-deployments/deployment.yaml     # the api: 3 replicas

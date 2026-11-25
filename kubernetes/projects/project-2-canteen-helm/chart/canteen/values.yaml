@@ -2,7 +2,7 @@
 # Per-environment files (values-dev.yaml, values-prod.yaml) override only what differs.
 
 image:
-  repository: canteen-rush
+  repository: vellankikoti/canteen-rush
   tag: ""                 # empty = use the chart's appVersion (see Chart.yaml)
   pullPolicy: IfNotPresent
 

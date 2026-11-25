@@ -15,7 +15,7 @@ spec:
       enableServiceLinks: false        # don't inject legacy *_SERVICE_HOST/*_PORT env vars
       containers:
         - name: api
-          image: z2h/api:1.0
+          image: vellankikoti/z2h-api:1.0
           imagePullPolicy: IfNotPresent
           env:
             - { name: STARTUP_DELAY, value: "20" }
