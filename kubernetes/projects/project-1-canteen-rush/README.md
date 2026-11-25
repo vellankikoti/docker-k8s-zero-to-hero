@@ -97,6 +97,8 @@ kubectl port-forward -n canteen svc/canteen 8080:80
 ```
 Open http://localhost:8080. Order a few things and refresh a few times.
 
+> 🌐 **On Killercoda or iximiuz** add `--address 0.0.0.0` to the `port-forward` line, then open the platform's port link for 8080 (Killercoda: top-right menu → **Traffic / Ports**). Without it the forward listens only inside the VM, and the link shows **502 Bad Gateway**. `port-forward` keeps running in that terminal, so open a second terminal tab for the next commands.
+
 **What is odd? Look at the numbers and the coloured chips.** Each refresh may show different totals. Each Pod keeps orders in *its own memory*, and the Service spreads you across two Pods. That is a bug you will fix in Phase 4.
 
 **Follow the apply: who did what?** This is the architecture lesson, from real evidence:
@@ -310,6 +312,7 @@ Swap these in the manifests: the image name, the port, the env, the probe paths.
 | `kubectl get hpa` shows `<unknown>` | metrics-server is not working: `kubectl top nodes`, then `./scripts/install-metrics-server.sh` |
 | The page loads but numbers differ per refresh | you are still on `20-canteen-memory.yaml`: apply `10-redis.yaml` and `21-canteen.yaml` |
 | `port-forward` says the port is busy | use another local port: `8082:80` |
+| Killercoda's port link shows **502 Bad Gateway** | the forward is listening on `127.0.0.1` only: rerun it with `--address 0.0.0.0` (`kubectl port-forward --address 0.0.0.0 -n canteen svc/canteen 8080:80`) |
 
 ## 🧹 Clean up
 ```bash

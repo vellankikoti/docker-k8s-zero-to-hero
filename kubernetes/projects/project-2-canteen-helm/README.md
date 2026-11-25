@@ -58,7 +58,11 @@ kubectl describe pod -n canteen2 -l app=canteen | grep -A12 "Environment:"
 kubectl exec -n canteen2 deploy/canteen -- cat /etc/canteen/menu.txt
 kubectl port-forward -n canteen2 svc/canteen 8080:80
 ```
-Open http://localhost:8080 and see the menu. In `describe` the token shows as `<set to the key 'admin-token' in secret 'canteen-admin'>`: the value is not printed, and **it is not in the Deployment YAML either**. Check: `kubectl get deployment canteen -n canteen2 -o yaml | grep -i -B2 -A3 admin`.
+Open http://localhost:8080 and see the menu.
+
+> 🌐 **On Killercoda or iximiuz** add `--address 0.0.0.0` to the `port-forward` line, then open the platform's port link for 8080 (Killercoda: top-right menu → **Traffic / Ports**). Without it the forward listens only inside the VM, and the link shows **502 Bad Gateway**. `port-forward` keeps running in that terminal, so open a second terminal tab for the next commands.
+
+In `describe` the token shows as `<set to the key 'admin-token' in secret 'canteen-admin'>`: the value is not printed, and **it is not in the Deployment YAML either**. Check: `kubectl get deployment canteen -n canteen2 -o yaml | grep -i -B2 -A3 admin`.
 
 ## Phase 3 · ⭐ Change the menu without touching the app (8 min)
 Add a dish to the menu while the app is running:
@@ -158,7 +162,7 @@ helm install canteen chart/canteen -n canteen-helm --create-namespace --wait
 helm list -n canteen-helm
 kubectl get all,configmap,secret,cronjob -n canteen-helm
 helm test canteen -n canteen-helm
-kubectl port-forward -n canteen-helm svc/canteen 8080:80
+kubectl port-forward -n canteen-helm svc/canteen 8080:80      # Killercoda/iximiuz: add --address 0.0.0.0
 ```
 One command created the Deployment, Service, Redis, ConfigMap, Secret and CronJob. The opening-bell Job ran as a **hook** (a Job Helm runs at a moment you choose, here right after install) and cleaned itself up, so it does not appear in `kubectl get jobs`, but its five orders are on the page. `helm test` ran a Pod that checked `/healthz`.
 
@@ -253,6 +257,7 @@ Take **your own Project 1 app** and give it the same treatment. Your chart must 
 | `helm install` says "cannot re-use a name that is still in use" | `helm list -A`, then `helm uninstall canteen -n canteen-helm` |
 | The CronJob never creates a Job | check `kubectl get cronjob` (is `SUSPEND` true?) and wait the full 2 minutes |
 | `helm upgrade ... --wait` times out | that is the point of the bad-release drill; look at `kubectl get pods`, then `helm rollback` |
+| Killercoda's port link shows **502 Bad Gateway** | the forward is listening on `127.0.0.1` only: stop it (Ctrl+C) and rerun with `--address 0.0.0.0`, e.g. `kubectl port-forward --address 0.0.0.0 -n canteen2 svc/canteen 8080:80` |
 | The menu change does not show | give the ConfigMap file up to two minutes; the page re-reads the file on each request |
 | `helm: command not found` | install it: `brew install helm` / `winget install Helm.Helm` / see helm.sh |
 
