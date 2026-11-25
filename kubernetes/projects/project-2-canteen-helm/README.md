@@ -65,10 +65,23 @@ Open http://localhost:8080 and see the menu.
 In `describe` the token shows as `<set to the key 'admin-token' in secret 'canteen-admin'>`: the value is not printed, and **it is not in the Deployment YAML either**. Check: `kubectl get deployment canteen -n canteen2 -o yaml | grep -i -B2 -A3 admin`.
 
 ## Phase 3 · ⭐ Change the menu without touching the app (8 min)
-Add a dish to the menu while the app is running:
+Add a dish to the menu while the app is running. Work on **your own copy** of the ConfigMap file (so the course folder stays clean for `git pull`):
 ```bash
-kubectl edit configmap canteen-menu -n canteen2        # add a line:  biryani|🍛|Biryani|120   (under menu.txt)
+cd ~/docker-k8s-zero-to-hero 2>/dev/null; R=kubernetes/projects/project-2-canteen-helm/k8s-raw   # again, in case this is a new terminal tab
+cp $R/20-menu-configmap.yaml ~/menu.yaml
+nano ~/menu.yaml          # or vi, or Killercoda's Editor tab
 ```
+Under `menu.txt: |`, add one line below the dosa line, **indented exactly like the others** (4 spaces), then save:
+```yaml
+    biryani|🍛|Biryani|120
+```
+See what will change, then send it to the cluster:
+```bash
+kubectl diff -f ~/menu.yaml          # - is the old menu.txt, + the new one (squashed onto one line): it should end with biryani
+kubectl apply -f ~/menu.yaml
+```
+> **Why not `kubectl edit configmap`?** It works, but it shows the menu squashed onto one line with `\n` between dishes and every emoji as a code such as `\U0001F375`. One wrong quote or backslash and the menu breaks. Editing the file, checking it with `kubectl diff`, then applying it is safer, and it is how teams change configuration: the file is the truth, and the cluster is made to match it.
+
 Watch the file change inside a running Pod (it takes up to a minute or two: the kubelet syncs ConfigMaps periodically):
 ```bash
 kubectl exec -n canteen2 deploy/canteen -- cat /etc/canteen/menu.txt
@@ -79,7 +92,9 @@ Refresh the page: **the biryani appears, and no Pod restarted.**
 ```bash
 kubectl set env deployment/canteen -n canteen2 --from=configmap/canteen-menu --keys=MENU
 kubectl rollout status deployment/canteen -n canteen2
-kubectl edit configmap canteen-menu -n canteen2        # change the MENU line (for example drop "samosa")
+nano ~/menu.yaml          # in the MENU line, delete   samosa|🥟|Samosa|15,   (keep the quotes)
+kubectl diff -f ~/menu.yaml
+kubectl apply -f ~/menu.yaml
 sleep 90
 kubectl exec -n canteen2 deploy/canteen -- sh -c 'echo "env:  $MENU"; echo "file:"; cat /etc/canteen/menu.txt'
 ```
