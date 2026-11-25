@@ -12,6 +12,8 @@ note() { printf '  \033[1;33m•\033[0m %s\n' "$*"; }
 head1(){ printf '\n\033[1m%s\033[0m\n' "$*"; }
 
 IMAGES=(
+  # Course app images used by the Kubernetes labs and projects (public on Docker Hub, amd64 + arm64)
+  vellankikoti/z2h-api:1.0 vellankikoti/z2h-frontend:1.0 vellankikoti/canteen-rush:1.0.0 vellankikoti/canteen-rush:2.0.0
   hello-world busybox:1.36 alpine ubuntu:24.04
   nginx:1.27-alpine nginxinc/nginx-unprivileged:1.27-alpine
   python:3.12-alpine redis:7-alpine postgres:16-alpine registry:2
@@ -65,8 +67,9 @@ command -v helm >/dev/null 2>&1 && ok "helm: $(helm version --short 2>/dev/null)
 command -v kubens >/dev/null 2>&1 && ok "kubens and kubectx installed" || note "kubens/kubectx not installed (optional but handy; see kubernetes/README.md)"
 
 head1 "📦 Course images"
+note "Kubernetes labs pull vellankikoti/z2h-api, vellankikoti/z2h-frontend and vellankikoti/canteen-rush from Docker Hub: nothing to build"
 for img in z2h/api:1.0 z2h/frontend:1.0; do
-  docker image inspect "$img" >/dev/null 2>&1 && ok "$img built" || note "$img not built yet: docker build -t $img apps/${img#z2h/}"
+  docker image inspect "$img" >/dev/null 2>&1 && ok "$img built (for the Docker labs)" || note "$img not built yet (Docker labs build it: docker build -t $img apps/${img#z2h/})"
 done
 
 if [ "${1:-}" = "--pull" ]; then

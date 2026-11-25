@@ -60,7 +60,7 @@ kubectl rollout history deployment/api
 ### Step 3: 💥 A broken release
 Someone ships an image tag that doesn't exist:
 ```bash
-kubectl set image deployment/api api=z2h/api:9.9.9
+kubectl set image deployment/api api=vellankikoti/z2h-api:9.9.9
 kubectl annotate deployment/api kubernetes.io/change-cause="v9.9.9 oops" --overwrite
 kubectl rollout status deployment/api --timeout=30s     # times out: stuck
 kubectl get pods -l app=api                              # 1 new Pod ImagePullBackOff, 4 old still Running
@@ -102,7 +102,7 @@ kubectl rollout resume deployment/api           # ONE rollout containing both ch
 - CI/CD pipelines run `kubectl rollout status --timeout=…` and fail the deploy if it doesn't finish.
 
 ## 🏆 Challenge
-Roll out an image that does not exist (`z2h/api:9.9`) and watch the vote page while it happens. Does the site stay up? Then undo it in one command.
+Roll out an image that does not exist (`vellankikoti/z2h-api:9.9`) and watch the vote page while it happens. Does the site stay up? Then undo it in one command.
 
 <details><summary>Check your answer</summary>
 

@@ -25,7 +25,7 @@ kubectl port-forward -n jenkins svc/jenkins 8081:8080                           
 kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80        # http://localhost:3000  admin / z2h-grafana
 kubectl port-forward -n mail svc/mailpit 8025:8025                                  # http://localhost:8025  (the inbox)
 ```
-(Passwords like these are for a lab. Never use fixed passwords for real.) Make sure the course images are loaded ([K01 Step 8](../01-cluster-tour/README.md)): the app deployed here uses `z2h/api:1.0` and `z2h/frontend:1.0`.
+(Passwords like these are for a lab. Never use fixed passwords for real.) The app deployed here uses `vellankikoti/z2h-api:1.0` and `vellankikoti/z2h-frontend:1.0`, pulled from Docker Hub ([K01 Step 8](../01-cluster-tour/README.md)).
 
 ## 🚀 Project 1: Ship it with Jenkins (30 min)
 

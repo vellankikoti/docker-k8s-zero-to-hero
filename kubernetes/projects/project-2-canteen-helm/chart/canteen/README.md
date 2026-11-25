@@ -12,7 +12,7 @@ helm test canteen -n canteen-helm
 | Value | Default | What it does |
 |---|---|---|
 | `replicaCount` | `2` | how many web Pods (ignored when `autoscaling.enabled`) |
-| `image.repository` / `image.tag` | `canteen-rush` / chart `appVersion` | which image to run |
+| `image.repository` / `image.tag` | `vellankikoti/canteen-rush` / chart `appVersion` | which image to run |
 | `menu` | three dishes | the menu file (`id\|emoji\|name\|price` per line) |
 | `adminToken` / `existingSecret` | demo token / empty | the admin secret; for real use, create a Secret yourself and name it in `existingSecret` |
 | `redis.enabled` | `true` | keep orders in Redis so every Pod agrees |

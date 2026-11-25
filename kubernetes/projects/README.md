@@ -22,10 +22,8 @@ Both projects use one small ordering app, [`apps/canteen`](../../apps/canteen): 
 ## Before either project
 ```bash
 ./scripts/install-metrics-server.sh                      # kubectl top, and the autoscaler
-docker build -t canteen-rush:1.0.0 apps/canteen
-docker build -t canteen-rush:2.0.0 --build-arg VERSION=2.0.0 apps/canteen
-./scripts/load-image.sh canteen-rush:1.0.0 canteen-rush:2.0.0
 ```
+The app image is public on Docker Hub: `vellankikoti/canteen-rush:1.0.0` and `:2.0.0` (amd64 and arm64), so any cluster, Killercoda's two nodes included, pulls it by itself. Project 1, Phase 1 still has you build it with Docker, to see how it is made.
 Project 2 also needs [`helm`](../README.md).
 
 Want a CI/CD and monitoring bonus on top? Lab [K20](../20-projects/README.md) deploys with Jenkins and emails you when it breaks.

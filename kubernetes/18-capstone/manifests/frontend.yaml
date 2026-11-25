@@ -41,7 +41,7 @@ spec:
             matchLabels: { app.kubernetes.io/name: frontend }
       containers:
         - name: nginx
-          image: z2h/frontend:1.0
+          image: vellankikoti/z2h-frontend:1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

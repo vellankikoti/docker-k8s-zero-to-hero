@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: z2h/api:1.0
+          image: vellankikoti/z2h-api:1.0
           imagePullPolicy: IfNotPresent     # use the image loaded into the cluster (K01 Step 8)
           ports:
             - containerPort: 8080

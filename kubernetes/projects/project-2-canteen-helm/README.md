@@ -22,7 +22,7 @@ The fest is over, and the canteen is staying. Now real life arrives: the menu ch
 
 ## 🧰 Before you start
 - A cluster, `kubectl` and **`helm`** ([install](../../README.md)).
-- The app images loaded (Project 1, Phases 1 and 2): `canteen-rush:1.0.0` and `canteen-rush:2.0.0`. If not: `docker build -t canteen-rush:1.0.0 apps/canteen`, `docker build -t canteen-rush:2.0.0 --build-arg VERSION=2.0.0 apps/canteen`, then `./scripts/load-image.sh canteen-rush:1.0.0 canteen-rush:2.0.0`. On a multi-node cluster (Killercoda has `controlplane` and `node01`) the image must be on **every** node; the script copies it to each one and warns you about any it could not reach.
+- Nothing to build: the app image is public on Docker Hub as `vellankikoti/canteen-rush:1.0.0` and `:2.0.0` (amd64 and arm64), and every node pulls it by itself, both Killercoda nodes included.
 - Project 1 is *not* required to be running. This project has its own namespace.
 
 > **The plan.** Phases 1 to 6 build every piece **by hand**, so you know what each object does. Phases 7 to 9 replace all that hand-work with a chart. If you skip the hand-work, the chart is magic. If you do it, the chart is just a tidy way to say what you already said.
@@ -47,12 +47,11 @@ The last command printed your "secret". **A Secret is base64, which is encoding,
 kubectl apply -f $R/30-canteen.yaml
 kubectl get pods -n canteen2 -l app=canteen -o wide
 ```
-Both Pods should reach `Running` within a few seconds. **If they show `ErrImagePull` or `ImagePullBackOff`**, the node the Pod landed on (the `NODE` column) does not have `canteen-rush:1.0.0`: it is a local image, not in any registry, so *every* node needs a copy. Load it and let the Deployment make fresh Pods:
-```bash
-./scripts/load-image.sh canteen-rush:1.0.0 canteen-rush:2.0.0     # on Killercoda this also copies to node01 over ssh
-kubectl rollout restart deployment/canteen -n canteen2
-```
-(`CreateContainerConfigError` instead means the Secret from Phase 1 is missing.) Once both are `Running`:
+Both Pods should reach `Running` within a few seconds (the first pull from Docker Hub can take up to a minute). If one is not, its `STATUS` tells you why:
+- `CreateContainerConfigError`: the Secret from Phase 1 is missing. Create it and the Pods start by themselves.
+- `ErrImagePull` / `ImagePullBackOff`: the node in the `NODE` column cannot pull `vellankikoti/canteen-rush:1.0.0`. Run `kubectl describe pod -n canteen2 -l app=canteen | grep -A5 Events` for the exact error (usually no internet, or a typo in the image name).
+
+Once both are `Running`:
 ```bash
 kubectl rollout status deployment/canteen -n canteen2 --timeout=90s
 kubectl describe pod -n canteen2 -l app=canteen | grep -A12 "Environment:"
@@ -249,7 +248,7 @@ Take **your own Project 1 app** and give it the same treatment. Your chart must 
 ## 🧯 If something goes wrong
 | Symptom | Fix |
 |---|---|
-| Pods say `ErrImagePull` / `ImagePullBackOff`, `rollout status` hangs, or `kubectl exec` says `container not found ("canteen")` | the image is not on that Pod's node: `./scripts/load-image.sh canteen-rush:1.0.0 canteen-rush:2.0.0` (it copies to every node, `node01` included), then `kubectl rollout restart deployment/canteen -n canteen2` |
+| Pods say `ErrImagePull` / `ImagePullBackOff`, `rollout status` hangs, or `kubectl exec` says `container not found ("canteen")` | the container never started because the image could not be pulled: `kubectl describe pod -n canteen2 -l app=canteen` shows the error. Check that the node has internet and that the image is `vellankikoti/canteen-rush:<tag>` (Phase 8's `9.9.9` fails on purpose) |
 | Pods say `CreateContainerConfigError` | the Secret is missing: create it (Phase 1) or point `existingSecret` at one that exists |
 | `helm install` says "cannot re-use a name that is still in use" | `helm list -A`, then `helm uninstall canteen -n canteen-helm` |
 | The CronJob never creates a Job | check `kubectl get cronjob` (is `SUSPEND` true?) and wait the full 2 minutes |

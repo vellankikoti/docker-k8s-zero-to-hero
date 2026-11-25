@@ -23,7 +23,7 @@ spec:
       terminationGracePeriodSeconds: 20
       containers:
         - name: api
-          image: z2h/api:1.0
+          image: vellankikoti/z2h-api:1.0
           imagePullPolicy: IfNotPresent
           env:
             - { name: REDIS_HOST, value: redis }

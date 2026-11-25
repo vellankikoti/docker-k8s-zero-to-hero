@@ -116,7 +116,7 @@ kill %1
 - Everything you apply should live in **Git**. If it only exists in the cluster, it's lost the next time someone rebuilds the cluster.
 
 ## 🏆 Challenge
-1. Write a Pod manifest from scratch for `z2h/api:1.0` (with `imagePullPolicy: IfNotPresent`), setting env `TITLE=My First Pod`. Port-forward to 8080 and open it in the browser.
+1. Write a Pod manifest from scratch for `vellankikoti/z2h-api:1.0` (with `imagePullPolicy: IfNotPresent`), setting env `TITLE=My First Pod`. Port-forward to 8080 and open it in the browser.
 2. Use `kubectl debug` to attach an ephemeral debugging container to a running Pod:
    `kubectl debug -it web-with-sidecar --image=busybox:1.36 --target=nginx -- sh`, then run `ps` inside.
 
