@@ -115,6 +115,24 @@ Open the doors into the cluster, then create **your own** copy of the app:
 | Staging | http://localhost:8082 | none |
 | Production | http://localhost:8090 | none |
 
+### 🌐 Using Killercoda or iximuz Labs (a browser lab)?
+In a browser lab the cluster and your terminal live in a remote VM, so `http://localhost:8081` in *your* browser is **not** that VM. Two things make it work:
+
+1. **`forward.sh start` detects the lab** (you are the user `laborant`) and listens on **all interfaces** instead of only `127.0.0.1`, because the lab's "open a port" feature reaches the VM from outside and cannot see a loopback-only listener. (Force it with `forward.sh start --lab`; force local-only with `--local`.)
+2. **Expose each port with your lab's port feature** and open the link it gives you:
+
+| Door | Port to expose | Killercoda |
+|---|---|---|
+| Jenkins | `8081` | menu → **Traffic / Ports** → enter `8081` |
+| Git server | `3001` | same, `3001` |
+| Inbox | `8025` | same, `8025` |
+| Staging | `8082` | same, `8082` (after the first pipeline run) |
+| Production | `8090` | same, `8090` |
+
+In **iximuz Labs** use the lab's own port-exposing panel with the same port numbers. Inside the lab terminal nothing changes: `curl`, `git push` and `kubectl` keep using `http://localhost:PORT`.
+
+> Jenkins and Gitea were tested behind a proxy that changes the client address (Jenkins would otherwise answer **403 "No valid crumb"** to every *Build Now* click: the platform sets `excludeClientIPFromCrumb`). A yellow "reverse proxy set up is broken" notice in Jenkins' bell menu can appear in a lab; it is cosmetic and can be dismissed. If a page loads but a button fails, tell us which one.
+
 > 📌 **Your app repo is not the course repo.** `new-app-repo.sh` made `~/chai-stall` and pushed it to the Git server *inside your cluster*. You commit and push **there**. No GitHub account, no tokens, and **nothing you do can touch the shared course repository.** (This also removes the old "which branch is Jenkins building?" confusion: Jenkins always builds `main` of `chai-stall`.)
 
 ```bash
@@ -330,6 +348,8 @@ rm -rf ~/chai-stall                  # your repo copy (optional)
 | `k8s-up.sh`: Jenkins "did not finish installing" | `kubectl -n cicd logs jenkins-0 -c jenkins \| tail -30` (plugins download needs internet); run the script again |
 | build Pod `ImagePullBackOff` for `gcr.io/kaniko-project/...` | the node cannot reach gcr.io: check the node's internet / proxy (on kind, `./scripts/load-image.sh` can preload images) |
 | `forward.sh start` shows `○ jenkins stopped` (or production) | it now prints kubectl's own reason and a hint under each stopped door. Usual causes: the Pod is not Ready yet (`kubectl -n cicd get pods`: `jenkins-0` must be `2/2 Running`), or that local port is taken. Fix it, then run `forward.sh start` again. Logs: `/tmp/z2h-unit4-forward-<name>.log` |
+| In a Killercoda / iximuz lab the URLs do not open | the lab's browser cannot see `127.0.0.1` inside the VM. `forward.sh start --lab` (automatic for user `laborant`) listens on `0.0.0.0`; then expose the port with the lab's port feature (see the box in Phase 2) |
+| Jenkins answers **403 No valid crumb** to *Build Now* behind a proxy / lab | an older install: run `./cicd-observability/scripts/k8s-up.sh` again (it sets `excludeClientIPFromCrumb`; Jenkins reloads its config by itself, or `kubectl -n cicd delete pod jenkins-0`) |
 | `forward.sh` says staging was skipped | normal before the first pipeline run: nothing is deployed in `stall-staging` yet |
 | `new-app-repo.sh`: cannot reach `localhost:3001` | `./cicd-observability/scripts/forward.sh start`; is port 3001 used by something else? |
 | `git push` asks for a password | the remote has the lab login in the URL (`git remote -v`); if you cloned another way use `z2h` / `z2h-gitea-pass` |
