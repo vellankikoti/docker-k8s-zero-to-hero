@@ -1,0 +1,25 @@
+# A DYNAMIC pipeline in GitLab: one job WRITES a pipeline file, a second job RUNS it as a child pipeline.
+# Use case: one job per changed service in a monorepo, one job per region, one job per customer.
+stages: [generate, run]
+
+generate:
+  stage: generate
+  image: alpine:3.20
+  script:
+    - |
+      echo "stages: [check]" > child.yml
+      for check in unit-tests secret-scan syntax; do
+        printf '%s:\n  stage: check\n  image: alpine:3.20\n  script: [echo "running %s"]\n' "$check" "$check" >> child.yml
+      done
+      cat child.yml
+  artifacts:
+    paths: [child.yml]
+
+run-generated:
+  stage: run
+  needs: [generate]
+  trigger:
+    include:
+      - artifact: child.yml
+        job: generate
+    strategy: depend                      # this job fails if the child pipeline fails
