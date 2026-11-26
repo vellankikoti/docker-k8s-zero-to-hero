@@ -26,6 +26,8 @@ flowchart LR
 
 You will have: a **Prometheus** that scrapes the app and computes **SLIs**, **tested alert rules**, an **Alertmanager** with grouping, routing, inhibition and **email**, a **Grafana dashboard stored as code**, **centralized logs** and **traces** with a clickable link between them, an **SLO with burn-rate alerts**, a **runbook**, and **your own postmortem**.
 
+> 🧭 **No branches, no commits, no pushing needed here.** Prometheus, Grafana and Alertmanager read the files in *this folder* directly, so an edit takes effect as soon as you save it (and reload where the lab says so). Git only helps you *see* what you changed (`git diff`). Nothing in this project touches the shared repository.
+
 ## 📋 The phases
 
 | # | Phase | You prove | Time | Lab |
@@ -236,7 +238,7 @@ cd ../project-2-see-everything
 docker compose -f docker-compose.yml -f docker-compose.shipit.yml down -v 2>/dev/null || docker compose down -v
 echo '[]' > prometheus/targets/prod.yml            # put the empty targets file back
 ```
-(`git status` should show only the files *you* changed on purpose.)
+`git status` shows the files *you* changed on purpose. To undo any of them (a dashboard or rule you edited), use `git restore <file>`; to keep your work, you may `git commit` on a private branch (`git switch -c my-observability`): committing only ever stays on your laptop.
 
 ---
 

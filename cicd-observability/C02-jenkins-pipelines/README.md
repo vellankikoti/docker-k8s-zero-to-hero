@@ -46,14 +46,15 @@ In this lab the controller runs in one container and builds on its own built-in 
 ### Step 1: Start the factory (about 4 minutes the first time)
 ```bash
 cd cicd-observability/projects/project-1-ship-it
+git switch -c practice                    # a private practice branch: nothing you commit here can touch the shared repo
 cp .env.example .env
-git branch --show-current                 # note this name
-```
-Open `.env`. The line `REPO_BRANCH=*/main` tells Jenkins which branch to build. **If your branch is not `main`**, edit it, for example `REPO_BRANCH=*/my-branch`. Then:
-```bash
+sed -i.bak "s#^REPO_BRANCH=.*#REPO_BRANCH=*/$(git branch --show-current)#" .env && rm .env.bak
+grep REPO_BRANCH .env                     # REPO_BRANCH=*/practice
 docker compose up -d --build
 docker compose ps
 ```
+`REPO_BRANCH` tells Jenkins which Git branch to build. **Jenkins builds a branch of Git, not your working folder, and you never need to `git push`**: it reads your local repository directly. Commit on the branch it watches (the reason is Step 7). If you ever change branch, run `./scripts/use-branch.sh` from this folder and Jenkins follows.
+
 The first build downloads Jenkins and installs about a dozen plugins into the image (3 to 5 minutes). Watch it become ready:
 ```bash
 docker compose logs -f jenkins | grep -m1 "fully up and running"        # Ctrl+C if it does not return
@@ -148,7 +149,7 @@ Jenkins can start a build two ways:
 - **Webhook (push):** Git calls Jenkins the moment you push. Instant, but needs Jenkins reachable from the internet (or a tunnel).
 - **Polling (pull):** Jenkins asks Git "anything new?" on a schedule. Slower, works anywhere. The job uses this: `triggers { scm('H/2 * * * *') }` in [`pipelines.groovy`](../projects/project-1-ship-it/jenkins/jobs/pipelines.groovy) (`H` spreads the load: "about every 2 minutes").
 
-Try it. Make a change, commit it **on the branch Jenkins watches**, and do nothing else:
+Try it. Make a change, commit it **on the branch Jenkins watches** (`git branch --show-current` must match `REPO_BRANCH` in `.env`; if not, run `./scripts/use-branch.sh`), and do nothing else. (A commit needs `git config user.name` and `user.email` once; it needs no GitHub login and nothing is pushed.)
 ```bash
 cd ../../..                                             # repo root
 sed -i.bak 's/"biscuit": 5/"biscuit": 6/' cicd-observability/app/app.py && rm cicd-observability/app/app.py.bak
