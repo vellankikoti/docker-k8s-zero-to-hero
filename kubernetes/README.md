@@ -337,3 +337,5 @@ Every lab opens its concept with a diagram and gives you a 🏆 challenge to sol
 [`stack/`](stack/README.md) holds the shared frontend + Redis manifests used by K04–K13.
 
 **The story arc:** K04: votes jump between Pods → K05: shared Redis fixes it → K06: ship v2 🦄 mid-vote with 0 failures → K07: swap the whole poll via config → K12: canary 10% of traffic → K13: the Pod wall grows by itself → K18: survive the Gauntlet.
+
+➡️ Next track: [🚦 CI/CD, Automation, Monitoring & Observability](../cicd-observability/README.md) (Unit 4): the same ideas, built from first principles on plain Docker, with two projects.
