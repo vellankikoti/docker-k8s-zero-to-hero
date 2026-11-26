@@ -61,7 +61,7 @@ flowchart LR
 kubectl config current-context        # must be your THROWAWAY course cluster (kind-… / docker-desktop / minikube)
 kubectl get nodes                     # all Ready
 ```
-Fix every ✖. Two classics: the context points at a cluster that is not yours; no default StorageClass (the registry and Git server need a PVC, Lab K10).
+Fix every ✖. A classic: the context points at a cluster that is not yours. (No default StorageClass is only a note: `k8s-up.sh` then falls back to plain Pod storage for the registry and Git server, see the troubleshooting table.)
 
 > 💡 Cluster too small? The platform needs about 3 GB. Docker Desktop: Settings → Resources → 6 GB+. No Gateway controller yet? Phase 1 installs one (the K12 one).
 
@@ -324,6 +324,8 @@ rm -rf ~/chai-stall                  # your repo copy (optional)
 ## 🧯 Troubleshooting
 | Symptom | Cause and fix |
 |---|---|
+| `k8s-up.sh` says "no default StorageClass" | normal on kubeadm / Killercoda-style clusters. It switches the registry and Git server to `emptyDir` (no volume needed). They then lose their data if their Pod restarts: re-run the pipeline / `new-app-repo.sh`. For real volumes, install a StorageClass (Lab K10) and run `k8s-up.sh` again |
+| `k8s-up.sh` hangs on the registry / `kubectl -n cicd get pvc` shows `Pending` | you ran an older `k8s-up.sh` without a StorageClass: press Ctrl+C, `git pull`, run `k8s-up.sh` again (Scenario S4.3) |
 | `k8s-up.sh` is slow | the first run pulls ~2 GB of images and Jenkins plugins: wait; `kubectl -n cicd get pods` shows progress |
 | `k8s-up.sh`: Jenkins "did not finish installing" | `kubectl -n cicd logs jenkins-0 -c jenkins \| tail -30` (plugins download needs internet); run the script again |
 | build Pod `ImagePullBackOff` for `gcr.io/kaniko-project/...` | the node cannot reach gcr.io: check the node's internet / proxy (on kind, `./scripts/load-image.sh` can preload images) |

@@ -25,7 +25,7 @@ if [ "$MODE" = k8s ]; then
     if [ "${nodes:-0}" -eq 0 ]; then bad "the cluster has no nodes: kubectl get nodes"
     elif [ "${notready:-0}" -eq 0 ]; then ok "all $nodes node(s) Ready"
     else bad "$notready of $nodes node(s) not Ready: kubectl get nodes"; fi
-    kubectl get storageclass 2>/dev/null | grep -q '(default)' && ok "a default StorageClass exists (the registry and Git server need volumes, Lab K10)" || bad "no default StorageClass: the registry and Git server PVCs would stay Pending (Scenario S4.3)"
+    kubectl get storageclass 2>/dev/null | grep -q '(default)' && ok "a default StorageClass exists (the registry and Git server need volumes, Lab K10)" || note "no default StorageClass (common on kubeadm labs). k8s-up.sh will use plain Pod storage (emptyDir) for the registry and Git server: fine for a lab, but images/repos are lost if those Pods restart (Scenario S4.3 explains PVCs)"
     case "$(kubectl config current-context)" in
       kind-*|docker-desktop|minikube|*killercoda*|*kubernetes-admin*) ok "the context looks like a course/lab cluster" ;;
       *) note "context '$(kubectl config current-context)' does not look like a throwaway lab cluster: make sure it is YOURS and safe to experiment on" ;;

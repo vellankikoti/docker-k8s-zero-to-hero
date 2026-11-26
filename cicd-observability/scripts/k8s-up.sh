@@ -13,18 +13,35 @@ WITH_GATEWAY=1; [ "${1:-}" = "--no-gateway" ] && WITH_GATEWAY=0
 
 need_cluster; need_helm
 say "Cluster: $(kubectl config current-context)"
-kubectl get storageclass 2>/dev/null | grep -q '(default)' || warn "no default StorageClass: the registry and Git server volumes may stay Pending (Lab K10)"
+NO_SC=0
+kubectl get storageclass 2>/dev/null | grep -q '(default)' || NO_SC=1
+
+# Apply quietly: show nothing on success (the "cicd" namespace deliberately only WARNS about Pod Security "restricted",
+# because Kaniko and the registry run as root), show everything on failure.
+apply_quiet() {
+  local out; out=$(kubectl apply "$@" 2>&1) || { echo "$out" >&2; die "kubectl apply failed: see above"; }
+}
 
 say "Namespaces (with Pod Security) and permissions"
-kubectl apply -f "$K8S_DIR/platform/00-namespaces.yaml" -f "$K8S_DIR/platform/rbac.yaml" >/dev/null
+apply_quiet -f "$K8S_DIR/platform/00-namespaces.yaml" -f "$K8S_DIR/platform/rbac.yaml"
 
 say "Mail catcher, image registry and Git server"
-kubectl apply -f "$COURSE_ROOT/kubernetes/20-projects/mailpit.yaml" >/dev/null
-kubectl apply -f "$K8S_DIR/platform/registry.yaml" -f "$K8S_DIR/platform/gitea.yaml" >/dev/null
+apply_quiet -f "$COURSE_ROOT/kubernetes/20-projects/mailpit.yaml"
+apply_quiet -f "$K8S_DIR/platform/registry.yaml" -f "$K8S_DIR/platform/gitea.yaml"
+if [ "$NO_SC" = 1 ]; then
+  warn "this cluster has no default StorageClass, so PersistentVolumeClaims would stay Pending (Scenario S4.3)."
+  warn "Using plain Pod storage (emptyDir) for the registry and the Git server instead. Fine for a lab: if those Pods restart,"
+  warn "built images and pushed repos are lost (re-run the pipeline / new-app-repo.sh). To get real volumes, install a StorageClass, then run this again."
+  for d in registry gitea; do
+    kubectl -n cicd patch deploy "$d" --type=json \
+      -p '[{"op":"replace","path":"/spec/template/spec/volumes/0","value":{"name":"data","emptyDir":{}}}]' >/dev/null
+  done
+  kubectl -n cicd delete pvc registry-data gitea-data --ignore-not-found --wait=false >/dev/null
+fi
 kubectl -n cicd create secret generic jenkins-lab-secrets \
   --from-literal=deploy-token="s3cr3t-deploy-token-42" --from-literal=gitea-password="$GITEA_PASSWORD" \
   --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-kubectl -n cicd rollout status deploy/registry --timeout=5m >/dev/null || die "the registry did not start. Look: kubectl -n cicd get pods ; kubectl -n cicd describe pod -l app=registry"
+kubectl -n cicd rollout status deploy/registry --timeout=5m >/dev/null || die "the registry did not start. Look: kubectl -n cicd get pods,pvc ; kubectl -n cicd describe pod -l app=registry   (a Pending PVC means no StorageClass: Scenario S4.3)"
 kubectl -n cicd rollout status deploy/gitea --timeout=5m >/dev/null || die "Gitea did not start. Look: kubectl -n cicd logs deploy/gitea"
 kubectl -n mail rollout status deploy/mailpit --timeout=3m >/dev/null || warn "mailpit is not ready yet"
 
@@ -43,7 +60,7 @@ helm upgrade --install jenkins jenkins/jenkins --version "$CHART_VERSION" -n cic
 if [ "$WITH_GATEWAY" = 1 ]; then
   say "Gateway API controller (Envoy Gateway) and production's Gateway + HTTPRoute"
   "$COURSE_ROOT/scripts/install-gateway.sh"
-  kubectl apply -f "$K8S_DIR/platform/prod-gateway.yaml" >/dev/null
+  apply_quiet -f "$K8S_DIR/platform/prod-gateway.yaml"
 fi
 
 ok "Platform is up."
