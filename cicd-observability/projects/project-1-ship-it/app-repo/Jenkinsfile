@@ -83,6 +83,7 @@ pipeline {
               --destination=$PUSH_REGISTRY/chai-stall:$TAG --insecure \
               --build-arg APP_VERSION=$TAG --cache=false \
               --digest-file=$WORKSPACE/out/digest.txt --tar-path=$WORKSPACE/out/image.tar
+            chmod -R a+rX $WORKSPACE/out        # Kaniko is root; the scanner and the next stages are not
           '''
         }
       }
@@ -92,9 +93,25 @@ pipeline {
       when { expression { params.SCAN_MODE != 'skip' } }
       steps {
         container('trivy') {
+          // enforce = a CRITICAL finding fails the build, AND so does a scanner that cannot run (it fails CLOSED:
+          //           a gate that silently passes when it cannot check anything is worse than no gate).
+          // report  = findings are shown but never block, and neither does a scanner that cannot start
+          //           (for example no route to its vulnerability database).
           sh '''
+            trivy --version | head -1
+            ls -l $WORKSPACE/out/image.tar
             EXIT=1; [ "$SCAN_MODE" = report ] && EXIT=0
-            trivy image --input $WORKSPACE/out/image.tar --severity CRITICAL --exit-code $EXIT --no-progress
+            set +e
+            trivy image --input $WORKSPACE/out/image.tar --cache-dir /tmp/trivy-cache \
+              --severity CRITICAL --exit-code $EXIT --no-progress
+            rc=$?
+            set -e
+            if [ "$SCAN_MODE" = report ] && [ $rc -ne 0 ]; then
+              echo "⚠ the scanner itself failed (exit $rc) and SCAN_MODE=report never blocks. Read the message above:"
+              echo "  usually it cannot download its vulnerability database (no route to mirror.gcr.io / ghcr.io from this cluster)."
+              exit 0
+            fi
+            exit $rc
           '''
         }
       }
