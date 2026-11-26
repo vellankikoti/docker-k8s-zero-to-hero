@@ -1,143 +1,170 @@
-# 🏁 Project 1: Ship It: a CI/CD Factory (Lab Exercise 7)
+# 🏁 Project 1: Ship It: a CI/CD Factory on Kubernetes (Lab Exercise 7)
 
 > **Syllabus lab exercise 7:** *Create CI/CD pipelines using Jenkins and GitHub Actions or GitLab CI with automated build and deployment stages.*
 >
-> ⏱ 2–3 hours · 🟡→🔴 · Needs: Docker + Compose, ~2 GB free memory, ports 8080 / 5001 / 8081 / 8090 free. Best after labs [C01](../../C01-git-based-ci/README.md) to [C05](../../C05-images-and-deployment/README.md): each phase says which lab explains it.
+> ⏱ 2–3 hours · 🟡→🔴 · Needs: your course cluster (kind / Docker Desktop / minikube / Killercoda), `kubectl`, `helm`, about 3 GB of free memory, and [K05](../../../kubernetes/05-services/README.md) to [K16](../../../kubernetes/16-pod-security/README.md) under your belt. No cluster? Use the [Docker Compose edition](../../compose-edition/README.md).
 >
-> **After every phase run `./scripts/verify.sh N`**: it prints ✔ or ✖ with a hint. Nobody has to guess whether it worked.
+> **After every phase run `./cicd-observability/projects/project-1-ship-it/scripts/verify.sh N`**: it asks the cluster and prints ✔ or ✖ with a hint.
 
 ## 🎯 The mission
-A tea stall's app, the **Chai Stall**, is deployed by an engineer typing commands. It broke production twice last month. **Your job: build the factory that ships it**, so that a commit is automatically tested, scanned, built, published, deployed to staging, approved by a human, and released to production with a strategy that can **roll itself back**. And prove each gate really stops a bad change.
+The Chai Stall is deployed by an engineer typing `kubectl apply`. It broke production twice last month. **Build the factory that ships it, inside your cluster**: a commit is tested, scanned, built into an image, published, deployed to staging, approved by a human, and released to production with a strategy that **rolls itself back**. Then prove that every gate stops a different kind of bad change.
 
 ```mermaid
 flowchart LR
-  DEV[👩‍💻 git commit] --> JK
-  subgraph JK [Jenkins · configured as code]
-    T[🧪 test] --> P[⚡ secret scan ‖ syntax] --> B[📦 build + image policy] --> S[🔍 vuln scan] --> PU[(registry :5001)]
+  DEV[👩‍💻 git push] --> GT[(Gitea<br/>namespace cicd)]
+  GT -->|webhook| JK
+  subgraph JK [Jenkins · namespace cicd · one build Pod per run]
+    T[🧪 test] --> C[⚡ secret scan ‖ chart + API-server check] --> B[📦 Kaniko build] --> S[🔍 Trivy] --> PU
   end
-  PU --> ST[🧱 staging :8081<br/>recreate]
+  PU[(registry<br/>:5000 / NodePort 30500)] --> ST[🧱 stall-staging<br/>helm release chai-stall]
   ST --> AP{🙋 approval}
-  AP --> RT{{🚦 router :8090}}
-  RT -->|blue/green · canary · rolling| PROD[🏭 production]
-  PROD -.canary check fails.-> RB[↩ automatic rollback]
-  DEV -.same code, other CI.-> GH[GitHub Actions · GitLab CI]
+  AP --> RT{{🚦 Gateway + HTTPRoute<br/>weights}}
+  RT -->|"100/0 · 0/100 · 80/20"| BL[chai-blue]
+  RT --> GR[chai-green]
+  GR -.canary check fails.-> RB[↩ weights back, build red]
 ```
 
-By the end you will have: **Jenkins from code** (Configuration as Code + Job DSL), a **pipeline in a `Jenkinsfile`** with parameters, parallel checks, approval and a post-deploy gate, an **image registry**, **four deployment strategies**, three **security gates**, and the **same pipeline running on GitHub Actions** as well.
+## 🧩 Every piece is something you already know
+| In this project | You met it in | Where it shows |
+|---|---|---|
+| a build agent that is a **Pod**, deleted afterwards | K02, K20 | `kubectl -n cicd get pods -w` while a build runs |
+| the pipeline may deploy to two namespaces and **nowhere else** | K14 RBAC | `kubectl auth can-i … --as=system:serviceaccount:cicd:jenkins-agent` |
+| registry and Git server with **volumes** | K10 PVCs | `kubectl -n cicd get pvc` |
+| the app's **probes, limits, PDB, securityContext** | K08, K09, K17, K16 | [`chart/chai-stall`](../../k8s/chart/chai-stall/templates/deployment.yaml) |
+| namespaces **enforce `restricted`** | K16 Pod Security | a root Pod is refused by the API server |
+| **rolling update**, **Recreate** | K06 | `strategy:` in the chart |
+| **blue/green** and **canary** by traffic **weights** | K05, K12 | `kubectl -n stall-prod get httproute chai -o yaml` |
+| a release that fails **rolls back** (`helm --atomic`, weights) | K06 `rollout undo` | `helm history` |
+| secrets as env from a **Secret** | K07 | `jenkins-lab-secrets` |
+| a failing pipeline step ≈ a scenario you solved | S1–S6 | the [scenario map](#-when-the-pipeline-fails-it-is-a-scenario-you-have-solved) at the end |
 
 ## 📋 The phases
 
-| # | Phase | You prove | Time | Lab |
-|---|---|---|---|---|
-| 0 | Pre-flight | your machine is ready | 5 m | |
-| 1 | Boot the factory | registry, Jenkins, router run | 10 m | [C02](../../C02-jenkins-pipelines/README.md) |
-| 2 | Jenkins configures itself | jobs are generated from Git | 10 m | [C02](../../C02-jenkins-pipelines/README.md), [C03](../../C03-job-dsl-dynamic/README.md) |
-| 3 | The first green pipeline | build → test → scan → push → deploy | 25 m | [C02](../../C02-jenkins-pipelines/README.md), [C04](../../C04-artifacts-secrets-security/README.md) |
-| 4 | **Ship a feature, test-first** | a commit reaches production on its own | 25 m | [C02](../../C02-jenkins-pipelines/README.md) |
-| 5 | **Release four ways** | recreate, rolling, blue/green, canary + auto-rollback | 25 m | [C05](../../C05-images-and-deployment/README.md) |
-| 6 | **Break it on purpose** | each gate stops a different bad change | 20 m | [C04](../../C04-artifacts-secrets-security/README.md) |
-| 7 | Extend the factory | your own check, your own button | 20 m | [C03](../../C03-job-dsl-dynamic/README.md) |
-| 8 | The same pipeline on GitHub Actions / GitLab CI | a second CI runs it | 30 m | [C01](../../C01-git-based-ci/README.md) |
-| 9 | Clean up (and optionally watch it) | | 5 m | [Project 2, Phase 7](../project-2-see-everything/README.md) |
+| # | Phase | You prove | Time |
+|---|---|---|---|
+| 0 | Pre-flight | the cluster and tools are ready | 5 m |
+| 1 | **Install the platform** | registry, Git server, Jenkins, Gateway run in your cluster | 15 m |
+| 2 | **Your repo → Git server → Jenkins** | a push reaches Jenkins; jobs are generated from Git | 10 m |
+| 3 | **The first green pipeline** | test → build → scan → push → staging → production | 25 m |
+| 4 | **Ship a feature, test-first** | a `git push` reaches production by itself | 25 m |
+| 5 | **Release four ways** | recreate, rolling, blue/green, canary + automatic rollback | 30 m |
+| 6 | **Break it on purpose** | seven gates, seven different failures | 30 m |
+| 7 | Extend the factory | your own check, button, stage | 20 m |
+| 8 | The same pipeline on GitHub Actions / GitLab CI | a second CI runs it | 30 m |
+| 9 | Clean up | | 5 m |
 
 ---
 
-## 📌 Read this once: how Jenkins sees your code (it removes 90% of the confusion)
-
-```mermaid
-flowchart LR
-  A[✏️ you edit a file] -->|git commit| B[(your local repo<br/>branch: practice)]
-  B -.mounted read-only.-> C[Jenkins container<br/>/repo]
-  C -->|builds the branch named in .env| D[🏭 pipeline]
-  A -. an uncommitted edit is invisible .-x C
-  B -. "no git push needed" .-x E[(GitHub)]
-```
-1. **Jenkins builds a *branch*, not your working folder.** An edit you did not **commit** does not exist for Jenkins.
-2. **It builds *the branch named in `.env`*** (`REPO_BRANCH`). If you commit on `practice` while Jenkins watches `main`, Jenkins will never see your commit. (This is the #1 mistake. `./scripts/verify.sh 1` warns you about it.)
-3. **You never push.** Jenkins reads your *local* repository directly (it is mounted into the container). Commits stay on your laptop: **nothing you do here can touch the shared repository on GitHub.** A commit needs no GitHub login, only a name and email (below).
-4. Switching branch later? One command: **`./scripts/use-branch.sh`**.
-
-(The only time you would push is if you point Jenkins at a GitHub URL instead of your laptop (`REPO_URL` in `.env`). The lab does not.)
-
-## Phase 0: Pre-flight, and a safe practice branch (5 min)
-From the repository root:
+## Phase 0: Pre-flight (5 min)
 ```bash
-./cicd-observability/scripts/doctor.sh          # fix every ✖
-git status --short                              # should print nothing; commit or stash anything of yours first
-git switch -c practice                          # a private branch for this project: main stays untouched
-git config user.name  "Your Name"               # needed once to commit; stored only in this clone
-git config user.email "you@example.com"
+./cicd-observability/scripts/doctor.sh --k8s
+kubectl config current-context        # must be your THROWAWAY course cluster (kind-… / docker-desktop / minikube)
+kubectl get nodes                     # all Ready
 ```
-Everything you commit in this project goes on `practice`. When you are finished you can throw it away (`git switch main && git branch -D practice`) and the shared repository never knew.
+Fix every ✖. Two classics: the context points at a cluster that is not yours; no default StorageClass (the registry and Git server need a PVC, Lab K10).
 
-## Phase 1: Boot the factory (10 min)
+> 💡 Cluster too small? The platform needs about 3 GB. Docker Desktop: Settings → Resources → 6 GB+. No Gateway controller yet? Phase 1 installs one (the K12 one).
+
+## Phase 1: Install the platform (15 min)
 ```bash
-cd cicd-observability/projects/project-1-ship-it
-cp .env.example .env
-sed -i.bak "s#^REPO_BRANCH=.*#REPO_BRANCH=*/$(git branch --show-current)#" .env && rm .env.bak
-grep REPO_BRANCH .env                           # must say  REPO_BRANCH=*/practice
-docker compose up -d --build                    # 3-5 minutes the first time: it downloads Jenkins and installs plugins
-./scripts/verify.sh 1
+./cicd-observability/scripts/k8s-up.sh
+./cicd-observability/projects/project-1-ship-it/scripts/verify.sh 1
 ```
-Expected: four ✔ (registry, Jenkins, router, **and "Jenkins builds the branch you are on"**). Jenkins is ready about a minute after the containers start: if verify says ✖, wait and retry. Log in at **http://localhost:8080** with `admin` / `z2h-jenkins`.
+It takes 5 to 10 minutes (images, Jenkins plugins). While you wait, read what it installs: [`k8s/platform/`](../../k8s/platform/):
 
-> 🔁 **Started the stack earlier, on `main`, or switched branches?** Do not rebuild anything. Run **`./scripts/use-branch.sh`** from this folder: it updates `.env`, restarts Jenkins, and re-runs the seed job, in about two minutes. Your registry, images and deployed containers are kept.
+| File | What it creates | Lab |
+|---|---|---|
+| `00-namespaces.yaml` | `cicd`, `stall-staging`, `stall-prod`; the last two **enforce Pod Security `restricted`** | K16 |
+| `rbac.yaml` | ServiceAccount `jenkins-agent` and a Role in each stall namespace | K14 |
+| `registry.yaml` | the image registry (PVC + two Services: cluster DNS and NodePort 30500) | K05, K10 |
+| `gitea.yaml` | a Git server for *your* app repo | K04 |
+| `jenkins-values.yaml` | Jenkins by Helm: **configured as code**, secrets from a Secret | K19, K20 |
+| `prod-gateway.yaml` | production's `Gateway` + `HTTPRoute` | K12 |
 
-<details><summary>🧯 Image build fails with "PKIX path building failed"?</summary>
-
-You are behind a proxy that re-signs HTTPS. Put your company root certificate in `jenkins/extra-ca/` as `corp.crt`, then `docker compose build jenkins`. See [`extra-ca/README.md`](jenkins/extra-ca/README.md).
-</details>
-
-## Phase 2: Jenkins configures itself (10 min)
-You did not click through a setup wizard: the whole controller is in [`jenkins/casc/jenkins.yaml`](jenkins/casc/jenkins.yaml). Now let it create its own jobs:
-
-1. In Jenkins open **00-seed → Build Now**. Open the build → **Console Output**; read the `GeneratedJob{…}` lines at the end.
-2. Back on the dashboard, open the **chai-stall** folder: `ci-cd`, `dynamic-checks`, `secrets-demo`, and the `ops-*` buttons (see the **Operations** view).
+### Look around (10 min): the cluster tells you everything
 ```bash
-./scripts/verify.sh 2
+kubectl get pods -A | grep -vE 'kube-system|Running|Completed'     # nothing listed = all healthy
+kubectl -n cicd get pods,svc,pvc
+kubectl get ns --show-labels | grep -E 'cicd|stall'                # see the pod-security labels
 ```
-**Understand it (answer in your own words, then peek):** *"Why is the seed job the only job anyone ever created by hand?"*
-<details><summary>Peek</summary>
+Now two things you already know, in a new setting:
+```bash
+# 1. least privilege (K14): what may the PIPELINE'S ServiceAccount do?
+kubectl auth can-i create deployments -n stall-prod  --as=system:serviceaccount:cicd:jenkins-agent    # yes
+kubectl auth can-i create deployments -n kube-system --as=system:serviceaccount:cicd:jenkins-agent    # no
 
-Because everything else is described in `jenkins/jobs/*.groovy` and re-created from Git on demand. If Jenkins is destroyed, `docker compose up -d` plus one seed run restores everything: no hand-made configuration to lose.
-</details>
+# 2. Pod Security (K16): the production namespace refuses a normal Pod
+kubectl run rootpod --image=nginx -n stall-prod --dry-run=server
+```
+Read the refusal: *violates PodSecurity "restricted:latest"*. **Every image the pipeline ships must satisfy this**, or production will refuse it. That rule is your first, free, always-on security gate.
+
+> 🔤 **One registry, two names.** Build Pods push to `registry.cicd.svc.cluster.local:5000` (cluster DNS). The node's kubelet cannot resolve cluster DNS, so it pulls from `localhost:30500` (the NodePort). Same bytes, same digest, two addresses. When an image "can't be pulled", ask first *who is pulling, and from where?* (Scenario S1.2.)
+
+## Phase 2: Your repo → Git server → Jenkins (10 min)
+Open the doors into the cluster, then create **your own** copy of the app:
+```bash
+./cicd-observability/scripts/forward.sh start
+./cicd-observability/scripts/new-app-repo.sh
+./cicd-observability/projects/project-1-ship-it/scripts/verify.sh 2
+```
+| Door | URL | Login |
+|---|---|---|
+| Jenkins | http://localhost:8081 | `admin` / `z2h-jenkins` |
+| Git server | http://localhost:3001 | `z2h` / `z2h-gitea-pass` |
+| Inbox | http://localhost:8025 | none |
+| Staging | http://localhost:8082 | none |
+| Production | http://localhost:8090 | none |
+
+> 📌 **Your app repo is not the course repo.** `new-app-repo.sh` made `~/chai-stall` and pushed it to the Git server *inside your cluster*. You commit and push **there**. No GitHub account, no tokens, and **nothing you do can touch the shared course repository.** (This also removes the old "which branch is Jenkins building?" confusion: Jenkins always builds `main` of `chai-stall`.)
+
+```bash
+cd ~/chai-stall && git log --oneline && git remote -v        # an ordinary Git repository with one commit
+ls                                                           # app/  chart/  ci/  deploy/  jenkins/  Jenkinsfile …
+```
+In **Gitea** (http://localhost:3001/z2h/chai-stall) look at *Settings → Webhooks*: one webhook points at Jenkins. In **Jenkins** open the **chai-stall** folder: `ci-cd`, `dynamic-checks`, `secrets-demo` and the `ops-*` buttons. Nobody clicked "New Item": the seed job read [`jenkins/jobs/*.groovy`](app-repo/jenkins/jobs/pipelines.groovy) from your repo and created them (Lab C03).
 
 ## Phase 3: The first green pipeline (25 min)
-Open **chai-stall → ci-cd → Build Now**. (The first build registers the parameters; from the next one the button reads **Build with Parameters**.) Watch the **Stage View** and the **Console Output**. The pipeline runs, in order:
-
-`Checkout → Test → [Secret scan ‖ Syntax check] → Build image (+ image policy) → Scan image → Push to registry → Deploy to staging → Approval → Release to production`
-
-Things to notice as it runs:
-- Stages run **in parallel** where they can (secret scan ‖ syntax check).
-- **Push to registry** logs in with a credential, and the password appears as `****` (C04).
-- At **Approval** the pipeline *stops and waits for you*. Click the **Input requested** box and **Ship it**.
-
-> ⚠️ **If "Scan image" fails** with a message about downloading a database, the scanner cannot reach the internet. That is the gate failing *closed*, which is correct. Run **Build with Parameters** and set `SCAN_MODE=report` (the scan runs and shows findings without failing the build).
-
-When the build is green:
+In a second terminal, watch the cluster work:
 ```bash
-curl -s localhost:8081/api/info          # staging
-curl -s localhost:8090/api/info          # production, through the router
-./scripts/verify.sh 3
-./scripts/verify.sh 4
+kubectl -n cicd get pods -w
 ```
-Open the build page: under **Build Artifacts** is `build-info.json` (version, image, **digest**, commit). Run `./scripts/registry-digest.sh 1.0.1` (use your version) and match the digest. 🎉 You have shipped.
+In Jenkins open **chai-stall → ci-cd → Build Now**. (The first build only teaches Jenkins the pipeline's parameters; from the next one the button says **Build with Parameters**.)
 
-**Run it a second time** with **Build with Parameters**, `REQUIRE_APPROVAL` **unticked**: no stop at all. *That* is continuous deployment; the first run was continuous delivery.
+**Watch the Pod appear.** A Pod named after the build starts with **five containers** (`jnlp` plus the four from [`ci/pod.yaml`](app-repo/ci/pod.yaml): `python`, `tools`, `kaniko`, `trivy`) and disappears when the build ends. Open one while it runs:
+```bash
+kubectl -n cicd describe pod -l jenkins=slave | grep -E 'Image:|Service Account|Containers:' 
+```
+The pipeline's stages, in [`Jenkinsfile`](app-repo/Jenkinsfile):
+
+`Checkout → Test → [Secret scan ‖ Chart: lint + ask the API server] → Build image (Kaniko) → Scan image (Trivy) → Record the artifact → Deploy to staging → Approval → Release to production`
+
+Things to notice:
+- **Chart: lint + ask the API server** renders the Helm chart and sends it to the real API server with `--dry-run=server`: *the cluster itself* validates it (including Pod Security) **before** anything is built.
+- **Kaniko** builds the image *without* a Docker daemon or the Docker socket, then pushes it to the registry. (The Compose edition mounted the Docker socket, which is root on the host; here, no.)
+- **Deploy to staging** is `helm upgrade --install --atomic`: if the release is not healthy within 3 minutes, **Helm rolls it back by itself**. Then `helm test` runs a small Pod that checks `/readyz` and the version.
+- At **Approval** the pipeline stops and waits for you. Press **Ship it**.
+
+> ⚠️ **If "Scan image" fails** with a message about downloading a database, the scanner could not reach the internet. That is the gate failing *closed*, which is correct. Run **Build with Parameters** and set `SCAN_MODE=report`.
+
+When it is green:
+```bash
+./cicd-observability/projects/project-1-ship-it/scripts/verify.sh 3
+./cicd-observability/projects/project-1-ship-it/scripts/verify.sh 4
+curl -s localhost:8082/api/info          # staging
+curl -s localhost:8090/api/info          # production, through the Gateway
+kubectl get deploy,pods,svc -n stall-staging
+kubectl get deploy,pods,svc,httproute -n stall-prod
+helm list -A
+```
+Open the build page: **Build Artifacts → `build-info.json`** holds the version, the image, its **digest** and the commit. That one file answers "what exactly runs in production, and where did it come from?" (Lab C04). Run it again with **Build with Parameters** and `REQUIRE_APPROVAL` unticked: no stop at all. That is continuous *deployment*; the first run was continuous *delivery*.
 
 ## Phase 4: Ship a feature, test-first (25 min)
-The festival is coming: add **vada** (₹8) to the menu, **the way a real team would**: write the failing test first, watch the pipeline refuse it, then make it pass.
+The festival is coming: add **vada** (₹8). In **your** repo, the way a real team does: failing test first, then the code.
 
-Work on the `practice` branch (the one Jenkins watches). Before you start, check:
+**4a. 🔴 Red: push only the test.**
 ```bash
-git branch --show-current                       # practice
-./scripts/verify.sh 1                           # from the project folder: the branch line must be ✔
-```
-From the repository root:
-
-**4a. 🔴 Red: commit only the test.**
-```bash
-cat > cicd-observability/app/tests/test_menu.py <<'EOF'
+cd ~/chai-stall
+cat > app/tests/test_menu.py <<'EOF'
 """The menu has vada (a new item for the festival season)."""
 import sys
 import unittest
@@ -155,158 +182,161 @@ class MenuTests(unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
 EOF
-git add -A && git commit -m "test: vada should be on the menu"
+git add -A && git commit -m "test: vada should be on the menu" && git push
 ```
-Do **not** press anything. Within ~2 minutes Jenkins notices the commit and starts a build. **It fails at *Test*** (red), and every later stage is skipped: **nothing was built, pushed or deployed.** Open the console and find the failing assertion. A broken change was stopped by a machine, before a human saw it.
+Nothing else to press: the **webhook** starts a build within seconds. Watch `kubectl -n cicd get pods -w`: a build Pod appears, runs the tests, and the build goes **red at *Test***. Nothing was built, pushed or deployed: the stages after it were skipped. A broken change was stopped by a machine.
 
 **4b. 🟢 Green: make it pass.**
 ```bash
-sed -i.bak 's/"biscuit": 5}/"biscuit": 5, "vada": 8}/' cicd-observability/app/app.py && rm cicd-observability/app/app.py.bak
-python3 -m unittest discover -s cicd-observability/app/tests 2>&1 | tail -3        # passes on your laptop first
-git commit -am "feat: add vada to the menu"
+sed -i.bak 's/"biscuit": 5}/"biscuit": 5, "vada": 8}/' app/app.py && rm app/app.py.bak
+python3 -m unittest discover -s app/tests 2>&1 | tail -3        # passes on your laptop first (skip if python3 is not installed)
+git commit -am "feat: add vada to the menu" && git push
 ```
-(If `python3` is not installed locally, skip the middle line: the pipeline runs the tests anyway.) Wait for the build, press **Ship it** at *Approval* when it arrives, and then:
+The build goes through to **Approval**. Press **Ship it**, then:
 ```bash
-curl -s -X POST 'localhost:8090/order?item=vada'          # {"ok": true, "item": "vada", "price_inr": 8, ...}
+curl -s -X POST 'localhost:8090/order?item=vada'               # {"ok": true, "item": "vada", "price_inr": 8, ...}
+kubectl -n stall-prod get pods -o wide                         # the Pods that serve it
+helm history chai-blue -n stall-prod                           # which revision is that? (or chai-green)
 ```
-✔ Your commit is live in production, with a new version number, and **you never typed a deploy command**.
+✔ Your `git push` reached production, and you never typed a deploy command.
 
-<details><summary>🧯 Got <code>unknown item, choose one of ['biscuit', 'chai', 'coffee', 'samosa']</code> instead?</summary>
+<details><summary>🧯 No build started after the push?</summary>
 
-That is the *old* app still answering: Jenkins has not built and released your commit. Check in this order:
-1. `./scripts/verify.sh 1`: does it say Jenkins builds a **different branch** than the one you committed on? Run `./scripts/use-branch.sh`, then **Build Now** on `chai-stall/ci-cd`.
-2. Open the latest `ci-cd` build: did it stop at **Approval** (press *Ship it*), or fail at **Scan image** (use `SCAN_MODE=report`)?
-3. `curl -s localhost:8090/api/info`: the `version` changes when a release really reached production.
-4. Did you `git commit`? (`git log -1 --stat` should show `app.py`.)
+1. Gitea → your repo → **Settings → Webhooks → the hook → Recent Deliveries**: a red delivery shows the reason.
+2. Jenkins also **polls every ~2 minutes** as a safety net. Wait, or press **Build Now**.
+3. `git remote -v` must show `localhost:3001`; `./cicd-observability/scripts/forward.sh status` must show the Git server door open.
 </details>
 
-> 🤔 **Which parts of that were "CI" and which "CD"?** *(Checkout, test, scan, build, push = CI. Staging deploy, approval, production = CD.)*
+## Phase 5: Release four ways (30 min)
+Use **Build with Parameters**; set `REQUIRE_APPROVAL` off to move faster. Keep `kubectl -n stall-prod get pods -w` open in a terminal and **watch the Pods**: that is the strategy, made visible.
 
-## Phase 5: Release four ways (25 min)
-Use **Build with Parameters** (set `REQUIRE_APPROVAL` off to move faster). Each build needs a *new commit or just a re-run*; re-running the same commit is fine: the version is the build number.
-
-| Try | Parameters | What you should see |
+| Try | Parameters | What you will see |
 |---|---|---|
-| **Blue/green** | `STRATEGY=bluegreen` | the new version appears in the idle colour, then traffic flips: `curl -si localhost:8090/api/info \| grep -E "X-Slot|version"` |
-| **Rolling** | `STRATEGY=rolling` | three replicas replaced one by one; `curl localhost:8090/roll/api/info` |
-| **A good canary** | `STRATEGY=canary`, `CANARY_PERCENT=40` | the check passes, the canary is **promoted** |
-| **A bad canary** | `STRATEGY=canary`, **`INJECT_BUG` ticked**, `CANARY_PERCENT=40` | the check reports ~30% errors, the pipeline **rolls back by itself** and the build is red |
+| **Blue/Green** | `STRATEGY=bluegreen` | the new version appears in the *idle* colour (`chai-green`), `helm test` passes, then the weights flip: `kubectl -n stall-prod get httproute chai -o jsonpath='{.spec.rules[0].backendRefs[*].weight}'` |
+| **Rolling** | `STRATEGY=rolling` | the live release is updated **in place**, Pod by Pod: a new Pod appears, becomes Ready, an old one terminates (`maxSurge 1, maxUnavailable 0`, Lab K06) |
+| **Recreate** | `STRATEGY=recreate` | **all** old Pods terminate first, then new ones start: **an outage**. Prove it: `while true; do curl -s -o /dev/null -w '%{http_code} ' localhost:8090/api/info; sleep 0.3; done` and count the non-200s |
+| **A good canary** | `STRATEGY=canary`, `CANARY_PERCENT=40` | 40% of traffic goes to the idle colour; the check judges *that colour's own* answers; the canary is **promoted** |
+| **A bad canary** | `STRATEGY=canary`, **`INJECT_BUG` ticked**, `CANARY_PERCENT=40` | the check reports ~30% errors, the pipeline **sets the weights back by itself** and the build is red |
 
-For the bad canary, read the console: you will find `canary chai-…: N failed of M requests = 30% (limit 5%)` followed by `rollback`. Then confirm users were never left on the bad version:
+For the bad canary read the console: `chai-green…: 12 failed of 40 requests = 30% (limit 5%)`, then `canary removed: 100% of traffic back to chai-blue`. Confirm:
 ```bash
-./deploy/deploy.sh status                                   # canary weight back to 0%
-./scripts/traffic-test.sh http://localhost:8090 10          # failed=0
-./scripts/verify.sh 5
+kubectl -n stall-prod get httproute chai -o jsonpath='{range .spec.rules[0].backendRefs[*]}{.name}={.weight} {end}'; echo
+helm list -n stall-prod                                      # both releases exist; only one gets traffic
+./cicd-observability/projects/project-1-ship-it/scripts/verify.sh 5
 ```
-Use the **ops-* buttons** (Operations view) for manual control: **ops-status**, **ops-rollback**, **ops-promote**.
+Use the **ops-\* buttons** (Jenkins → chai-stall → **Operations**) for manual control: `ops-status`, `ops-rollback`, `ops-promote`, `ops-retire` (scale the idle colour to 0). They run [`deploy/k8s-deploy.sh`](app-repo/deploy/k8s-deploy.sh) as the pipeline's own ServiceAccount.
 
-**Prove zero downtime** for yourself: in one terminal `./scripts/traffic-test.sh http://localhost:8090/roll 25`, then run a **rolling** build. Count the `x` characters. Now do the same against staging (`http://localhost:8081`) during a build's *Deploy to staging* stage (which is a *recreate*). The difference between the two is the reason strategies exist.
+**Read the script once** (about 190 lines of `helm` and `kubectl`): *every* strategy is a handful of Kubernetes commands you already know. There is no magic in a deployment strategy: it is **which weights, when**.
 
-## Phase 6: Break it on purpose (20 min)
-A pipeline you have not seen *fail* is a pipeline you do not trust. Break it three ways and watch a **different** gate stop each one. Make each break as a commit on the branch Jenkins watches, then undo it with `git reset --hard HEAD~1` (**commit or stash your real work first**: this removes the one bad commit you just made and anything uncommitted).
+## Phase 6: Break it on purpose (30 min)
+A pipeline you have never seen *fail* is a pipeline you do not trust. Break it, one way at a time, in `~/chai-stall`, watch the right gate stop it, then undo with `git revert --no-edit HEAD && git push`.
 
-| # | Break | How | Which stage turns red | What it proves |
+| # | Break | How | Which gate stops it | The Unit 3 scenario it echoes |
 |---|---|---|---|---|
-| A | A **failing test** | you did it in Phase 4a | *Test* | broken code never builds |
-| B | A **leaked secret** | `printf '\nAPI_KEY = "AKIAABCDEFGHIJKLMNOP"\n' >> cicd-observability/app/app.py && git commit -am "oops"` | *Checks in parallel → Secret scan* | secrets stop at the gate (C04) |
-| C | An **unsafe image** | `sed -i.bak '/^USER 10001/d' cicd-observability/app/Dockerfile && rm cicd-observability/app/Dockerfile.bak && git commit -am "run as root"` | *Build image* (image-policy: "runs as root") | policy as code (C04) |
-| D | A **buggy release** | Phase 5, bad canary | *Release to production* (auto-rollback) | the last gate: real traffic |
+| A | a **failing test** | Phase 4a | *Test* stage | |
+| B | a **leaked secret** | `printf '\nAPI_KEY = "AKIAABCDEFGHIJKLMNOP"\n' >> app/app.py && git commit -am oops && git push` | *Secret scan* | S4.2 (secrets) |
+| C | a manifest the cluster would **reject** | delete the `securityContext:` block (the Pod-level one) from `chart/chai-stall/templates/deployment.yaml`, commit, push | *Chart: lint + ask the API server*: `violates PodSecurity "restricted"` | S4.5 / K16 |
+| D | an image that **runs as root** | `sed -i.bak '/^USER 10001/d' app/Dockerfile && rm app/Dockerfile.bak`, commit, push | *Deploy to staging*: the Pod stays `CreateContainerConfigError: container has runAsNonRoot and image will run as root`; `--atomic` rolls the release back | **S4.5** (the exact one) |
+| E | a **typo in the image name** | in `Jenkinsfile` change `PULL_REPO = 'localhost:30500/chai-stall'` to `'localhost:30500/chai-stal'` | *Deploy to staging*: `ImagePullBackOff`, then `helm --atomic` rolls back | **S1.2** |
+| F | a **buggy release** | Phase 5, bad canary | *Release to production*: automatic rollback | S5.4 |
+| G | **too many permissions asked** | run the **ops-state** job after changing `NS` to `kube-system` in `deploy/k8s-deploy.sh` | the API server: `forbidden` for ServiceAccount `jenkins-agent` | **S4.4** / K14 |
 
-After each one: look at the console, find **the exact line** that explains the failure, undo the commit, and let the pipeline go green again. Then answer: *which of these four would a human reviewer most likely have missed?* (Usually B and D.)
+**For C, D, E, G do the forensics like an on-call engineer, with `kubectl`:**
+```bash
+kubectl -n stall-staging get pods                              # what state?
+kubectl -n stall-staging describe pod <name> | tail -15        # the event that explains it
+kubectl -n stall-staging get events --sort-by=.lastTimestamp | tail
+helm history chai-stall -n stall-staging                       # Helm's own record: "failed", then "rolled back"
+```
+Which gate caught each, and *when*? The earlier a gate catches something, the cheaper it is: C costs seconds, D and E cost minutes, F costs a few percent of users. Rank your seven.
 
 ## Phase 7: Extend the factory (20 min)
-Make it yours. Do **at least two**:
-1. **A new dynamic check.** Add a fourth entry to [`pipeline-config.json`](pipeline-config.json) (for example `{"name": "no TODOs", "cmd": "! grep -rn TODO cicd-observability/app/app.py"}`), commit, run **chai-stall → dynamic-checks**. A new parallel stage appears without touching the Jenkinsfile. ([C03](../../C03-job-dsl-dynamic/README.md))
-2. **A new button.** Add `'state'` to the list in [`jenkins/jobs/deploy_jobs.groovy`](jenkins/jobs/deploy_jobs.groovy), commit, run **00-seed**: a new **ops-state** job appears.
-3. **A new stage.** In the [`Jenkinsfile`](Jenkinsfile) add a stage after *Push to registry* that prints the image **digest** in a big banner, or fails the build if the image is larger than 150 MB (`docker image inspect -f '{{.Size}}' $FULL_IMAGE`).
-4. **A new gate.** Make *Release to production* fail if `deploy.sh status` shows that more than one container is unhealthy.
-5. **A new parameter.** `VERSION_SUFFIX` (see the C02 challenge).
-
-<details><summary>Hint for #3 (size gate)</summary>
-
-```groovy
-stage('Image size gate') {
-  steps {
-    sh '''
-      SIZE=$(docker image inspect -f '{{.Size}}' $FULL_IMAGE)
-      echo "image size: $((SIZE/1024/1024)) MB"
-      [ "$SIZE" -lt 157286400 ] || { echo "image is over 150 MB"; exit 1; }
-    '''
-  }
-}
-```
-</details>
+Do **at least two**:
+1. **A new dynamic check.** Add `{"name": "no TODOs", "container": "tools", "cmd": "! grep -rn TODO app/app.py"}` to `pipeline-config.json`, push, run **dynamic-checks**: a new parallel stage appears without touching the Jenkinsfile. ([C03](../../C03-job-dsl-dynamic/README.md))
+2. **A new button.** Add `'retire'` is already there; add your own action name to the list in `jenkins/jobs/ops.groovy` *and* a matching `case` in `deploy/k8s-deploy.sh`, push, run **00-seed**: a new job appears.
+3. **Autoscaling (K13).** Set `autoscaling.enabled: true` in `chart/chai-stall/values-prod.yaml` (needs metrics-server: `./scripts/install-metrics-server.sh`), push, release, then `kubectl -n stall-prod get hpa -w`.
+4. **A drain that cannot hurt (K17).** With `podDisruptionBudget.enabled`, run `kubectl drain <worker> --ignore-daemonsets --delete-emptydir-data` while you `curl` production in a loop: zero failures, because the PDB keeps one Pod up. `kubectl uncordon <worker>` afterwards.
+5. **A NetworkPolicy (K15).** Production already enables the chart's policy. From a throwaway Pod in `default`, `kubectl run t --rm -it --image=curlimages/curl -n default -- curl -m 3 chai-blue.stall-prod`: it is refused. From `stall-staging` or `cicd`: allowed. Why?
+6. **A new stage.** Add a stage after *Record the artifact* that fails the build if the image is larger than 150 MB (`ls -l out/image.tar`).
 
 ## Phase 8: The same pipeline on GitHub Actions or GitLab CI (30 min)
-Jenkins is one CI. Most teams today run **Git-hosted CI**. Follow [**C01**](../../C01-git-based-ci/README.md) Steps 2 to 4 with your fork:
-- GitHub: [`.github/workflows/unit4-ci.yml`](../../../.github/workflows/unit4-ci.yml) runs tests on three Python versions, unit-tests the Prometheus alert rules, builds and scans the image, and publishes to GHCR on `main`; deploy jobs use **environments** (add yourself as a *required reviewer* on `production` to get an approval gate).
-- GitLab: copy [`ci-examples/gitlab-ci.yml`](../../ci-examples/gitlab-ci.yml) to a GitLab project's root as `.gitlab-ci.yml`.
+Jenkins is one CI. Most teams today run **Git-hosted CI**. Follow [**C01**](../../C01-git-based-ci/README.md) Steps 2 to 4 with your fork: [`.github/workflows/unit4-ci.yml`](../../../.github/workflows/unit4-ci.yml) runs tests on three Python versions, unit-tests the alert rules, builds and scans the image and publishes it to GHCR, with deploy jobs behind **environments** and approvals. For GitLab, copy [`ci-examples/gitlab-ci.yml`](../../ci-examples/gitlab-ci.yml). Where the Jenkins pipeline ends with `helm upgrade` into *your* cluster, a hosted runner needs credentials to reach a cluster: that is the one real step you would add in a company (a short-lived token or OIDC, never a kubeconfig in a variable).
 
-**Deliverable:** a screenshot or link of one **green** and one **red** run (use the broken-test trick from C01). Then fill in this table for your own understanding:
+**Deliverable:** a green and a red run, and this table filled in:
 
 | Concept | Jenkins (this project) | GitHub Actions | GitLab CI |
 |---|---|---|---|
 | pipeline file | `Jenkinsfile` | | |
 | a parallel step | `parallel { }` | | |
 | a manual approval | `input` | | |
-| a secret | `withCredentials` | | |
+| a secret | credential bound to env | | |
 | a build artifact | `archiveArtifacts` | | |
+| the build environment | a Pod from `ci/pod.yaml` | | |
 
 <details><summary>Check the table</summary>
 
 | Concept | Jenkins | GitHub Actions | GitLab CI |
 |---|---|---|---|
 | pipeline file | `Jenkinsfile` | `.github/workflows/*.yml` | `.gitlab-ci.yml` |
-| a parallel step | `parallel { }` | jobs without `needs`, or `strategy.matrix` | jobs in the same stage, `parallel:matrix` |
+| a parallel step | `parallel { }` | jobs without `needs`, `strategy.matrix` | same stage, `parallel:matrix` |
 | a manual approval | `input` | `environment` with required reviewers | `when: manual` |
-| a secret | `withCredentials` | `secrets.NAME` | CI/CD variables (masked/protected) |
+| a secret | `withCredentials` / env from a Secret | `secrets.NAME` | masked CI/CD variable |
 | a build artifact | `archiveArtifacts` | `actions/upload-artifact` | `artifacts: paths:` |
+| the build environment | a Pod from `ci/pod.yaml` | `runs-on:` (a fresh VM) | `image:` + a runner |
 </details>
 
-## Phase 9: Clean up, and what next (5 min)
-Want to **watch your releases on a dashboard**? Do [Project 2, Phase 7](../project-2-see-everything/README.md) *before* cleaning up: it points Prometheus at the containers you just deployed and lets you see a canary in Grafana.
-
-When you are done:
+## Phase 9: Clean up (5 min)
+Want to **watch your releases on a dashboard and be paged when they fail**? Do [Project 2](../project-2-see-everything/README.md) *before* cleaning up.
 ```bash
-./deploy/deploy.sh clean       # the app containers the pipeline deployed
-docker compose down -v         # Jenkins, registry, router, and all their data
-git switch main && git branch -D practice     # optional: discard your practice branch (it was only ever on your laptop)
+./cicd-observability/scripts/forward.sh stop
+./cicd-observability/scripts/k8s-down.sh
+rm -rf ~/chai-stall                  # your repo copy (optional)
 ```
 
 ---
 
+## 🔥 When the pipeline fails, it is a scenario you have solved
+| The pipeline says… | Look with… | It is… |
+|---|---|---|
+| build Pod stays `Pending` | `kubectl -n cicd describe pod` ("Insufficient cpu/memory") | **S1.1** requests too big for the cluster |
+| `ImagePullBackOff` for `localhost:30500/...` | `kubectl describe pod`; is the registry up? right tag? who pulls from where? | **S1.2** |
+| release `CrashLoopBackOff` | `kubectl logs --previous` | **S1.3** |
+| `helm test` can't reach the Service | `kubectl get endpoints` | **S3.1** no endpoints (selector ≠ labels) |
+| `CreateContainerConfigError … runAsNonRoot` | `kubectl describe pod` | **S4.5** |
+| `Forbidden … serviceaccount jenkins-agent` | `kubectl auth can-i … --as=…` | **S4.4** RBAC |
+| registry/Gitea Pod `Pending` with a PVC | `kubectl get pvc,sc` | **S4.3** no StorageClass |
+| rollout never finishes | `kubectl rollout status` / `helm history` | **S5.4** bad rollout |
+| Pod `OOMKilled` | `kubectl describe pod` (`Last State`) | **S5.5** |
+| `exceeded quota` | `kubectl describe quota` | **S6.2** |
+| `kubectl apply` "worked" but nothing changed | wrong namespace / context | **S6.1** |
+
 ## ✅ Definition of done (self-assessment)
-Tick them honestly. Each one is something you **did**, not read:
-- [ ] Jenkins runs from code; I destroyed nothing by hand-configuring it
-- [ ] `ci-cd` goes green end to end, and I can explain every stage
-- [ ] A commit reached production **without me running a deploy command**
-- [ ] I saw the pipeline **fail** for a test, a secret, an unsafe image, and a bad canary
-- [ ] I measured downtime for recreate vs rolling vs blue/green
-- [ ] I can find, for any running container, **the commit and digest it came from** (`build-info.json`)
-- [ ] The same code ran through a Git-hosted CI (GitHub Actions or GitLab CI)
-- [ ] `./scripts/verify.sh` prints all ✔
+- [ ] The platform runs in **my cluster**; I can say what every Pod in `cicd` is for
+- [ ] A `git push` to **my** repo reached production without me typing a deploy command
+- [ ] I watched a build **Pod appear and disappear**, and I know which container did which stage
+- [ ] I can explain the two registry names, and why the node uses `localhost:30500`
+- [ ] I used `helm history`, `helm rollback` or the weights to go back, and checked with `kubectl`
+- [ ] I saw the pipeline fail for a test, a secret, a rejected manifest, a root image, a bad image name and a bad canary, and matched each to a scenario
+- [ ] I measured an outage (recreate) against none (rolling, blue/green)
+- [ ] The same code ran through a Git-hosted CI
+- [ ] `verify.sh` prints all ✔
 
 ## 🧯 Troubleshooting
 | Symptom | Cause and fix |
 |---|---|
-| `verify.sh 1` ✖ for Jenkins | still starting: `docker compose logs jenkins \| tail`; wait for "fully up and running" |
-| Image build fails: `PKIX path building failed` | corporate proxy: [`jenkins/extra-ca/`](jenkins/extra-ca/README.md) |
-| My commit never builds / my change is not in production | Jenkins watches a different branch than you committed on (or you did not commit). **`./scripts/use-branch.sh`**, then build. **You do not need to push**: Jenkins reads your local repo |
-| Seed job: `Couldn't find any revision to build` | your clone is shallow (`git fetch --unshallow`), or `REPO_BRANCH` names a branch that does not exist locally: **`./scripts/use-branch.sh`** |
-| `git commit` says `Please tell me who you are` | `git config user.name "Your Name"` and `git config user.email you@example.com` (local to this clone; no GitHub login involved) |
-| Seed job: `references a local directory, which may be insecure` | you changed the Jenkins image options; `ALLOW_LOCAL_CHECKOUT` must stay on for the lab ([Dockerfile](jenkins/Dockerfile)) |
-| You edited a job file and nothing changed | you must **commit**: Jenkins reads Git, not your working folder |
-| No build starts after a commit | polling runs every ~2 min; commit on the watched branch; or press **Build Now** |
-| `Scan image` fails (database download) | no internet to the scanner: `SCAN_MODE=report` |
-| `Deploy to staging`: `network 'shipit' not found` | the stack is not up: `docker compose up -d` |
-| `port is already allocated` | another program uses 8080/5001/8081/8090: `doctor.sh` tells you which |
-| Canary check says "no traffic" | run it from the host with the router up (`curl localhost:8090/api/info`); inside Jenkins it uses `ROUTER_URL` (already set in Compose) |
-| Everything is slow / containers killed | Docker has too little memory: give it 4 GB+ (Docker Desktop → Settings → Resources) |
-| Start over | `./deploy/deploy.sh clean; docker compose down -v; docker compose up -d --build` (then `./scripts/use-branch.sh` if you are not on the branch in `.env`) |
+| `k8s-up.sh` is slow | the first run pulls ~2 GB of images and Jenkins plugins: wait; `kubectl -n cicd get pods` shows progress |
+| `k8s-up.sh`: Jenkins "did not finish installing" | `kubectl -n cicd logs jenkins-0 -c jenkins \| tail -30` (plugins download needs internet); run the script again |
+| build Pod `ImagePullBackOff` for `gcr.io/kaniko-project/...` | the node cannot reach gcr.io: check the node's internet / proxy (on kind, `./scripts/load-image.sh` can preload images) |
+| `new-app-repo.sh`: cannot reach `localhost:3001` | `./cicd-observability/scripts/forward.sh start`; is port 3001 used by something else? |
+| `git push` asks for a password | the remote has the lab login in the URL (`git remote -v`); if you cloned another way use `z2h` / `z2h-gitea-pass` |
+| Jenkins build: `No Kubernetes cloud was found` | Jenkins was installed without the chart's defaults: re-run `k8s-up.sh` |
+| `helm upgrade` times out in staging | the Pod is not Ready: `kubectl -n stall-staging describe pod`; `--atomic` will have rolled it back; see the scenario table above |
+| production `curl` returns nothing | is the door open (`forward.sh status`)? is the Gateway proxy up (`kubectl -n envoy-gateway-system get pods`)? is any release in `stall-prod`? |
+| Canary check says `000` for every request | the build Pod cannot reach `chai-<colour>.stall-prod.svc.cluster.local`: the NetworkPolicy must allow namespace `cicd` (it does by default); did you edit it? |
+| Start over | `./cicd-observability/scripts/k8s-down.sh -y && ./cicd-observability/scripts/k8s-up.sh` |
+| Test the whole thing automatically | `./cicd-observability/scripts/k8s-selftest.sh` (about 15 minutes) |
 
 ## 💼 For your CV / portfolio
-> *Built a CI/CD platform with Jenkins (Configuration as Code, Job DSL, declarative pipelines) and GitHub Actions: automated test, secret and vulnerability scanning, image build and registry publishing; blue/green, rolling and canary deployments with automated canary analysis and rollback; policy-as-code image gates.*
-
-Put the repo link, a screenshot of the Stage View with a red canary rollback, and the architecture diagram above in your README.
+> *Built a Kubernetes-native CI/CD platform: Jenkins (Configuration as Code, Job DSL, declarative pipelines with per-build Pods), Gitea webhooks, daemonless image builds with Kaniko, an in-cluster registry, Helm releases with atomic rollback, Pod Security `restricted` and least-privilege RBAC as deployment gates, and blue/green, rolling, recreate and canary releases driven by Gateway API traffic weights with automated canary analysis and rollback.*
 
 ➡️ Next: [🏁 Project 2: See Everything](../project-2-see-everything/README.md)

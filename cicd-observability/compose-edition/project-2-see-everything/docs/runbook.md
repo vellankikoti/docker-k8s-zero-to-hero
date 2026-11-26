@@ -1,7 +1,7 @@
 # 📖 Chai Stall Runbook
 
 > For the on-call engineer. Each section matches an alert's `Runbook:` link. **Mitigate first, diagnose later.**
-> Everything below works from `cicd-observability/projects/project-2-see-everything/`.
+> Everything below works from `cicd-observability/compose-edition/project-2-see-everything/`.
 
 **First 60 seconds for any alert**
 1. Open the dashboard: http://localhost:3000 → *Chai Stall: Service Overview*. What is red? When did it start?

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "chai.fullname" . }}
+  labels:
+    {{- include "chai.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "chai.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http

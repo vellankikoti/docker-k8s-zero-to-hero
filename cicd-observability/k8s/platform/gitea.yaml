@@ -1,0 +1,92 @@
+# A small Git server inside the cluster (Gitea, SQLite). It plays "the company's GitHub":
+# learners push THEIR OWN copy of the app here, so nothing they do can touch the shared course repository,
+# no GitHub account or token is needed, and Jenkins builds on every push (a real webhook, Lab C01/C02).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gitea-admin
+  namespace: cicd
+type: Opaque
+stringData:
+  username: z2h
+  password: z2h-gitea-pass          # lab only: never use a fixed password like this for anything real (Lab C04)
+  email: z2h@stall.local
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gitea-data
+  namespace: cicd
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests: { storage: 1Gi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gitea
+  namespace: cicd
+  labels: { app: gitea }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: gitea }
+  template:
+    metadata:
+      labels: { app: gitea }
+    spec:
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: gitea
+          image: gitea/gitea:1.24-rootless
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - { name: GITEA__database__DB_TYPE, value: sqlite3 }
+            - { name: GITEA__server__DOMAIN, value: gitea.cicd.svc.cluster.local }
+            - { name: GITEA__server__ROOT_URL, value: "http://gitea.cicd.svc.cluster.local:3000/" }
+            - { name: GITEA__server__DISABLE_SSH, value: "true" }
+            - { name: GITEA__security__INSTALL_LOCK, value: "true" }
+            - { name: GITEA__service__DISABLE_REGISTRATION, value: "true" }
+            - { name: GITEA__webhook__ALLOWED_HOST_LIST, value: "*" }      # let it call Jenkins, which has a private cluster address
+            - { name: GITEA__actions__ENABLED, value: "false" }
+            - { name: GITEA__log__LEVEL, value: Warn }
+          readinessProbe:
+            httpGet: { path: /api/healthz, port: http }
+            periodSeconds: 5
+            failureThreshold: 30
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/gitea }
+            - { name: config, mountPath: /etc/gitea }
+      volumes:
+        - name: data
+          persistentVolumeClaim: { claimName: gitea-data }
+        - name: config
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gitea
+  namespace: cicd
+spec:
+  selector: { app: gitea }
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http

@@ -1,0 +1,4 @@
+# Staging: small, and always Recreate-able. Deployed by every green pipeline run.
+replicaCount: 1
+podDisruptionBudget:
+  enabled: false

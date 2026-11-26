@@ -1,0 +1,58 @@
+# Defaults for the Chai Stall chart. Override per environment with  -f values-staging.yaml  or  --set key=value.
+
+image:
+  repository: localhost:30500/chai-stall     # how the NODE's kubelet reaches the in-cluster registry (NodePort 30500)
+  tag: ""                                    # the pipeline sets this to the build version, e.g. 1.0.7
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+# Which "slot" this release is when used for blue/green and canary (blue | green | ""). Becomes a Pod label.
+slot: ""
+
+# Rolling update (the default) or Recreate. Lab K06 / C05.
+strategy:
+  type: RollingUpdate
+  maxSurge: 1
+  maxUnavailable: 0
+
+# Pretend the release is buggy or slow (the app reads these at start). Lab C05 / C09 incidents.
+chaos:
+  errorRate: "0"
+  latencyMs: "0"
+
+# Send traces here when set, e.g. http://jaeger.observability.svc.cluster.local:4318
+otlpEndpoint: ""
+
+resources:
+  requests: { cpu: 25m, memory: 48Mi }
+  limits: { memory: 128Mi }
+
+probes:
+  startupFailureThreshold: 20     # 20 x 1 s of patience before liveness takes over (Lab K08)
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1                 # a node drain may never take the last Pod (Lab K17)
+
+autoscaling:
+  enabled: false                  # Lab K13: the Pod wall grows by itself
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+networkPolicy:
+  enabled: false                  # Lab K15: only these namespaces may talk to the Pods
+  allowFromNamespaces: [stall-staging, stall-prod, envoy-gateway-system, monitoring, cicd]
+
+serviceMonitor:
+  enabled: false                  # Project 2 turns this on: Prometheus then scrapes /metrics by itself
+  interval: 5s
+  labels: { release: kube-prometheus-stack }
+
+service:
+  port: 80
+
+# Extra Pod labels / annotations (optional)
+podLabels: {}
+podAnnotations: {}

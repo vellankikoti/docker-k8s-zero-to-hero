@@ -1,0 +1,158 @@
+// The Chai Stall pipeline, on Kubernetes. Pipeline as Code (Lab C02): the whole process is in this file, in Git.
+// Every build runs in its own Pod (ci/pod.yaml). Every deploy is a Helm release into a namespace that ENFORCES
+// Pod Security "restricted". Every environment is a namespace; every release strategy is plain Kubernetes.
+pipeline {
+  agent { kubernetes { yamlFile 'ci/pod.yaml'; defaultContainer 'tools' } }
+
+  options {
+    skipDefaultCheckout()
+    timestamps()
+    ansiColor('xterm')
+    timeout(time: 25, unit: 'MINUTES')
+    disableConcurrentBuilds()               // two releases at once would fight over the same Deployments
+    buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '5'))
+  }
+
+  parameters {
+    choice(name: 'STRATEGY', choices: ['bluegreen', 'canary', 'rolling', 'recreate'], description: 'How to release to production')
+    string(name: 'CANARY_PERCENT', defaultValue: '20', description: 'Canary only: percent of traffic for the new version')
+    booleanParam(name: 'INJECT_BUG', defaultValue: false, description: 'Pretend this release has a bug (30% of orders fail)')
+    choice(name: 'SCAN_MODE', choices: ['enforce', 'report', 'skip'], description: 'enforce = a CRITICAL vulnerability fails the build')
+    booleanParam(name: 'REQUIRE_APPROVAL', defaultValue: true, description: 'Ask a human before touching production')
+  }
+
+  environment {
+    PUSH_REGISTRY = 'registry.cicd.svc.cluster.local:5000'   // where a build Pod pushes (cluster DNS)
+    PULL_REPO     = 'localhost:30500/chai-stall'              // where the node's kubelet pulls from (NodePort)
+    TAG           = "1.0.${env.BUILD_NUMBER}"
+    CHAOS_ERROR_RATE = "${params.INJECT_BUG ? '0.3' : '0'}"
+    IMAGE_REPO    = "${PULL_REPO}"
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        container('jnlp') { checkout scm }
+        sh 'git config --global --add safe.directory "$WORKSPACE" || true; git log -1 --pretty="commit %h by %an: %s"'
+      }
+    }
+
+    stage('Test') {
+      steps {
+        container('python') {
+          // Keep the exit code of the tests: a pipe into tee would swallow a failure (sh has no pipefail).
+          sh '''
+            cd app
+            python -m unittest discover -s tests -v > "$WORKSPACE/test-output.txt" 2>&1; rc=$?
+            cat "$WORKSPACE/test-output.txt"
+            exit $rc
+          '''
+        }
+      }
+    }
+
+    stage('Checks in parallel') {
+      parallel {
+        stage('Secret scan') {
+          steps { sh 'ci/secret-scan.sh app chart ci deploy' }
+        }
+        stage('Chart: lint + ask the API server') {
+          steps {
+            // 1) helm lint  2) render the chart and let the REAL API server validate it without creating anything
+            // (--dry-run=server). For a Deployment, Pod Security only WARNS ("would violate ..."), so we turn that
+            // warning into a failure: a manifest the cluster would refuse to run fails HERE, not at deploy time.
+            sh '''
+              helm lint chart/chai-stall --set image.tag=$TAG
+              helm template chai-stall chart/chai-stall -f chart/chai-stall/values-staging.yaml \
+                --set image.tag=$TAG --set image.repository=$PULL_REPO -n stall-staging > rendered.yaml
+              kubectl apply --dry-run=server -n stall-staging -f rendered.yaml > dryrun.txt 2>&1 || { cat dryrun.txt; exit 1; }
+              cat dryrun.txt
+              if grep -q "would violate PodSecurity" dryrun.txt; then echo "✖ the cluster would refuse these Pods (Pod Security): fix the securityContext"; exit 1; fi
+          '''
+          }
+        }
+      }
+    }
+
+    stage('Build image (Kaniko)') {
+      steps {
+        container('tools') { sh 'mkdir -p out && chmod 777 out' }
+        container('kaniko') {
+          sh '''
+            /kaniko/executor --context=dir://$WORKSPACE/app --dockerfile=$WORKSPACE/app/Dockerfile \
+              --destination=$PUSH_REGISTRY/chai-stall:$TAG --insecure \
+              --build-arg APP_VERSION=$TAG --cache=false \
+              --digest-file=$WORKSPACE/out/digest.txt --tar-path=$WORKSPACE/out/image.tar
+          '''
+        }
+      }
+    }
+
+    stage('Scan image (Trivy)') {
+      when { expression { params.SCAN_MODE != 'skip' } }
+      steps {
+        container('trivy') {
+          sh '''
+            EXIT=1; [ "$SCAN_MODE" = report ] && EXIT=0
+            trivy image --input $WORKSPACE/out/image.tar --severity CRITICAL --exit-code $EXIT --no-progress
+          '''
+        }
+      }
+    }
+
+    stage('Record the artifact') {
+      steps {
+        sh '''
+          DIGEST=$(cat out/digest.txt)
+          printf '{"version":"%s","image":"%s:%s","digest":"%s","commit":"%s","build":"%s"}\\n' \
+            "$TAG" "$PULL_REPO" "$TAG" "$DIGEST" "$(git rev-parse --short HEAD)" "$BUILD_NUMBER" | tee build-info.json
+        '''
+        archiveArtifacts artifacts: 'build-info.json, test-output.txt', fingerprint: true
+      }
+    }
+
+    stage('Deploy to staging') {
+      steps {
+        // --atomic: if the new release does not become healthy, Helm rolls it back by itself.
+        sh '''
+          helm upgrade --install chai-stall chart/chai-stall -n stall-staging -f chart/chai-stall/values-staging.yaml \
+            --set image.repository=$PULL_REPO --set image.tag=$TAG --atomic --wait --timeout 3m
+          helm test chai-stall -n stall-staging --logs
+        '''
+      }
+    }
+
+    stage('Approval') {
+      when { expression { params.REQUIRE_APPROVAL } }
+      steps {
+        timeout(time: 10, unit: 'MINUTES') {
+          input message: "Staging runs ${TAG}. Release it to production with ${params.STRATEGY}?", ok: 'Ship it'
+        }
+      }
+    }
+
+    stage('Release to production') {
+      steps {
+        script {
+          if (params.STRATEGY == 'canary') {
+            sh 'deploy/k8s-deploy.sh canary $TAG ${CANARY_PERCENT}'
+            // Automated canary analysis: judge the canary ON ITS OWN traffic, then promote or roll back.
+            def verdict = sh(script: 'deploy/k8s-deploy.sh analyse canary', returnStatus: true)
+            if (verdict != 0) {
+              sh 'deploy/k8s-deploy.sh rollback'
+              error 'The canary failed its health check: rolled back automatically.'
+            }
+            sh 'deploy/k8s-deploy.sh promote'
+          } else {
+            sh "deploy/k8s-deploy.sh ${params.STRATEGY} \$TAG"
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    success { echo "✅ ${TAG} is live in stall-prod. Look: kubectl -n stall-prod get deploy,httproute" }
+    failure { echo "❌ Build failed: open the first red stage. Stages after it were skipped. If it was a deploy, helm already rolled back (--atomic)." }
+  }
+}

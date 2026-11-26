@@ -1,0 +1,30 @@
+// A DYNAMIC pipeline (Lab C03): the stages are not written here, they are BUILT at run time from pipeline-config.json.
+// Add a check by adding a line of JSON. No Groovy to edit.
+pipeline {
+  agent { kubernetes { yamlFile 'ci/pod.yaml'; defaultContainer 'tools' } }
+  options { skipDefaultCheckout(); timestamps(); ansiColor('xterm') }
+  stages {
+    stage('Checkout') { steps { container('jnlp') { checkout scm } } }
+
+    stage('Read config') {
+      steps {
+        script {
+          def cfg = readJSON file: 'pipeline-config.json'
+          env.CHECK_COUNT = "${cfg.checks.size()}"
+          checks = [:]                                   // a map: name -> closure, which is what `parallel` wants
+          cfg.checks.each { c ->
+            checks[c.name] = { stage(c.name) { container(c.container) { sh c.cmd } } }
+          }
+        }
+      }
+    }
+
+    stage('Run every check in parallel') {
+      steps { script { parallel checks } }
+    }
+
+    stage('Report') {
+      steps { echo "All ${env.CHECK_COUNT} configured checks passed." }
+    }
+  }
+}

@@ -1,0 +1,91 @@
+# Jenkins on Kubernetes, configured as code (Lab K20 + C02). Used by scripts/k8s-up.sh:
+#   helm upgrade --install jenkins jenkins/jenkins -n cicd -f jenkins-values.yaml
+# Everything not listed keeps the chart's defaults, which already include the Kubernetes plugin:
+# every build gets its OWN Pod (ci/pod.yaml in the app repo) and the Pod disappears afterwards.
+controller:
+  # Lab-only login. Never use a fixed password like this anywhere real (Lab C04).
+  admin:
+    username: admin
+    password: z2h-jenkins
+  # The chart's own defaults (kubernetes, workflow-aggregator, git, configuration-as-code) PLUS these.
+  additionalPlugins:
+    - job-dsl
+    - pipeline-utility-steps
+    - pipeline-stage-view
+    - timestamper
+    - ansicolor
+    - mailer
+    - build-timeout
+  # One executor on the controller ONLY so the lab's seed job can run. Production: 0, and the seed runs on an agent.
+  numExecutors: 1
+  serviceType: ClusterIP
+  resources:
+    requests: { cpu: 100m, memory: 512Mi }
+    limits: { memory: 1536Mi }
+  # Secrets arrive as environment variables from a Kubernetes Secret (Lab K07), NEVER written in this file or in Git.
+  # JCasC below refers to them as ${DEPLOY_TOKEN} and ${GITEA_PASSWORD}.
+  containerEnv:
+    - name: DEPLOY_TOKEN
+      valueFrom: { secretKeyRef: { name: jenkins-lab-secrets, key: deploy-token } }
+    - name: GITEA_PASSWORD
+      valueFrom: { secretKeyRef: { name: jenkins-lab-secrets, key: gitea-password } }
+  JCasC:
+    defaultConfig: true
+    configScripts:
+      mail: |
+        unclassified:
+          location:
+            adminAddress: "jenkins@stall.local"
+          mailer:
+            smtpHost: "mailpit.mail.svc.cluster.local"
+            smtpPort: "1025"
+            useSsl: false
+            charset: "UTF-8"
+      security: |
+        security:
+          globalJobDslSecurityConfiguration:
+            useScriptSecurity: false        # lab only: lets our seed job run Job DSL from Git without admin approval clicks
+      credentials: |
+        credentials:
+          system:
+            domainCredentials:
+              - credentials:
+                  - string:
+                      scope: GLOBAL
+                      id: "deploy-token"
+                      description: "Pretend production deploy token"
+                      secret: "${DEPLOY_TOKEN}"
+                  - usernamePassword:
+                      scope: GLOBAL
+                      id: "gitea"
+                      description: "Login to the in-cluster Git server"
+                      username: "z2h"
+                      password: "${GITEA_PASSWORD}"
+      jobs: |
+        jobs:
+          # The ONE hand-made job. It reads jenkins/jobs/*.groovy from the app repo and CREATES every other job.
+          - script: >
+              freeStyleJob('00-seed') {
+                description('Reads jenkins/jobs/*.groovy from the app repo in Gitea and creates / updates every other job.')
+                scm {
+                  git {
+                    remote {
+                      url('http://gitea.cicd.svc.cluster.local:3000/z2h/chai-stall.git')
+                      credentials('gitea')
+                    }
+                    branch('*/main')
+                  }
+                }
+                steps {
+                  dsl {
+                    external('jenkins/jobs/*.groovy')
+                    removeAction('DELETE')
+                    removeViewAction('DELETE')
+                  }
+                }
+              }
+agent:
+  # Build Pods are described in the app repo (ci/pod.yaml), not here.
+  enabled: true
+persistence:
+  enabled: false        # lab: jobs are re-created from Git and builds are throwaway. Production: a PVC (Lab K10).

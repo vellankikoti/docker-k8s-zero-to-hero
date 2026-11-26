@@ -1,0 +1,6 @@
+apiVersion: v2
+name: chai-stall
+description: "The Chai Stall service (Unit 4). Deployment, Service, probes, limits, PDB, optional HPA, NetworkPolicy and ServiceMonitor"
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

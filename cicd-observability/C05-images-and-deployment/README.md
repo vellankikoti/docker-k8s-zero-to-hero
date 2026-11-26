@@ -56,7 +56,7 @@ It takes well under a second. A process that ignores `SIGTERM` (as PID 1 does by
 
 ### Step 2: Make three versions to release (3 min)
 ```bash
-cd ../projects/project-1-ship-it
+cd ../compose-edition/project-1-ship-it
 for v in 1 2 3; do
   docker build -q --build-arg APP_VERSION=demo-$v -t localhost:5001/chai-stall:demo-$v ../../app >/dev/null
   docker push -q localhost:5001/chai-stall:demo-$v >/dev/null
@@ -64,9 +64,9 @@ done
 curl -s localhost:5001/v2/chai-stall/tags/list
 R=localhost:5001/chai-stall           # a shortcut: set it again in every terminal you open
 ```
-You now have `demo-1`, `demo-2`, `demo-3` in the registry. The `deploy.sh` script ([read it](../projects/project-1-ship-it/deploy/deploy.sh), it is about 190 lines of plain bash) is the same one the pipeline calls.
+You now have `demo-1`, `demo-2`, `demo-3` in the registry. The `deploy.sh` script ([read it](../compose-edition/project-1-ship-it/deploy/deploy.sh), it is about 190 lines of plain bash) is the same one the pipeline calls.
 
-The helper [`traffic-test.sh`](../projects/project-1-ship-it/scripts/traffic-test.sh) sends ~10 requests a second to a URL for N seconds and prints `.` for every success and `x` for every failure. It is how we will **measure whether users noticed**.
+The helper [`traffic-test.sh`](../compose-edition/project-1-ship-it/scripts/traffic-test.sh) sends ~10 requests a second to a URL for N seconds and prints `.` for every success and `x` for every failure. It is how we will **measure whether users noticed**.
 
 ### Step 3: Strategy 1: Recreate (staging) (8 min)
 Staging uses *recreate*: stop the old, start the new.
@@ -213,4 +213,4 @@ Double the capacity while both environments exist, plus the discipline to keep t
 docker rmi chai-stall:demo-0 2>/dev/null
 ```
 
-➡️ Next: [C06 · Metrics and Prometheus](../C06-prometheus/README.md). **Then** try [🏁 Project 1](../projects/project-1-ship-it/README.md).
+➡️ Next: [C06 · Metrics and Prometheus](../C06-prometheus/README.md). **Then** try [🏁 Project 1](../compose-edition/project-1-ship-it/README.md).

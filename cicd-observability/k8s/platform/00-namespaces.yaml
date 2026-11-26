@@ -1,0 +1,28 @@
+# Unit 4 on Kubernetes: the namespaces. Three of Unit 3's ideas are already at work here:
+#   * Pod Security Admission (Lab K16): the two app namespaces ENFORCE "restricted". A root container, a missing
+#     securityContext, a privileged Pod: the API server (or the kubelet) says no.
+#   * Namespaces as the unit of permission (Lab K14): the pipeline's ServiceAccount may only touch these two.
+#   * "cicd" is "baseline": Kaniko (the image builder) runs as root inside its Pod, but nothing privileged.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cicd
+  labels:
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stall-staging
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stall-prod
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest

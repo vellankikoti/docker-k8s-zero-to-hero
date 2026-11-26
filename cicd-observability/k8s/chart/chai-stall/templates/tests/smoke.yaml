@@ -1,0 +1,31 @@
+# `helm test <release>` runs this Pod: it must succeed before a release counts as healthy.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "chai.fullname" . }}-smoke
+  labels:
+    {{- include "chai.selectorLabels" . | nindent 4 }}
+    smoke-test: "true"
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 100
+    seccompProfile: { type: RuntimeDefault }
+  containers:
+    - name: smoke
+      image: curlimages/curl:8.11.1
+      command: ["sh", "-c"]
+      args:
+        - |
+          set -e
+          B=http://{{ include "chai.fullname" . }}:{{ .Values.service.port }}
+          curl -sf $B/readyz
+          curl -sf $B/api/info | grep -q '"version": "{{ .Values.image.tag }}"'
+          echo "smoke test passed for {{ .Values.image.tag }}"
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities: { drop: [ALL] }

@@ -1,0 +1,6 @@
+# Production: two replicas behind the Gateway, protected against drains, with network rules.
+replicaCount: 2
+podDisruptionBudget:
+  enabled: true
+networkPolicy:
+  enabled: true
