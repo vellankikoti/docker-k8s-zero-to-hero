@@ -1,0 +1,145 @@
+# Unit 4 · Lab C02: the Chai Stall's CI/CD pipeline on GitHub Actions.
+# Runs only when the app, the Prometheus rules or this file change (the `paths` filter), so the rest of the repo is unaffected.
+name: Unit 4 · Chai Stall CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths: ['cicd-observability/app/**', 'cicd-observability/projects/project-2-see-everything/prometheus/**', 'cicd-observability/projects/project-2-see-everything/tests/**', '.github/workflows/unit4-ci.yml']
+  pull_request:
+    paths: ['cicd-observability/app/**', 'cicd-observability/projects/project-2-see-everything/prometheus/**', 'cicd-observability/projects/project-2-see-everything/tests/**', '.github/workflows/unit4-ci.yml']
+  workflow_dispatch:
+    inputs:
+      push_image:
+        description: 'Push the image to GHCR even from a branch other than main?'
+        type: boolean
+        default: false
+
+# Least privilege: the token can only read the code, unless a job asks for more.
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the older run: no wasted minutes.
+concurrency:
+  group: unit4-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_DIR: cicd-observability/app
+  P2_DIR: cicd-observability/projects/project-2-see-everything
+
+jobs:
+  test:
+    name: Unit tests (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12', '3.13']       # one job per version, in parallel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run the tests
+        working-directory: ${{ env.APP_DIR }}
+        run: python -m unittest discover -s tests -v
+
+  alert-rules:
+    name: Check and unit-test the Prometheus alert rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: promtool check + test
+        run: |
+          docker run --rm -v "$PWD/$P2_DIR":/w -w /w --entrypoint promtool prom/prometheus:v3.5.0 check rules prometheus/rules/recording.yml prometheus/rules/alerts.yml
+          docker run --rm -v "$PWD/$P2_DIR":/w -w /w --entrypoint promtool prom/prometheus:v3.5.0 test rules tests/rules_test.yml
+
+  build:
+    name: Build, scan and publish the image
+    needs: [test, alert-rules]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write          # only this job may push to GitHub's container registry
+    outputs:
+      image: ${{ steps.vars.outputs.image }}
+      version: ${{ steps.vars.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out the image name and version
+        id: vars
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"                      # registry names must be lowercase
+          echo "image=ghcr.io/${owner}/chai-stall" >> "$GITHUB_OUTPUT"
+          echo "version=1.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build (not pushed yet)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ env.APP_DIR }}
+          load: true
+          tags: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.version }}
+          build-args: APP_VERSION=${{ steps.vars.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Scan for vulnerabilities (CRITICAL fails the build)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.58.1 image --no-progress --severity CRITICAL --exit-code 1 \
+            ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.version }}
+
+      - name: Smoke-test the image
+        run: |
+          docker run -d --name smoke -p 8080:8080 ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.version }}
+          for _ in $(seq 1 20); do curl -sf localhost:8080/readyz && break; sleep 1; done
+          curl -sf -X POST 'localhost:8080/order?item=chai'
+          curl -sf localhost:8080/metrics | grep -q '^orders_total'
+
+      - name: Log in to GHCR
+        if: github.ref == 'refs/heads/main' || inputs.push_image
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}     # created for this run, expires when it ends: nothing to leak
+
+      - name: Push
+        if: github.ref == 'refs/heads/main' || inputs.push_image
+        run: docker push ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.version }}
+
+      - name: Keep a build record as an artifact
+        run: |
+          printf '{"image":"%s","version":"%s","commit":"%s","run":"%s"}\n' \
+            "${{ steps.vars.outputs.image }}" "${{ steps.vars.outputs.version }}" "$GITHUB_SHA" "$GITHUB_RUN_ID" | tee build-info.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-info
+          path: build-info.json
+
+  deploy-staging:
+    name: Deploy to staging
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - name: Pull and start the image (a stand-in for a real server)
+        run: |
+          docker run -d --name staging -p 8081:8080 ${{ needs.build.outputs.image }}:${{ needs.build.outputs.version }}
+          for _ in $(seq 1 20); do curl -sf localhost:8081/readyz && break; sleep 1; done
+          curl -sf localhost:8081/api/info
+
+  deploy-production:
+    name: Deploy to production
+    needs: [build, deploy-staging]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production        # add "required reviewers" to this environment in Settings -> Environments: a human must approve
+    steps:
+      - name: Release
+        run: echo "Here you would run kubectl set image / helm upgrade / ssh deploy for ${{ needs.build.outputs.version }}"

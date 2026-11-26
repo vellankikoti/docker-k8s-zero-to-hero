@@ -1,0 +1,104 @@
+# Unit 4 · Lab C03: the same Chai Stall pipeline on GitLab CI.
+# To use it: copy this file to the ROOT of a GitLab project as .gitlab-ci.yml (with the cicd-observability/ folder).
+# No GitLab account? The lab shows how to practise the syntax on your laptop.
+
+stages: [test, build, scan, release, deploy]
+
+default:
+  interruptible: true                 # a newer pipeline on the same branch may cancel this one
+
+variables:
+  APP_DIR: cicd-observability/app
+  IMAGE: $CI_REGISTRY_IMAGE/chai-stall
+  VERSION: "1.0.$CI_PIPELINE_IID"
+
+# When does a pipeline exist at all?
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+# ---- a hidden template (name starts with a dot): any job can `extends` it ------------------------
+.python:
+  cache:
+    key: pip-$CI_COMMIT_REF_SLUG
+    paths: [.cache/pip]
+  variables:
+    PIP_CACHE_DIR: $CI_PROJECT_DIR/.cache/pip
+
+unit-tests:
+  extends: .python
+  stage: test
+  parallel:
+    matrix:
+      - PY: ["3.11", "3.12", "3.13"]     # one job per Python version, in parallel
+  image: python:$PY-alpine
+  script:
+    - cd $APP_DIR && python -m unittest discover -s tests -v
+
+secret-scan:
+  stage: test
+  image:
+    name: zricethezav/gitleaks:v8.21.2
+    entrypoint: [""]
+  script:
+    - gitleaks detect --source . --no-banner --redact
+
+build-image:
+  stage: build
+  image: docker:27
+  services: ["docker:27-dind"]           # a Docker engine for this job only
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"   # built-in, short-lived credentials
+  script:
+    - docker build --build-arg APP_VERSION=$VERSION -t $IMAGE:$VERSION $APP_DIR
+    - docker push $IMAGE:$VERSION
+    - echo "{\"image\":\"$IMAGE:$VERSION\",\"commit\":\"$CI_COMMIT_SHORT_SHA\"}" > build-info.json
+  artifacts:                              # files that outlive the job and travel to later jobs
+    paths: [build-info.json]
+    expire_in: 1 week
+
+container-scan:
+  stage: scan
+  image:
+    name: aquasec/trivy:0.58.1
+    entrypoint: [""]
+  needs: [build-image]                    # start as soon as the image exists, don't wait for the whole stage
+  variables:
+    TRIVY_USERNAME: $CI_REGISTRY_USER
+    TRIVY_PASSWORD: $CI_REGISTRY_PASSWORD
+  script:
+    - trivy image --severity CRITICAL --exit-code 1 --no-progress $IMAGE:$VERSION
+
+release-notes:
+  stage: release
+  image: alpine:3.20
+  needs: [build-image, container-scan]   # the build-info.json artifact arrives from build-image
+  script:
+    - echo "Released $VERSION" && cat build-info.json
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+deploy-staging:
+  stage: deploy
+  image: alpine:3.20
+  environment: { name: staging, url: "https://staging.example.com" }
+  needs: [release-notes]
+  script:
+    - echo "kubectl set image deployment/chai-stall app=$IMAGE:$VERSION -n staging"      # the real command; see lab K20
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+deploy-production:
+  stage: deploy
+  image: alpine:3.20
+  environment: { name: production, url: "https://chai.example.com" }
+  needs: [deploy-staging]
+  script:
+    - echo "kubectl set image deployment/chai-stall app=$IMAGE:$VERSION -n production"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual                         # a person presses the button

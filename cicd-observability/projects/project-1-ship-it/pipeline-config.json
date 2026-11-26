@@ -1,0 +1,7 @@
+{
+  "checks": [
+    { "name": "unit tests",   "cmd": "cd cicd-observability/app && python3 -m unittest discover -s tests" },
+    { "name": "secret scan",  "cmd": "cicd-observability/projects/project-1-ship-it/scripts/secret-scan.sh cicd-observability/app" },
+    { "name": "syntax check", "cmd": "python3 -m py_compile cicd-observability/app/app.py" }
+  ]
+}
