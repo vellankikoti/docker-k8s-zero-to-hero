@@ -1,37 +1,40 @@
-# G-08: Who broke the filter coffee price? (bisect)
+# G-08: Who broke the health check? (bisect)
 
 ## 📖 The story
-Filter Coffee shows **₹600** on the website. The last known good release is tag `v1.0`, and there are 10 commits since. Find the guilty commit in under a minute, then fix it the team-safe way.
+Release smoke test: the Showdown API container never turns healthy. The Dockerfile's health check asks for `/healthz`. The last good release is tag `v1.0`, and there are 10 commits since, by Lakshmi, Ravi and you. Find the commit that broke it, then undo it the team-safe way.
 
 ## 🔥 Symptoms
-- `grep "Filter Coffee" menu.md` shows ₹600
-- `git log --oneline v1.0..main` lists 10 commits
+- `grep -n 'path == "/health' api/app.py` shows `elif path == "/health":`
+- `git log --oneline v1.0..main` lists 10 commits.
 
 ## 🔍 Investigate
 ```bash
-cd /tmp/z2h-git-ts/08-who-broke-it-bisect/cafe
+cd /tmp/z2h-git-ts/08-who-broke-it-bisect/you
 git log --oneline v1.0..main
-git bisect start HEAD v1.0
+git show v1.0:api/app.py | grep -n 'path == "/health'
+bash ../check.sh
 ```
 
 <details><summary>💡 Hint 1</summary>
 
-`git bisect run <command>`: the command must exit 0 for *good* and non-zero for *bad*.
+`git bisect run <command>`: the command must exit 0 for *good* and 1–127 (not 125) for *bad*.
 </details>
 <details><summary>💡 Hint 2</summary>
 
-`! grep -q 'Filter Coffee | ₹600 |' menu.md` is "good" when ₹600 is absent.
+`grep -q 'path == "/healthz"' api/app.py` exits 0 when the route is there and 1 when it is not.
 </details>
 <details><summary>✅ Root cause & fix</summary>
 
 ```bash
-git bisect start HEAD v1.0
-git bisect run sh -c '! grep -q "Filter Coffee | ₹600 |" menu.md'
+git bisect start main v1.0
+git bisect run grep -q 'path == "/healthz"' api/app.py   # f587695 is the first bad commit
 git bisect reset
-git revert --no-edit <the-first-bad-commit>
-grep "Filter Coffee" menu.md          # ₹60 ✅
+git revert --no-edit f587695       # main is shared: undo with a new commit
+git push
+bash ../check.sh
 ```
+Reverting the newest commit (`git revert HEAD`) because "it is usually the culprit" changes the wrong thing.
 </details>
 
 ## 🏭 Production lesson
-Bisect finds a bug among thousands of commits with about 10 tests. Pair it with an automated check (like G06's price check) so the bug can't come back.
+Bisect halves the suspects at each test: 10 commits took 3 tests here. Pair it with an automated check so the bug cannot come back.

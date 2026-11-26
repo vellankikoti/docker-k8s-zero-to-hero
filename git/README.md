@@ -15,7 +15,7 @@ Bengaluru's legendary breakfast spot in Basavanagudi (since 1943): benne dosa, i
 | G05 | [Merge Conflicts](05-merge-conflicts/README.md) | 🥞⚔️ the ghee roast dosa price war | 40m | 🟡 |
 | G06 | [Pull Requests & Code Review](06-pull-requests/README.md) | a robot and a human catch a ₹2600 typo | 60m | 🟡 |
 | G07 | [Release Day & the Friday Incident](07-release-and-incident/README.md) | 🚨 `git bisect` finds the bug, then hotfix, tag, and on to Docker | 50m | 🟡→🔴 |
-| 🔥 | [Break-and-fix scenarios G-01 … G-08](troubleshooting/README.md) | the 8 Git emergencies every developer meets | 1–2h | 🟢→🔴 |
+| 🔥 | [Break-and-fix scenarios G-01 … G-10](troubleshooting/README.md) | 8 Git emergencies every developer meets, plus 2 exercises, in the Showdown repo | 1–2h | 🟢→🔴 |
 
 ### How it works on one laptop, offline
 | Folder | Plays the role of |

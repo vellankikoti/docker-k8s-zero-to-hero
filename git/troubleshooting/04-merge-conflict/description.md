@@ -1,36 +1,39 @@
 # G-04: A merge stopped halfway (conflict)
 
 ## 📖 The story
-You tried to merge `coffee-price` into `main` and Git stopped with CONFLICT. Now every command feels risky. The team agreed the filter coffee price is **₹70**.
+You tried a blue theme on the branch `blue-theme`. Meanwhile `main` got a green theme. You merge `blue-theme` into `main` and Git stops with CONFLICT. The team has since agreed on violet: **#7c3aed**.
 
 ## 🔥 Symptoms
-- `git status` shows `You have unmerged paths` and `both modified: menu.md`
+- `git status` shows `You have unmerged paths` and `both modified:   api/app.py`
 
 ## 🔍 Investigate
 ```bash
-cd /tmp/z2h-git-ts/04-merge-conflict/cafe
+cd /tmp/z2h-git-ts/04-merge-conflict/you
 git status
-grep -n -A4 '<<<<<<<' menu.md
+grep -n -A4 '<<<<<<<' api/app.py
+git diff
+bash ../check.sh
 ```
 
 <details><summary>💡 Hint 1</summary>
 
-The file contains both versions between `<<<<<<<`, `=======` and `>>>>>>>`.
+The file holds both versions between `<<<<<<<`, `=======` and `>>>>>>>`.
 </details>
 <details><summary>💡 Hint 2</summary>
 
-Keep the agreed line, delete all the markers, then mark the file as resolved.
+Write the agreed line, delete all the markers, then mark the file as resolved.
 </details>
 <details><summary>✅ Root cause & fix</summary>
 
-Edit `menu.md` so the block becomes one line, `| Filter Coffee | ₹70 |`, with no markers left. Then:
+Edit `api/app.py` so the five lines become one: `THEME_COLOR = os.environ.get("THEME_COLOR", "#7c3aed")`. Then:
 ```bash
-grep -c '<<<<<<<' menu.md      # 0
-git add menu.md
+grep -c '<<<<<<<' api/app.py      # 0
+git add api/app.py
 git commit --no-edit
+bash ../check.sh
 ```
 Want to give up instead? `git merge --abort` puts everything back.
 </details>
 
 ## 🏭 Production lesson
-Conflicts are a normal part of teamwork. Always check that no markers are left (`grep '<<<<<<<'`) before committing: committed markers break builds.
+`git add` marks a file resolved whatever it holds. Committing it unedited puts the markers in history, and the API no longer starts (`python3 -m py_compile api/app.py` fails). Check for markers before you commit.

@@ -2,7 +2,8 @@
 # 🔥 Troubleshooting scenario runner for docker-k8s-zero-to-hero
 #
 #   ./labs.sh                     interactive menu
-#   ./labs.sh git 02              break Git scenario G-02 (sandbox in /tmp/z2h-git-ts)
+#   ./labs.sh git 02              break Git scenario G-02 (sandbox in /tmp/z2h-git-ts/<scenario>)
+#   ./labs.sh git 02 check        am I done? (runs the sandbox's check.sh)
 #   ./labs.sh git 02 fix
 #   ./labs.sh docker clean        run every docker/scenarios/*/cleanup.sh
 #   ./labs.sh k8s clean           run every Kubernetes scenario's cleanup.py
@@ -52,8 +53,10 @@ git_break() {
   bash "$1/break.sh"
   echo
   bold "📖 Read the story and investigate:  $1/description.md"
-  echo "   Sandbox: /tmp/z2h-git-ts/$(basename "$1")   ·   start with: git status · git log --oneline --graph --all"
+  echo "   Your clone: ${Z2H_GIT_TS:-/tmp/z2h-git-ts}/$(basename "$1")/you   ·   start with: git status · git log --oneline --graph --decorate --all"
+  echo "   Am I done?  bash ../check.sh  (from your clone)"
 }
+git_check() { bash "$1/check.sh"; }
 git_fix()   { info "Applying the reference fix for: $(title_of "$1")"; bash "$1/fix.sh"; }
 git_clean() { rm -rf "${Z2H_GIT_TS:-/tmp/z2h-git-ts}"; ok "Git scenario sandboxes removed"; }
 
@@ -140,7 +143,8 @@ case "${1:-}" in
     case "${2:-}" in
       clean) git_clean ;;
       ""|help) list ;;
-      *) d=$(scenario_dir git "$2"); if [ "${3:-}" = fix ]; then git_fix "$d"; else git_break "$d"; fi ;;
+      *) d=$(scenario_dir git "$2")
+         case "${3:-}" in fix) git_fix "$d" ;; check) git_check "$d" ;; *) git_break "$d" ;; esac ;;
     esac ;;
   *) sed -n '2,12p' "$0" ;;
 esac
