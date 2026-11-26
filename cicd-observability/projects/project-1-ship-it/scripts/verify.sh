@@ -16,6 +16,9 @@ if phase 1; then echo "Phase 1: the factory is running"
   curl -sf localhost:5001/v2/ >/dev/null && ok "registry answers on :5001" || bad "registry is not answering" "docker compose up -d   (in project-1-ship-it/)"
   curl -sf -o /dev/null $J/login && ok "Jenkins answers on :8080" || bad "Jenkins is not answering" "docker compose logs jenkins | tail -30   (first start takes ~1 minute)"
   docker inspect chai-router >/dev/null 2>&1 && ok "the production router container exists" || bad "no chai-router container" "docker compose up -d"
+  watched=$(sed -n 's/^REPO_BRANCH=\*\///p' .env 2>/dev/null); watched=${watched:-main}; current=$(git branch --show-current)
+  if [ "$watched" = "$current" ]; then ok "Jenkins builds the branch you are on ('$current')"
+  else bad "Jenkins builds '$watched' but you are on '$current': your commits are invisible to it" "./scripts/use-branch.sh   (no push needed)"; fi
 fi
 if phase 2; then echo "Phase 2: Jenkins was configured and the jobs were generated, all from Git"
   jq_ "api/json?tree=jobs[name]" | grep -q '"00-seed"' && ok "the seed job exists (made by Configuration as Code)" || bad "no 00-seed job" "docker compose logs jenkins | grep -i casc"

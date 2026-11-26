@@ -42,26 +42,46 @@ By the end you will have: **Jenkins from code** (Configuration as Code + Job DSL
 
 ---
 
-## Phase 0: Pre-flight (5 min)
+## 📌 Read this once: how Jenkins sees your code (it removes 90% of the confusion)
+
+```mermaid
+flowchart LR
+  A[✏️ you edit a file] -->|git commit| B[(your local repo<br/>branch: practice)]
+  B -.mounted read-only.-> C[Jenkins container<br/>/repo]
+  C -->|builds the branch named in .env| D[🏭 pipeline]
+  A -. an uncommitted edit is invisible .-x C
+  B -. "no git push needed" .-x E[(GitHub)]
+```
+1. **Jenkins builds a *branch*, not your working folder.** An edit you did not **commit** does not exist for Jenkins.
+2. **It builds *the branch named in `.env`*** (`REPO_BRANCH`). If you commit on `practice` while Jenkins watches `main`, Jenkins will never see your commit. (This is the #1 mistake. `./scripts/verify.sh 1` warns you about it.)
+3. **You never push.** Jenkins reads your *local* repository directly (it is mounted into the container). Commits stay on your laptop: **nothing you do here can touch the shared repository on GitHub.** A commit needs no GitHub login, only a name and email (below).
+4. Switching branch later? One command: **`./scripts/use-branch.sh`**.
+
+(The only time you would push is if you point Jenkins at a GitHub URL instead of your laptop (`REPO_URL` in `.env`). The lab does not.)
+
+## Phase 0: Pre-flight, and a safe practice branch (5 min)
 From the repository root:
 ```bash
-./cicd-observability/scripts/doctor.sh
-git branch --show-current          # remember this branch name
-git status --short                 # should be clean (commit or stash anything of yours)
+./cicd-observability/scripts/doctor.sh          # fix every ✖
+git status --short                              # should print nothing; commit or stash anything of yours first
+git switch -c practice                          # a private branch for this project: main stays untouched
+git config user.name  "Your Name"               # needed once to commit; stored only in this clone
+git config user.email "you@example.com"
 ```
-Fix every ✖ it prints. **Two classics:** a *shallow* clone (`git fetch --unshallow` fixes it), and a port already in use (stop the other program).
+Everything you commit in this project goes on `practice`. When you are finished you can throw it away (`git switch main && git branch -D practice`) and the shared repository never knew.
 
 ## Phase 1: Boot the factory (10 min)
 ```bash
 cd cicd-observability/projects/project-1-ship-it
 cp .env.example .env
-```
-Open `.env`. If the branch you printed in Phase 0 is **not** `main`, edit the line: `REPO_BRANCH=*/your-branch-name`. This is the branch Jenkins will watch. Then:
-```bash
-docker compose up -d --build            # 3-5 minutes the first time: it downloads Jenkins and installs plugins
+sed -i.bak "s#^REPO_BRANCH=.*#REPO_BRANCH=*/$(git branch --show-current)#" .env && rm .env.bak
+grep REPO_BRANCH .env                           # must say  REPO_BRANCH=*/practice
+docker compose up -d --build                    # 3-5 minutes the first time: it downloads Jenkins and installs plugins
 ./scripts/verify.sh 1
 ```
-Expected: three ✔ (registry :5001, Jenkins :8080, router). Jenkins is ready ~1 minute after the containers start: if verify says ✖, wait and retry. Log in at **http://localhost:8080** with `admin` / `z2h-jenkins`.
+Expected: four ✔ (registry, Jenkins, router, **and "Jenkins builds the branch you are on"**). Jenkins is ready about a minute after the containers start: if verify says ✖, wait and retry. Log in at **http://localhost:8080** with `admin` / `z2h-jenkins`.
+
+> 🔁 **Started the stack earlier, on `main`, or switched branches?** Do not rebuild anything. Run **`./scripts/use-branch.sh`** from this folder: it updates `.env`, restarts Jenkins, and re-runs the seed job, in about two minutes. Your registry, images and deployed containers are kept.
 
 <details><summary>🧯 Image build fails with "PKIX path building failed"?</summary>
 
@@ -108,7 +128,12 @@ Open the build page: under **Build Artifacts** is `build-info.json` (version, im
 ## Phase 4: Ship a feature, test-first (25 min)
 The festival is coming: add **vada** (₹8) to the menu, **the way a real team would**: write the failing test first, watch the pipeline refuse it, then make it pass.
 
-Work on the branch Jenkins watches (the one in `.env`). From the repository root:
+Work on the `practice` branch (the one Jenkins watches). Before you start, check:
+```bash
+git branch --show-current                       # practice
+./scripts/verify.sh 1                           # from the project folder: the branch line must be ✔
+```
+From the repository root:
 
 **4a. 🔴 Red: commit only the test.**
 ```bash
@@ -145,6 +170,15 @@ git commit -am "feat: add vada to the menu"
 curl -s -X POST 'localhost:8090/order?item=vada'          # {"ok": true, "item": "vada", "price_inr": 8, ...}
 ```
 ✔ Your commit is live in production, with a new version number, and **you never typed a deploy command**.
+
+<details><summary>🧯 Got <code>unknown item, choose one of ['biscuit', 'chai', 'coffee', 'samosa']</code> instead?</summary>
+
+That is the *old* app still answering: Jenkins has not built and released your commit. Check in this order:
+1. `./scripts/verify.sh 1`: does it say Jenkins builds a **different branch** than the one you committed on? Run `./scripts/use-branch.sh`, then **Build Now** on `chai-stall/ci-cd`.
+2. Open the latest `ci-cd` build: did it stop at **Approval** (press *Ship it*), or fail at **Scan image** (use `SCAN_MODE=report`)?
+3. `curl -s localhost:8090/api/info`: the `version` changes when a release really reached production.
+4. Did you `git commit`? (`git log -1 --stat` should show `app.py`.)
+</details>
 
 > 🤔 **Which parts of that were "CI" and which "CD"?** *(Checkout, test, scan, build, push = CI. Staging deploy, approval, production = CD.)*
 
@@ -236,6 +270,7 @@ When you are done:
 ```bash
 ./deploy/deploy.sh clean       # the app containers the pipeline deployed
 docker compose down -v         # Jenkins, registry, router, and all their data
+git switch main && git branch -D practice     # optional: discard your practice branch (it was only ever on your laptop)
 ```
 
 ---
@@ -256,7 +291,9 @@ Tick them honestly. Each one is something you **did**, not read:
 |---|---|
 | `verify.sh 1` ✖ for Jenkins | still starting: `docker compose logs jenkins \| tail`; wait for "fully up and running" |
 | Image build fails: `PKIX path building failed` | corporate proxy: [`jenkins/extra-ca/`](jenkins/extra-ca/README.md) |
-| Seed job: `Couldn't find any revision to build` | `REPO_BRANCH` in `.env` does not match your branch, **or** your clone is shallow (`git fetch --unshallow`). After editing `.env` run `docker compose up -d` then the seed again |
+| My commit never builds / my change is not in production | Jenkins watches a different branch than you committed on (or you did not commit). **`./scripts/use-branch.sh`**, then build. **You do not need to push**: Jenkins reads your local repo |
+| Seed job: `Couldn't find any revision to build` | your clone is shallow (`git fetch --unshallow`), or `REPO_BRANCH` names a branch that does not exist locally: **`./scripts/use-branch.sh`** |
+| `git commit` says `Please tell me who you are` | `git config user.name "Your Name"` and `git config user.email you@example.com` (local to this clone; no GitHub login involved) |
 | Seed job: `references a local directory, which may be insecure` | you changed the Jenkins image options; `ALLOW_LOCAL_CHECKOUT` must stay on for the lab ([Dockerfile](jenkins/Dockerfile)) |
 | You edited a job file and nothing changed | you must **commit**: Jenkins reads Git, not your working folder |
 | No build starts after a commit | polling runs every ~2 min; commit on the watched branch; or press **Build Now** |
@@ -265,7 +302,7 @@ Tick them honestly. Each one is something you **did**, not read:
 | `port is already allocated` | another program uses 8080/5001/8081/8090: `doctor.sh` tells you which |
 | Canary check says "no traffic" | run it from the host with the router up (`curl localhost:8090/api/info`); inside Jenkins it uses `ROUTER_URL` (already set in Compose) |
 | Everything is slow / containers killed | Docker has too little memory: give it 4 GB+ (Docker Desktop → Settings → Resources) |
-| Start over | `./deploy/deploy.sh clean; docker compose down -v; docker compose up -d --build` |
+| Start over | `./deploy/deploy.sh clean; docker compose down -v; docker compose up -d --build` (then `./scripts/use-branch.sh` if you are not on the branch in `.env`) |
 
 ## 💼 For your CV / portfolio
 > *Built a CI/CD platform with Jenkins (Configuration as Code, Job DSL, declarative pipelines) and GitHub Actions: automated test, secret and vulnerability scanning, image build and registry publishing; blue/green, rolling and canary deployments with automated canary analysis and rollback; policy-as-code image gates.*
