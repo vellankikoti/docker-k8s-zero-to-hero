@@ -329,6 +329,8 @@ rm -rf ~/chai-stall                  # your repo copy (optional)
 | `k8s-up.sh` is slow | the first run pulls ~2 GB of images and Jenkins plugins: wait; `kubectl -n cicd get pods` shows progress |
 | `k8s-up.sh`: Jenkins "did not finish installing" | `kubectl -n cicd logs jenkins-0 -c jenkins \| tail -30` (plugins download needs internet); run the script again |
 | build Pod `ImagePullBackOff` for `gcr.io/kaniko-project/...` | the node cannot reach gcr.io: check the node's internet / proxy (on kind, `./scripts/load-image.sh` can preload images) |
+| `forward.sh start` shows `○ jenkins stopped` (or production) | it now prints kubectl's own reason and a hint under each stopped door. Usual causes: the Pod is not Ready yet (`kubectl -n cicd get pods`: `jenkins-0` must be `2/2 Running`), or that local port is taken. Fix it, then run `forward.sh start` again. Logs: `/tmp/z2h-unit4-forward-<name>.log` |
+| `forward.sh` says staging was skipped | normal before the first pipeline run: nothing is deployed in `stall-staging` yet |
 | `new-app-repo.sh`: cannot reach `localhost:3001` | `./cicd-observability/scripts/forward.sh start`; is port 3001 used by something else? |
 | `git push` asks for a password | the remote has the lab login in the URL (`git remote -v`); if you cloned another way use `z2h` / `z2h-gitea-pass` |
 | Jenkins build: `No Kubernetes cloud was found` | Jenkins was installed without the chart's defaults: re-run `k8s-up.sh` |
