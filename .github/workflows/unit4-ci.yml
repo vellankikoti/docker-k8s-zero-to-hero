@@ -88,11 +88,10 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Scan for vulnerabilities (CRITICAL fails the build)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.version }}
-          severity: CRITICAL
-          exit-code: '1'
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.58.1 image --no-progress --severity CRITICAL --exit-code 1 \
+            ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.version }}
 
       - name: Smoke-test the image
         run: |

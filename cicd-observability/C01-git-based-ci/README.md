@@ -74,7 +74,7 @@ Open [`.github/workflows/unit4-ci.yml`](../../.github/workflows/unit4-ci.yml) an
 | `needs: [test, alert-rules]` | build waits for both | the order of the belt |
 | `permissions: packages: write` on `build` only | only this job may publish | scoped per job |
 | `docker/build-push-action` with `cache-from: type=gha` | build with layer cache | faster builds |
-| `aquasecurity/trivy-action` with `exit-code: '1'` | **fails the build on CRITICAL vulnerabilities** | a gate |
+| a `docker run aquasec/trivy … --exit-code 1` step | **fails the build on CRITICAL vulnerabilities** | a gate |
 | `secrets.GITHUB_TOKEN` | a token created for this run, gone when it ends | no stored password to leak |
 | `if: github.ref == 'refs/heads/main'` | push the image and deploy only from `main` | pull requests build but never publish |
 | `upload-artifact` | keeps `build-info.json` for download | **artifact** management |
