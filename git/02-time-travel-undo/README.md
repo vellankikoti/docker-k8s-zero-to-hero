@@ -109,7 +109,7 @@ git reflog | head -5             # …but Git remembers everywhere HEAD has been
 git reset --hard HEAD@{1}        # go back to where we were one move ago
 git log --oneline -3             # restored 🛟
 ```
-> 🧠 `reset --hard` destroys **uncommitted** work for real, but committed work almost always survives in the **reflog** (about 90 days by default). Knowing this saves careers.
+> 🧠 `reset --hard` destroys **uncommitted** work for real, but committed work survives in the **reflog** for a while. A commit you reset away is no longer on any branch, so its entries expire after 30 days by default (`gc.reflogExpireUnreachable`); entries still on the branch last 90 days (`gc.reflogExpire`). After that, `git gc` may delete the commit. Knowing this saves careers.
 
 ## 🗺️ Your undo cheat sheet
 | Situation | Command | Safe after pushing? |
