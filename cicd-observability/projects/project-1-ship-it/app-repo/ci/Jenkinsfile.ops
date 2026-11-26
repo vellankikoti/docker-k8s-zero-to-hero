@@ -1,0 +1,17 @@
+// An operations button: run one k8s-deploy.sh action as the pipeline's own ServiceAccount (least privilege, Lab K14).
+pipeline {
+  agent { kubernetes { yamlFile 'ci/pod.yaml'; defaultContainer 'tools' } }
+  options { skipDefaultCheckout(); timestamps(); ansiColor('xterm'); timeout(time: 10, unit: 'MINUTES') }
+  stages {
+    stage('Checkout') { steps { container('jnlp') { checkout scm } } }
+    stage('Run') {
+      steps {
+        script {
+          def args = params.ACTION
+          if (params.ACTION == 'canary') { args = "canary ${params.TAG} ${params.PERCENT}" }
+          sh "deploy/k8s-deploy.sh ${args}"
+        }
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 // DYNAMIC Job DSL: one loop creates many jobs. Add a name to the list, run the seed job, get a new job.
 // Each job is a small "operations button" on top of deploy/deploy.sh.
 
-String deployScript = '/repo/cicd-observability/projects/project-1-ship-it/deploy/deploy.sh'
+String deployScript = '/repo/cicd-observability/compose-edition/project-1-ship-it/deploy/deploy.sh'
 
 ['status', 'rollback', 'promote', 'clean'].each { action ->
   job("chai-stall/ops-${action}") {

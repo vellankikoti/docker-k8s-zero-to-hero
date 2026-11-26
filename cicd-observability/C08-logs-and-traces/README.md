@@ -38,10 +38,10 @@ The Chai Stall writes the second kind. One JSON object per line, always with the
 
 ### Step 1: Raw logs and where they go (5 min)
 ```bash
-cd cicd-observability/projects/project-2-see-everything
+cd cicd-observability/compose-edition/project-2-see-everything
 docker compose logs --tail 3 chai-1
 ```
-Each line is JSON (`ts, level, service, version, msg, method, path, status, duration_ms, trace_id`). Now see the shipper's config, [`alloy/config.alloy`](../projects/project-2-see-everything/alloy/config.alloy), four small blocks:
+Each line is JSON (`ts, level, service, version, msg, method, path, status, duration_ms, trace_id`). Now see the shipper's config, [`alloy/config.alloy`](../compose-edition/project-2-see-everything/alloy/config.alloy), four small blocks:
 
 | Block | Job |
 |---|---|
@@ -107,7 +107,7 @@ With errors still on (`error_rate=0.3`), follow a failure from symptom to cause.
 3. **Pick one failed line and expand it** (click the `>` at its left). Scroll to the bottom of the details: under **Links** there is a **trace_id** link. Click it.
 4. **Traces (where):** Grafana opens the matching trace from Jaeger beside the log line (a split view). You went from a graph to a log line to a trace **in three clicks**, because every log line and every span carry the same `trace_id`.
 
-How the link works (and why we set it up): in [`datasources.yml`](../projects/project-2-see-everything/grafana/provisioning/datasources/datasources.yml) the Loki data source has a *derived field*:
+How the link works (and why we set it up): in [`datasources.yml`](../compose-edition/project-2-see-everything/grafana/provisioning/datasources/datasources.yml) the Loki data source has a *derived field*:
 ```yaml
 derivedFields:
   - { name: trace_id, matcherRegex: '"trace_id": "(\w+)"', url: "$${__value.raw}", datasourceUid: jaeger }

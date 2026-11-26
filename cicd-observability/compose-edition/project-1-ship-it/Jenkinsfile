@@ -25,7 +25,7 @@ pipeline {
     VERSION    = "1.0.${env.BUILD_NUMBER}"
     FULL_IMAGE = "${REGISTRY}/${NAME}:${VERSION}"
     APP_DIR    = 'cicd-observability/app'
-    HERE       = 'cicd-observability/projects/project-1-ship-it'
+    HERE       = 'cicd-observability/compose-edition/project-1-ship-it'
     CHAOS_ERROR_RATE = "${params.INJECT_BUG ? '0.3' : '0'}"
   }
 

@@ -36,7 +36,7 @@ flowchart LR
 
 ### Step 1: Artifacts in the registry: tags lie, digests don't (10 min)
 ```bash
-cd cicd-observability/projects/project-1-ship-it
+cd cicd-observability/compose-edition/project-1-ship-it
 curl -s localhost:5001/v2/chai-stall/tags/list                 # every version the pipeline has published
 ./scripts/registry-digest.sh 1.0.1                             # the content fingerprint behind a tag
 ```
@@ -82,7 +82,7 @@ git check-ignore -v .env                                    # .env is ignored by
 The YAML says `secret: "${DEPLOY_TOKEN:-change-me-in-dot-env}"`: **a reference, not a value**. The value comes from `.env` on *your* machine, which Git ignores. So the repository can be public and the Jenkins config reviewed by everyone without exposing a secret. This is the pattern: **configuration in Git, secrets in a vault** (here a local file; in production Vault, AWS Secrets Manager, Kubernetes Secrets, GitHub/GitLab secret stores).
 
 ### Step 4: Masking, and how it fails (10 min)
-Run **chai-stall → secrets-demo → Build Now**, open the console. The job ([`pipelines.groovy`](../projects/project-1-ship-it/jenkins/jobs/pipelines.groovy)) binds the secret to `$TOKEN` and prints four things:
+Run **chai-stall → secrets-demo → Build Now**, open the console. The job ([`pipelines.groovy`](../compose-edition/project-1-ship-it/jenkins/jobs/pipelines.groovy)) binds the secret to `$TOKEN` and prints four things:
 ```
 1) printing it directly:   ****
 2) length of the secret:   22
@@ -99,7 +99,7 @@ Lessons that follow:
 3. Give each credential the **narrowest scope** (one folder, one job) and make the secret itself **low power** (a deploy token for staging only; short-lived; easy to rotate).
 4. Prefer **short-lived** credentials issued per build (OIDC to a cloud, Vault leases) over long-lived passwords.
 
-Also notice **how** the registry login is done in the real [`Jenkinsfile`](../projects/project-1-ship-it/Jenkinsfile):
+Also notice **how** the registry login is done in the real [`Jenkinsfile`](../compose-edition/project-1-ship-it/Jenkinsfile):
 ```groovy
 withCredentials([usernamePassword(credentialsId: 'registry-creds', usernameVariable: 'REG_USER', passwordVariable: 'REG_PASS')]) {
   sh '''
@@ -115,7 +115,7 @@ Three habits in six lines: the password goes through **stdin** (command lines ar
 Single quotes matter too. `sh 'echo $TOKEN'` lets the **shell** read the variable (safe). `sh "echo $TOKEN"` lets **Groovy** paste the secret into the script text first, where it can appear in logs and process lists. Jenkins even warns about it. Use single quotes for secrets.
 
 ### Step 5: Gate 1: the secret scan (5 min)
-A secret that reaches Git is a leaked secret. [`secret-scan.sh`](../projects/project-1-ship-it/scripts/secret-scan.sh) is a 20-line version of what gitleaks and GitHub secret scanning do. See it work locally:
+A secret that reaches Git is a leaked secret. [`secret-scan.sh`](../compose-edition/project-1-ship-it/scripts/secret-scan.sh) is a 20-line version of what gitleaks and GitHub secret scanning do. See it work locally:
 ```bash
 printf 'AWS_KEY = "AKIAABCDEFGHIJKLMNOP"\n' > /tmp/leak.py
 ./scripts/secret-scan.sh /tmp/leak.py ; echo "exit code: $?"
@@ -133,7 +133,7 @@ git reset --hard HEAD~1            # local only: removes your "oops" commit. CAR
 > ⚠️ **The most important rule of this lab.** Had that been a *real* key and you had pushed it, deleting it in the next commit would **not** make you safe: the key is in the history and in every clone. **Rotate the key first** (make the old one worthless), clean up later. The scan is a safety net that catches it *before* the push (in a pre-commit hook) or *before the merge* (in CI); it cannot un-leak a published secret.
 
 ### Step 6: Gate 2: image policy (5 min)
-[`image-policy.sh`](../projects/project-1-ship-it/scripts/image-policy.sh) is **policy as code**: house rules for images, checked on every build.
+[`image-policy.sh`](../compose-edition/project-1-ship-it/scripts/image-policy.sh) is **policy as code**: house rules for images, checked on every build.
 ```bash
 ./scripts/image-policy.sh localhost:5001/chai-stall:1.0.2                 # passes: non-root, healthcheck, version
 printf 'FROM alpine\nCMD ["sleep","1"]\n' | docker build -q -t bad:test - >/dev/null
@@ -156,7 +156,7 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v trivy-cache:/roo
 Read the table: *Library/Package*, *Vulnerability ID*, *Installed version*, *Fixed version*. "Fixed version" tells you the fix is usually "rebuild on a newer base image". (Needs internet for its first database download, about 1 minute. If your network blocks it, the pipeline's gate **fails closed**: use `SCAN_MODE=report`.)
 
 ### Step 8: The elephant in the room: the Docker socket (5 min)
-Remember this line in [`docker-compose.yml`](../projects/project-1-ship-it/docker-compose.yml)?
+Remember this line in [`docker-compose.yml`](../compose-edition/project-1-ship-it/docker-compose.yml)?
 ```yaml
 - /var/run/docker.sock:/var/run/docker.sock       # Jenkins drives YOUR Docker engine
 ```

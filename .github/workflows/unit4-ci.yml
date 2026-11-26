@@ -5,9 +5,9 @@ name: Unit 4 · Chai Stall CI/CD
 on:
   push:
     branches: [main]
-    paths: ['cicd-observability/app/**', 'cicd-observability/projects/project-2-see-everything/prometheus/**', 'cicd-observability/projects/project-2-see-everything/tests/**', '.github/workflows/unit4-ci.yml']
+    paths: ['cicd-observability/app/**', 'cicd-observability/compose-edition/project-2-see-everything/prometheus/**', 'cicd-observability/compose-edition/project-2-see-everything/tests/**', 'cicd-observability/k8s/**', 'cicd-observability/projects/project-1-ship-it/app-repo/**', '.github/workflows/unit4-ci.yml']
   pull_request:
-    paths: ['cicd-observability/app/**', 'cicd-observability/projects/project-2-see-everything/prometheus/**', 'cicd-observability/projects/project-2-see-everything/tests/**', '.github/workflows/unit4-ci.yml']
+    paths: ['cicd-observability/app/**', 'cicd-observability/compose-edition/project-2-see-everything/prometheus/**', 'cicd-observability/compose-edition/project-2-see-everything/tests/**', 'cicd-observability/k8s/**', 'cicd-observability/projects/project-1-ship-it/app-repo/**', '.github/workflows/unit4-ci.yml']
   workflow_dispatch:
     inputs:
       push_image:
@@ -26,7 +26,7 @@ concurrency:
 
 env:
   APP_DIR: cicd-observability/app
-  P2_DIR: cicd-observability/projects/project-2-see-everything
+  P2_DIR: cicd-observability/compose-edition/project-2-see-everything
 
 jobs:
   test:
@@ -55,9 +55,21 @@ jobs:
           docker run --rm -v "$PWD/$P2_DIR":/w -w /w --entrypoint promtool prom/prometheus:v3.5.0 check rules prometheus/rules/recording.yml prometheus/rules/alerts.yml
           docker run --rm -v "$PWD/$P2_DIR":/w -w /w --entrypoint promtool prom/prometheus:v3.5.0 test rules tests/rules_test.yml
 
+  helm-chart:
+    name: Lint and render the Helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: helm lint + template (every optional resource)
+        run: |
+          helm lint cicd-observability/k8s/chart/chai-stall --set image.tag=ci
+          helm template t cicd-observability/k8s/chart/chai-stall --set image.tag=ci \
+            -f cicd-observability/k8s/chart/chai-stall/values-prod.yaml \
+            --set serviceMonitor.enabled=true --set autoscaling.enabled=true > /dev/null
+
   build:
     name: Build, scan and publish the image
-    needs: [test, alert-rules]
+    needs: [test, alert-rules, helm-chart]
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -10,7 +10,7 @@ pipeline {
     stage('Read config') {
       steps {
         script {
-          def cfg = readJSON file: 'cicd-observability/projects/project-1-ship-it/pipeline-config.json'
+          def cfg = readJSON file: 'cicd-observability/compose-edition/project-1-ship-it/pipeline-config.json'
           // Build a map of  name -> closure,  which is what `parallel` wants.
           env.CHECK_COUNT = "${cfg.checks.size()}"
           checks = [:]

@@ -1,0 +1,40 @@
+# The build agent: ONE Pod per build, deleted afterwards (Lab K02, K20). Four tool containers share a workspace.
+# The Pod runs as the ServiceAccount "jenkins-agent" (Lab K14): it may change only the two stall namespaces.
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: jenkins-agent
+  securityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  containers:
+    - name: python                         # unit tests
+      image: python:3.12-alpine
+      command: ["cat"]
+      tty: true
+      resources:
+        requests: { cpu: 50m, memory: 64Mi }
+    - name: tools                          # kubectl + helm + curl + bash
+      image: alpine/k8s:1.34.1
+      command: ["cat"]
+      tty: true
+      resources:
+        requests: { cpu: 50m, memory: 96Mi }
+    - name: kaniko                         # builds the image WITHOUT a Docker daemon or the Docker socket
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      command: ["/busybox/cat"]
+      tty: true
+      securityContext:
+        runAsUser: 0                       # Kaniko needs root inside its own Pod: the "cicd" namespace allows it (baseline)
+        runAsGroup: 0
+      resources:
+        requests: { cpu: 200m, memory: 256Mi }
+        limits: { memory: 1Gi }
+    - name: trivy                          # vulnerability scanner
+      image: aquasec/trivy:0.58.1
+      command: ["cat"]
+      tty: true
+      resources:
+        requests: { cpu: 50m, memory: 128Mi }
+        limits: { memory: 1Gi }

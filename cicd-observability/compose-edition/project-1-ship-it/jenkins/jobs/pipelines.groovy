@@ -3,7 +3,7 @@
 String repoUrl    = System.getenv('REPO_URL')    ?: 'file:///repo'
 String repoBranch = System.getenv('REPO_BRANCH') ?: '*/main'
 
-String projectPath = 'cicd-observability/projects/project-1-ship-it'
+String projectPath = 'cicd-observability/compose-edition/project-1-ship-it'
 
 // A pipeline job whose steps live in a Jenkinsfile in Git ("Pipeline script from SCM").
 def pipelineFromGit = { String jobName, String file, String desc, boolean poll ->

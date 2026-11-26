@@ -1,0 +1,7 @@
+{
+  "checks": [
+    { "name": "unit tests",   "container": "python", "cmd": "cd app && python -m unittest discover -s tests" },
+    { "name": "secret scan",  "container": "tools",  "cmd": "ci/secret-scan.sh app chart ci deploy" },
+    { "name": "chart lint",   "container": "tools",  "cmd": "helm lint chart/chai-stall --set image.tag=lint" }
+  ]
+}

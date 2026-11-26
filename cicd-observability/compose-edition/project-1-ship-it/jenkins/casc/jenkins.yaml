@@ -51,7 +51,7 @@ jobs:
         }
         steps {
           dsl {
-            external('cicd-observability/projects/project-1-ship-it/jenkins/jobs/*.groovy')
+            external('cicd-observability/compose-edition/project-1-ship-it/jenkins/jobs/*.groovy')
             removeAction('DELETE')
             removeViewAction('DELETE')
           }
