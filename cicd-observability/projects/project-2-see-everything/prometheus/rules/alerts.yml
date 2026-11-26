@@ -1,0 +1,43 @@
+groups:
+  - name: chai-stall-symptoms
+    rules:
+      - alert: ChaiStallInstanceDown
+        expr: up{job="chai-stall"} == 0
+        for: 15s
+        labels: { severity: critical, team: stall }
+        annotations:
+          summary: "{{ $labels.instance_name }} is down"
+          description: "Prometheus cannot scrape {{ $labels.instance }} for 15s. Runbook: docs/runbook.md#instance-down"
+
+      - alert: ChaiStallHighLatency
+        expr: job:order_latency_p95:5m > 0.5
+        for: 30s
+        labels: { severity: warning, team: stall }
+        annotations:
+          summary: "p95 order latency is {{ $value | humanizeDuration }}"
+          description: "Customers wait too long. Runbook: docs/runbook.md#slow-orders"
+
+  # SLO: 99% of /order requests succeed. Error budget = 1%.
+  # "Burn rate" = how many times faster than allowed we are spending the budget.
+  # Lab windows are short so you can SEE alerts in minutes. Production would use 1h/5m and 6h/30m.
+  - name: chai-stall-slo
+    rules:
+      - alert: OrderSLOFastBurn
+        expr: |
+          sli:order_errors:ratio_rate5m > (14.4 * 0.01)
+          and sli:order_errors:ratio_rate1m > (14.4 * 0.01)
+        for: 15s
+        labels: { severity: critical, team: stall }
+        annotations:
+          summary: "Orders are failing fast: the error budget is burning at 14x+"
+          description: "{{ $value | humanizePercentage }} of orders failing (SLO allows 1%). Runbook: docs/runbook.md#high-error-rate"
+
+      - alert: OrderSLOSlowBurn
+        expr: |
+          sli:order_errors:ratio_rate30m > (3 * 0.01)
+          and sli:order_errors:ratio_rate5m > (3 * 0.01)
+        for: 1m
+        labels: { severity: warning, team: stall }
+        annotations:
+          summary: "Orders are failing steadily: the error budget is burning at 3x+"
+          description: "A slow leak. Fix it today, before the budget is gone."

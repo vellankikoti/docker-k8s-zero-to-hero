@@ -1,0 +1,71 @@
+# Unit tests for the alert rules: run in CI, no Prometheus server needed.
+#   docker run --rm -v "$PWD":/w -w /w --entrypoint promtool prom/prometheus:v3.5.0 test rules tests/rules_test.yml
+rule_files:
+  - ../prometheus/rules/recording.yml
+  - ../prometheus/rules/alerts.yml
+
+evaluation_interval: 15s
+
+tests:
+  - name: an instance that stops answering pages us
+    interval: 15s
+    input_series:
+      - series: 'up{job="chai-stall",instance="chai-1:8080",instance_name="chai-1"}'
+        values: '1 1 1 0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 30s
+        alertname: ChaiStallInstanceDown
+        exp_alerts: []                       # only 0 for 15s so far: not firing yet
+      - eval_time: 1m30s
+        alertname: ChaiStallInstanceDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: stall
+              job: chai-stall
+              instance: chai-1:8080
+              instance_name: chai-1
+            exp_annotations:
+              summary: "chai-1 is down"
+              description: "Prometheus cannot scrape chai-1:8080 for 15s. Runbook: docs/runbook.md#instance-down"
+
+  - name: 50 percent failing orders burns the budget fast
+    interval: 15s
+    input_series:
+      # one request per second, half of them fail, for 10 minutes
+      - series: 'http_requests_total{job="chai-stall",path="/order",status="200"}'
+        values: '0+30x40'
+      - series: 'http_requests_total{job="chai-stall",path="/order",status="500"}'
+        values: '0+30x40'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: OrderSLOFastBurn
+        exp_alerts:
+          - exp_labels: { severity: critical, team: stall }
+            exp_annotations:
+              summary: "Orders are failing fast: the error budget is burning at 14x+"
+              description: "50% of orders failing (SLO allows 1%). Runbook: docs/runbook.md#high-error-rate"
+
+  - name: a healthy service stays quiet
+    interval: 15s
+    input_series:
+      - series: 'http_requests_total{job="chai-stall",path="/order",status="200"}'
+        values: '0+30x40'
+      - series: 'http_requests_total{job="chai-stall",path="/order",status="500"}'
+        values: '0+0x40'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: OrderSLOFastBurn
+        exp_alerts: []
+
+  - name: no error series at all still gives an error ratio of zero (not "no data")
+    interval: 15s
+    input_series:
+      - series: 'http_requests_total{job="chai-stall",path="/order",status="200"}'
+        values: '0+30x40'
+    promql_expr_test:
+      - expr: sli:order_errors:ratio_rate5m
+        eval_time: 5m
+        exp_samples:
+          - labels: 'sli:order_errors:ratio_rate5m'
+            value: 0

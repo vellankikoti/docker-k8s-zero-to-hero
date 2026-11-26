@@ -1,0 +1,10 @@
+# Optional add-on: lets Prometheus reach the containers Project 1 deploys (they live on the "shipit" network).
+#   docker compose -f docker-compose.yml -f docker-compose.shipit.yml up -d
+# Requires Project 1's stack to have been started once (it creates the network).
+services:
+  prometheus:
+    networks: [default, shipit]
+networks:
+  shipit:
+    external: true
+    name: shipit
