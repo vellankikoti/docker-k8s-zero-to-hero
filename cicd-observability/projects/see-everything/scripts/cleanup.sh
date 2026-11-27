@@ -26,7 +26,7 @@ kubectl delete clusterrolebinding alloy-log-reader --ignore-not-found >/dev/null
 
 if [ "$KEEP" = 0 ]; then
   say "Removing Prometheus, Alertmanager and Grafana"
-  "$COURSE_ROOT/scripts/uninstall-monitoring.sh" >/dev/null 2>&1 || true
+  "$COURSE_ROOT/scripts/uninstall-monitoring.sh" || true
 fi
 
 say "Waiting for the namespaces to finish disappearing (up to 2 minutes)"
