@@ -26,13 +26,23 @@ else
   export TF_VAR_monitoring=false; warn "no Prometheus in this cluster: monitoring is off. Install it with the See Everything project, then run this script again."
 fi
 for e in dev prod; do
+  say "planning $e (the first time, Terraform downloads its providers: about a minute, with no output)"
   "$INFRA/infra-repo/scripts/tf.sh" "$e" plan >/dev/null
   docker_ok=0; command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1 && docker_ok=1
   if [ "$docker_ok" = 1 ]; then
     docker run --rm -v "$INFRA/infra-repo":/p -w /p openpolicyagent/conftest:v0.62.0 test --policy policy ".plans/$e.json" >/dev/null 2>&1 \
       || { docker run --rm -v "$INFRA/infra-repo":/p -w /p openpolicyagent/conftest:v0.62.0 test --policy policy ".plans/$e.json" || true; die "the policy check refused the $e plan (above)"; }
   fi
-  "$INFRA/infra-repo/scripts/tf.sh" "$e" apply >/dev/null || die "terraform apply failed for $e. Look: kubectl -n iac-$e get pods,events"
+  # Not silent: the app is released with "wait until the Pods are Ready" (up to 5 minutes). Terraform prints
+  # "Still creating... [30s elapsed]" while it waits, so you can see it is working, not stuck.
+  say "building $e (waits until its Pods are Ready: up to 5 minutes; open another terminal and run:  kubectl -n iac-$e get pods -w )"
+  if ! "$INFRA/infra-repo/scripts/tf.sh" "$e" apply; then
+    printf '\033[1;31m✖ the evidence, before you do anything else:\033[0m\n'
+    kubectl -n "iac-$e" get pods -o wide 2>&1 | head -10
+    kubectl -n "iac-$e" get events --sort-by=.lastTimestamp 2>&1 | tail -8
+    kubectl -n "iac-$e" describe pod -l app.kubernetes.io/name=chai-stall 2>&1 | grep -E "Image:|Reason|Message|Failed|Back-off|Events:" | head -10
+    die "terraform apply failed for $e (above). ImagePullBackOff = the image is missing: ./cicd-observability/scripts/ensure-image.sh. Pending = the cluster is full: kubectl describe node"
+  fi
   ok "$e is built"
 done
 
