@@ -75,8 +75,14 @@ pipeline {
         // Trivy runs as a container, scanning the image we just built. CRITICAL findings fail the build in 'enforce' mode.
         sh '''
           EXIT=1; [ "$SCAN_MODE" = report ] && EXIT=0
+          set +e
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v trivy-cache:/root/.cache/ \
             aquasec/trivy:0.58.1 image --no-progress --severity CRITICAL --exit-code $EXIT $FULL_IMAGE
+          rc=$?
+          set -e
+          # report mode never blocks, not even when the scanner cannot run (for example no route to its database)
+          if [ "$SCAN_MODE" = report ] && [ $rc -ne 0 ]; then echo "⚠ the scanner itself failed (exit $rc); SCAN_MODE=report never blocks"; exit 0; fi
+          exit $rc
         '''
       }
     }

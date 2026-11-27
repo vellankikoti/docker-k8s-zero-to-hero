@@ -162,7 +162,11 @@ Things to notice:
 - **Deploy to staging** is `helm upgrade --install --atomic`: if the release is not healthy within 3 minutes, **Helm rolls it back by itself**. Then `helm test` runs a small Pod that checks `/readyz` and the version.
 - At **Approval** the pipeline stops and waits for you. Press **Ship it**.
 
-> ⚠️ **If "Scan image" fails** with a message about downloading a database, the scanner could not reach the internet. That is the gate failing *closed*, which is correct. Run **Build with Parameters** and set `SCAN_MODE=report`.
+> ⚠️ **If "Scan image (Trivy)" fails**, open its log. If the message is about **downloading the vulnerability database**, the build Pod cannot reach the internet host the scanner needs (`mirror.gcr.io` / `ghcr.io`): common in locked-down labs. In `enforce` mode that is the gate failing *closed*, which is correct. Run **Build with Parameters** and choose:
+> - `SCAN_MODE=report`: the scan runs and shows findings, but **nothing it reports (or fails to do) blocks the build**. A scanner that cannot start prints a ⚠ line and the pipeline continues.
+> - `SCAN_MODE=skip`: do not scan at all (labs only, never real life).
+>
+> Either way the rest of the pipeline (staging, approval, production) runs, so you can keep going while the network question is sorted out.
 
 When it is green:
 ```bash
@@ -354,6 +358,7 @@ rm -rf ~/chai-stall                  # your repo copy (optional)
 | `new-app-repo.sh`: cannot reach `localhost:3001` | `./cicd-observability/scripts/forward.sh start`; is port 3001 used by something else? |
 | `git push` asks for a password | the remote has the lab login in the URL (`git remote -v`); if you cloned another way use `z2h` / `z2h-gitea-pass` |
 | Jenkins build: `No Kubernetes cloud was found` | Jenkins was installed without the chart's defaults: re-run `k8s-up.sh` |
+| `Scan image (Trivy)` is red | open the stage's log: usually the scanner cannot download its database from `mirror.gcr.io` / `ghcr.io` (a lab with restricted egress). Re-run with `SCAN_MODE=report` (never blocks) or `skip`. A *finding* (a CRITICAL CVE) is different: fix it by building on a newer base image |
 | `helm upgrade` times out in staging | the Pod is not Ready: `kubectl -n stall-staging describe pod`; `--atomic` will have rolled it back; see the scenario table above |
 | production `curl` returns nothing | is the door open (`forward.sh status`)? is the Gateway proxy up (`kubectl -n envoy-gateway-system get pods`)? is any release in `stall-prod`? |
 | Canary check says `000` for every request | the build Pod cannot reach `chai-<colour>.stall-prod.svc.cluster.local`: the NetworkPolicy must allow namespace `cicd` (it does by default); did you edit it? |
