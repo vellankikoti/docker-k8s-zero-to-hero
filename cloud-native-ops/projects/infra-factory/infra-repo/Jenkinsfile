@@ -1,0 +1,109 @@
+// The infrastructure pipeline (Lab O03). The SAME script you run by hand (scripts/tf.sh) does the work here,
+// so "it worked on my laptop" and "it worked in the pipeline" mean the same thing.
+//
+//   fmt + validate  →  plan  →  policy check  →  a human approves THAT plan  →  apply THAT plan  →  verify
+//   (a plan is saved to a file, so what was reviewed is exactly what runs)
+pipeline {
+  agent { kubernetes { yamlFile 'ci/pod.yaml'; defaultContainer 'terraform' } }
+
+  options {
+    skipDefaultCheckout()
+    timestamps()
+    ansiColor('xterm')
+    timeout(time: 30, unit: 'MINUTES')
+    disableConcurrentBuilds()              // two applies at once would fight over the same state (the lock would stop one)
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+  }
+
+  parameters {
+    choice(name: 'TARGET_ENV', choices: ['dev', 'staging', 'prod'], description: 'Which environment')
+    choice(name: 'ACTION', choices: ['plan-and-apply', 'plan-only', 'drift-check', 'destroy'], description: 'plan-only changes nothing. drift-check fails the build if someone changed the cluster by hand.')
+    string(name: 'IMAGE_TAG', defaultValue: '1.0.0', description: 'The Chai Stall image version to run (never "latest": the policy refuses it)')
+    booleanParam(name: 'REQUIRE_APPROVAL', defaultValue: true, description: 'Ask a human before applying. Always on for prod, whatever you tick.')
+  }
+
+  environment {
+    TF_VAR_image_tag = "${params.IMAGE_TAG}"
+    KUBECONFIG_PATH  = '/tmp/kubeconfig'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps { container('jnlp') { checkout scm } }
+    }
+
+    stage('Who am I?') {
+      steps {
+        // The kubeconfig is built from this Pod's own ServiceAccount: Terraform gets exactly its permissions, nothing more.
+        sh 'sh scripts/mk-kubeconfig.sh "$KUBECONFIG_PATH"'
+      }
+    }
+
+    stage('Format + validate') {
+      steps { sh 'sh scripts/tf.sh "$TARGET_ENV" check' }
+    }
+
+    stage('Plan') {
+      when { expression { params.ACTION in ['plan-and-apply', 'plan-only'] } }
+      steps {
+        sh 'sh scripts/tf.sh "$TARGET_ENV" plan'
+        sh 'cp .plans/$TARGET_ENV.json plan.json'
+        archiveArtifacts artifacts: 'plan.json', fingerprint: true
+      }
+    }
+
+    stage('Policy check') {
+      when { expression { params.ACTION in ['plan-and-apply', 'plan-only'] } }
+      steps {
+        // A "deny" fails the build here, before anything touches the cluster.
+        container('conftest') { sh 'conftest test --policy policy plan.json' }
+      }
+    }
+
+    stage('Approval') {
+      when { expression { params.ACTION == 'plan-and-apply' && (params.REQUIRE_APPROVAL || params.TARGET_ENV == 'prod') } }
+      steps {
+        timeout(time: 15, unit: 'MINUTES') {
+          input message: "The plan for ${params.TARGET_ENV} is in the log above. Apply exactly that plan?", ok: 'Apply'
+        }
+      }
+    }
+
+    stage('Apply') {
+      when { expression { params.ACTION == 'plan-and-apply' } }
+      steps { sh 'sh scripts/tf.sh "$TARGET_ENV" apply' }
+    }
+
+    stage('Verify') {
+      when { expression { params.ACTION == 'plan-and-apply' } }
+      steps {
+        container('tools') {
+          sh '''
+            NS=iac-$TARGET_ENV
+            kubectl -n "$NS" rollout status deploy/chai-stall --timeout=5m
+            kubectl get --raw "/api/v1/namespaces/$NS/services/chai-stall:80/proxy/api/info"; echo
+            kubectl -n "$NS" get deploy,hpa,pdb,resourcequota
+          '''
+        }
+      }
+    }
+
+    stage('Drift check') {
+      when { expression { params.ACTION == 'drift-check' } }
+      steps { sh 'sh scripts/tf.sh "$TARGET_ENV" drift' }      // exit 2 = drift = the build fails, loudly
+    }
+
+    stage('Destroy') {
+      when { expression { params.ACTION == 'destroy' } }
+      steps {
+        timeout(time: 15, unit: 'MINUTES') { input message: "Destroy EVERYTHING in ${params.TARGET_ENV}?", ok: 'Destroy' }
+        sh 'sh scripts/tf.sh "$TARGET_ENV" destroy'
+      }
+    }
+  }
+
+  post {
+    success { echo "✅ ${params.ACTION} on ${params.TARGET_ENV} finished." }
+    failure { echo '❌ Read the first red stage. A policy denial names the rule; a plan error names the resource; a drift failure shows the diff.' }
+  }
+}

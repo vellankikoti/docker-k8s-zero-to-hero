@@ -1,0 +1,6 @@
+# Terraform's local working copies and saved plans. Never commit them (a plan can contain secrets). The lock file IS committed.
+.terraform-*/
+.terraform/
+.plans/
+*.tfstate
+*.tfstate.*
