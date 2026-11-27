@@ -12,6 +12,7 @@
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 need_cluster; need_helm
+cluster_healthy
 
 say "1/7 Image registry and mail catcher (the light version of the CI/CD platform)"
 if ! kubectl -n cicd get deploy registry >/dev/null 2>&1; then "$COURSE_ROOT/cicd-observability/scripts/k8s-up.sh" --lite

@@ -11,6 +11,7 @@
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 need_cluster; need_helm
+cluster_healthy
 
 say "1/7 Infra Factory basics"
 "$INFRA/scripts/up.sh"

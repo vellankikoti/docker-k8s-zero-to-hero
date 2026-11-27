@@ -7,6 +7,7 @@ set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 PIPELINE=0; [ "${1:-}" = "--pipeline" ] && PIPELINE=1
 need_cluster
+cluster_healthy
 
 say "1/5 Terraform on this machine"
 if ! command -v terraform >/dev/null 2>&1; then
