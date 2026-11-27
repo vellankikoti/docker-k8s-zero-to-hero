@@ -4,8 +4,11 @@ kind: Pod
 metadata:
   name: {{ include "chai.fullname" . }}-smoke
   labels:
-    {{- include "chai.selectorLabels" . | nindent 4 }}
-    smoke-test: "true"
+    # NOT the app's selector labels: the Service, the Deployment and the PodDisruptionBudget select by those, and a test
+    # Pod must never be counted as one of the app's Pods.
+    app.kubernetes.io/component: smoke-test
+    app.kubernetes.io/part-of: chai-stall
+    app.kubernetes.io/instance-under-test: {{ .Release.Name }}
   annotations:
     "helm.sh/hook": test
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded

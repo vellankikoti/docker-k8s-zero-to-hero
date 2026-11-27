@@ -25,6 +25,10 @@ apply_quiet() {
 say "Namespaces (with Pod Security) and permissions"
 apply_quiet -f "$K8S_DIR/platform/00-namespaces.yaml" -f "$K8S_DIR/platform/rbac.yaml"
 
+say "Publishing the pipeline scripts (ConfigMap z2h-pipeline: every build Pod mounts them at /opt/z2h)"
+kubectl -n cicd create configmap z2h-pipeline --from-file="$K8S_DIR/pipeline" --dry-run=client -o yaml | kubectl apply -f - >/dev/null \
+  || die "could not publish the pipeline scripts"
+
 say "Mail catcher, image registry and Git server"
 apply_quiet -f "$COURSE_ROOT/kubernetes/20-projects/mailpit.yaml"
 apply_quiet -f "$K8S_DIR/platform/registry.yaml" -f "$K8S_DIR/platform/gitea.yaml"

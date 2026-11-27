@@ -67,7 +67,7 @@ deploy_slot() {  # deploy_slot SLOT TAG [extra helm args...]
   if [ $rc -ne 0 ]; then
     # Evidence first: a rollback deletes the failed Pods and their events.
     printf '\033[1;31m✖ %s is not healthy. Evidence, collected BEFORE rolling back:\033[0m\n' "$rel" >&2
-    "$(dirname "$0")/../ci/diagnose.sh" "$NS" "$rel" >&2 || true
+    "$(dirname "$0")/diagnose.sh" "$NS" "$rel" >&2 || true
     revs=$(helm history "$rel" -n "$NS" -o json 2>/dev/null | grep -o '"revision"' | wc -l)
     if [ "$revs" -gt 1 ]; then say "rolling $rel back to its previous revision"; helm rollback "$rel" -n "$NS" --wait --timeout 2m >/dev/null || true
     else say "first release of $rel: uninstalling it"; helm uninstall "$rel" -n "$NS" >/dev/null || true; fi
@@ -78,7 +78,7 @@ deploy_slot() {  # deploy_slot SLOT TAG [extra helm args...]
 service_url() { echo "http://chai-$1.$NS.svc.cluster.local"; }
 check_slot() {  # check_slot SLOT  → exit 1 if its own error rate is too high
   if [ -n "${CHECK_CMD:-}" ]; then $CHECK_CMD "$1"; return; fi     # (a seam for tests; unset in real use)
-  "$(dirname "$0")/../ci/canary-check.sh" "$(service_url "$1")" "$CHECK_REQUESTS" "$MAX_ERROR_PERCENT"
+  "$(dirname "$0")/canary-check.sh" "$(service_url "$1")" "$CHECK_REQUESTS" "$MAX_ERROR_PERCENT"
 }
 need_first_release() { [ -n "$(helm list -n "$NS" -q)" ] || die "nothing is released yet. Do a first release with: k8s-deploy.sh bluegreen TAG"; }
 
