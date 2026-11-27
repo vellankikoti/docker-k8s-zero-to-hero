@@ -20,7 +20,7 @@ NS=${NS:-stall-prod}
 CHART=${CHART:-chart/chai-stall}
 IMAGE_REPO=${IMAGE_REPO:-localhost:30500/chai-stall}
 ROUTE=${ROUTE:-chai}
-HELM_WAIT=${HELM_WAIT---atomic --wait --timeout 3m}     # tests may set HELM_WAIT="" to skip waiting
+HELM_WAIT=${HELM_WAIT---wait --timeout 3m}     # tests may set HELM_WAIT="" to skip waiting
 HELM_TEST=${HELM_TEST:-1}
 CHAOS_ERROR_RATE=${CHAOS_ERROR_RATE:-0}
 CHAOS_LATENCY_MS=${CHAOS_LATENCY_MS:-0}
@@ -54,16 +54,26 @@ active_slot() { weights; if [ "$WG" -gt "$WB" ]; then echo green; else echo blue
 
 # ---- helpers -------------------------------------------------------------------------------------
 deploy_slot() {  # deploy_slot SLOT TAG [extra helm args...]
-  local slot=$1 tag=$2; shift 2
+  local slot=$1 tag=$2 rel rc=0 revs; shift 2; rel="chai-$slot"
   # The slot's contents are about to change, so it can no longer serve as "the version to roll back to".
   if [ "$(previous_slot)" = "$slot" ]; then kubectl -n "$NS" annotate httproute "$ROUTE" z2h/previous-slot- >/dev/null; fi
-  say "helm upgrade chai-$slot → image tag $tag"
+  say "helm upgrade $rel → image tag $tag"
   # shellcheck disable=SC2086
-  helm upgrade --install "chai-$slot" "$CHART" -n "$NS" -f "$CHART/values-prod.yaml" \
+  helm upgrade --install "$rel" "$CHART" -n "$NS" -f "$CHART/values-prod.yaml" \
     --set "slot=$slot" --set "image.repository=$IMAGE_REPO" --set "image.tag=$tag" \
     --set-string "chaos.errorRate=$CHAOS_ERROR_RATE" --set-string "chaos.latencyMs=$CHAOS_LATENCY_MS" \
-    "$@" $HELM_WAIT
-  if [ "$HELM_TEST" = 1 ]; then helm test "chai-$slot" -n "$NS" --logs >/dev/null && ok "helm test passed for chai-$slot"; fi
+    "$@" $HELM_WAIT || rc=$?
+  if [ $rc -eq 0 ] && [ "$HELM_TEST" = 1 ]; then helm test "$rel" -n "$NS" --logs >/dev/null || rc=$?; fi
+  if [ $rc -ne 0 ]; then
+    # Evidence first: a rollback deletes the failed Pods and their events.
+    printf '\033[1;31m✖ %s is not healthy. Evidence, collected BEFORE rolling back:\033[0m\n' "$rel" >&2
+    "$(dirname "$0")/../ci/diagnose.sh" "$NS" "$rel" >&2 || true
+    revs=$(helm history "$rel" -n "$NS" -o json 2>/dev/null | grep -o '"revision"' | wc -l)
+    if [ "$revs" -gt 1 ]; then say "rolling $rel back to its previous revision"; helm rollback "$rel" -n "$NS" --wait --timeout 2m >/dev/null || true
+    else say "first release of $rel: uninstalling it"; helm uninstall "$rel" -n "$NS" >/dev/null || true; fi
+    return 1
+  fi
+  ok "$rel is healthy (helm --wait and helm test passed)"
 }
 service_url() { echo "http://chai-$1.$NS.svc.cluster.local"; }
 check_slot() {  # check_slot SLOT  → exit 1 if its own error rate is too high
@@ -80,7 +90,7 @@ case "$cmd" in
     if ! released "$slot"; then say "first release: creating chai-$slot"; set_weights 100 0; slot=blue; fi
     extra=(); [ "$cmd" = recreate ] && extra=(--set strategy.type=Recreate)
     say "$cmd: updating the live release chai-$slot in place"
-    if ! deploy_slot "$slot" "$tag" "${extra[@]}"; then die "release failed (helm --atomic already rolled it back)"; fi
+    if ! deploy_slot "$slot" "$tag" "${extra[@]}"; then die "release failed (the evidence is printed above and the release was rolled back)"; fi
     if ! check_slot "$slot"; then
       say "the new version fails its own health check: rolling back"
       helm rollback "chai-$slot" -n "$NS" --wait >/dev/null || true

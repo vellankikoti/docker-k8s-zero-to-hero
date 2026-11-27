@@ -34,7 +34,7 @@ flowchart LR
 | namespaces **enforce `restricted`** | K16 Pod Security | a root Pod is refused by the API server |
 | **rolling update**, **Recreate** | K06 | `strategy:` in the chart |
 | **blue/green** and **canary** by traffic **weights** | K05, K12 | `kubectl -n stall-prod get httproute chai -o yaml` |
-| a release that fails **rolls back** (`helm --atomic`, weights) | K06 `rollout undo` | `helm history` |
+| a release that fails **prints why, then rolls back** (`helm rollback`, weights) | K06 `rollout undo` | `helm history` |
 | secrets as env from a **Secret** | K07 | `jenkins-lab-secrets` |
 | a failing pipeline step ≈ a scenario you solved | S1–S6 | the [scenario map](#-when-the-pipeline-fails-it-is-a-scenario-you-have-solved) at the end |
 
@@ -115,6 +115,14 @@ Open the doors into the cluster, then create **your own** copy of the app:
 | Staging | http://localhost:8082 | none |
 | Production | http://localhost:8090 | none |
 
+### 🔄 Your repo is a copy: how to get the newest pipeline fixes
+`new-app-repo.sh` made your repo from the course files **once**. When the course repo is fixed or improved (`git pull` in it), your copy does not change by itself. Bring it up to date with one command; it copies only the **pipeline files** (`Jenkinsfile`, `ci/`, `deploy/`, `jenkins/`, the Helm chart), **never `app/`** (your code and tests), commits, pushes, and re-runs the seed job:
+```bash
+git pull                                                  # in the course repo
+./cicd-observability/scripts/update-app-repo.sh           # updates ~/chai-stall
+```
+It refuses to run over uncommitted changes. If you edited the chart or a Jenkinsfile yourself (Phases 6 and 7), those edits are overwritten: the diff is shown, and `git revert HEAD` in your repo brings them back.
+
 ### 🌐 Using Killercoda or iximuz Labs (a browser lab)?
 In a browser lab the cluster and your terminal live in a remote VM, so `http://localhost:8081` in *your* browser is **not** that VM. Two things make it work:
 
@@ -159,7 +167,7 @@ The pipeline's stages, in [`Jenkinsfile`](app-repo/Jenkinsfile):
 Things to notice:
 - **Chart: lint + ask the API server** renders the Helm chart and sends it to the real API server with `--dry-run=server`: *the cluster itself* validates it (including Pod Security) **before** anything is built.
 - **Kaniko** builds the image *without* a Docker daemon or the Docker socket, then pushes it to the registry. (The Compose edition mounted the Docker socket, which is root on the host; here, no.)
-- **Deploy to staging** is `helm upgrade --install --atomic`: if the release is not healthy within 3 minutes, **Helm rolls it back by itself**. Then `helm test` runs a small Pod that checks `/readyz` and the version.
+- **Deploy to staging** is `helm upgrade --install --wait`, then `helm test`. If the release is not healthy within 3 minutes, the build log first prints **the evidence** (Helm's message, the Deployment and Pods, the events, why each Pod is unhappy, what the containers printed: [`ci/diagnose.sh`](app-repo/ci/diagnose.sh)) and **only then rolls back**. (A plain `--atomic` rolls back first and deletes the very Pods you would need to look at.)
 - At **Approval** the pipeline stops and waits for you. Press **Ship it**.
 
 > ⚠️ **If "Scan image (Trivy)" fails**, open its log. If the message is about **downloading the vulnerability database**, the build Pod cannot reach the internet host the scanner needs (`mirror.gcr.io` / `ghcr.io`): common in locked-down labs. In `enforce` mode that is the gate failing *closed*, which is correct. Run **Build with Parameters** and choose:
@@ -258,8 +266,8 @@ A pipeline you have never seen *fail* is a pipeline you do not trust. Break it, 
 | A | a **failing test** | Phase 4a | *Test* stage | |
 | B | a **leaked secret** | `printf '\nAPI_KEY = "AKIAABCDEFGHIJKLMNOP"\n' >> app/app.py && git commit -am oops && git push` | *Secret scan* | S4.2 (secrets) |
 | C | a manifest the cluster would **reject** | delete the `securityContext:` block (the Pod-level one) from `chart/chai-stall/templates/deployment.yaml`, commit, push | *Chart: lint + ask the API server*: `violates PodSecurity "restricted"` | S4.5 / K16 |
-| D | an image that **runs as root** | `sed -i.bak '/^USER 10001/d' app/Dockerfile && rm app/Dockerfile.bak`, commit, push | *Deploy to staging*: the Pod stays `CreateContainerConfigError: container has runAsNonRoot and image will run as root`; `--atomic` rolls the release back | **S4.5** (the exact one) |
-| E | a **typo in the image name** | in `Jenkinsfile` change `PULL_REPO = 'localhost:30500/chai-stall'` to `'localhost:30500/chai-stal'` | *Deploy to staging*: `ImagePullBackOff`, then `helm --atomic` rolls back | **S1.2** |
+| D | an image that **runs as root** | `sed -i.bak '/^USER 10001/d' app/Dockerfile && rm app/Dockerfile.bak`, commit, push | *Deploy to staging*: the Pod stays `CreateContainerConfigError: container has runAsNonRoot and image will run as root`; the pipeline prints the evidence and rolls the release back | **S4.5** (the exact one) |
+| E | a **typo in the image name** | in `Jenkinsfile` change `PULL_REPO = 'localhost:30500/chai-stall'` to `'localhost:30500/chai-stal'` | *Deploy to staging*: `ImagePullBackOff`; the log prints the evidence (`Failed to pull image …`), then the release rolls back | **S1.2** |
 | F | a **buggy release** | Phase 5, bad canary | *Release to production*: automatic rollback | S5.4 |
 | G | **too many permissions asked** | run the **ops-state** job after changing `NS` to `kube-system` in `deploy/k8s-deploy.sh` | the API server: `forbidden` for ServiceAccount `jenkins-agent` | **S4.4** / K14 |
 
@@ -354,12 +362,14 @@ rm -rf ~/chai-stall                  # your repo copy (optional)
 | `forward.sh start` shows `○ jenkins stopped` (or production) | it now prints kubectl's own reason and a hint under each stopped door. Usual causes: the Pod is not Ready yet (`kubectl -n cicd get pods`: `jenkins-0` must be `2/2 Running`), or that local port is taken. Fix it, then run `forward.sh start` again. Logs: `/tmp/z2h-unit4-forward-<name>.log` |
 | In a Killercoda / iximuz lab the URLs do not open | the lab's browser cannot see `127.0.0.1` inside the VM. `forward.sh start --lab` (automatic for user `laborant`) listens on `0.0.0.0`; then expose the port with the lab's port feature (see the box in Phase 2) |
 | Jenkins answers **403 No valid crumb** to *Build Now* behind a proxy / lab | an older install: run `./cicd-observability/scripts/k8s-up.sh` again (it sets `excludeClientIPFromCrumb`; Jenkins reloads its config by itself, or `kubectl -n cicd delete pod jenkins-0`) |
+| a fix was merged into the course repo but your pipeline still behaves the old way | your app repo is a copy: `git pull` in the course repo, then `./cicd-observability/scripts/update-app-repo.sh` |
+| `Deploy to staging` is red | the log now prints **the evidence before rolling back**: scroll to the `──── ` sections (Helm's message, Deployment and Pods, events, ReplicaSet conditions, container logs). `ReplicaSet conditions: FailedCreate … violates PodSecurity` = the namespace refused the Pod (S4.5); `Failed to pull image` = S1.2; `0/1 nodes are available` = S1.1 |
 | `forward.sh` says staging was skipped | normal before the first pipeline run: nothing is deployed in `stall-staging` yet |
 | `new-app-repo.sh`: cannot reach `localhost:3001` | `./cicd-observability/scripts/forward.sh start`; is port 3001 used by something else? |
 | `git push` asks for a password | the remote has the lab login in the URL (`git remote -v`); if you cloned another way use `z2h` / `z2h-gitea-pass` |
 | Jenkins build: `No Kubernetes cloud was found` | Jenkins was installed without the chart's defaults: re-run `k8s-up.sh` |
 | `Scan image (Trivy)` is red | open the stage's log: usually the scanner cannot download its database from `mirror.gcr.io` / `ghcr.io` (a lab with restricted egress). Re-run with `SCAN_MODE=report` (never blocks) or `skip`. A *finding* (a CRITICAL CVE) is different: fix it by building on a newer base image |
-| `helm upgrade` times out in staging | the Pod is not Ready: `kubectl -n stall-staging describe pod`; `--atomic` will have rolled it back; see the scenario table above |
+| `helm upgrade` times out in staging | the Pod is not Ready: `kubectl -n stall-staging describe pod`; the build log already shows the evidence (the `──── ` sections) and the release was rolled back; see the scenario table above |
 | production `curl` returns nothing | is the door open (`forward.sh status`)? is the Gateway proxy up (`kubectl -n envoy-gateway-system get pods`)? is any release in `stall-prod`? |
 | Canary check says `000` for every request | the build Pod cannot reach `chai-<colour>.stall-prod.svc.cluster.local`: the NetworkPolicy must allow namespace `cicd` (it does by default); did you edit it? |
 | Start over | `./cicd-observability/scripts/k8s-down.sh -y && ./cicd-observability/scripts/k8s-up.sh` |
