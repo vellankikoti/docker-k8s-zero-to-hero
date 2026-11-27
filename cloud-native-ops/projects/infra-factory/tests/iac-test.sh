@@ -22,9 +22,8 @@ tf() { "$REPO/scripts/tf.sh" "$@"; }
 
 say "platform"
 "$HERE/scripts/cleanup.sh" -y >/dev/null 2>&1
+kubectl get ns cicd >/dev/null 2>&1 || kubectl create ns cicd >/dev/null     # the runner's ServiceAccount lives here (a fresh cluster has no "cicd" yet)
 kubectl apply -f "$HERE/platform/00-tfstate-and-runner.yaml" >/dev/null || die "cannot create the state store"
-kubectl get ns cicd >/dev/null 2>&1 || kubectl create ns cicd >/dev/null
-kubectl apply -f "$HERE/platform/00-tfstate-and-runner.yaml" >/dev/null
 
 say "as the pipeline's ServiceAccount"
 SA=$(mktemp -d); kubectl -n cicd create token terraform-runner --duration=1h > "$SA/token"
