@@ -172,11 +172,9 @@ Things to notice:
 - **Deploy to staging** is `helm upgrade --install --wait`, then `helm test`. If the release is not healthy within 3 minutes, the build log first prints **the evidence** (Helm's message, the Deployment and Pods, the events, why each Pod is unhappy, what the containers printed: [`diagnose.sh`](../../k8s/pipeline/diagnose.sh)) and **only then rolls back**. (A plain `--atomic` rolls back first and deletes the very Pods you would need to look at.)
 - At **Approval** the pipeline stops and waits for you. Press **Ship it**.
 
-> ⚠️ **If "Scan image (Trivy)" fails**, open its log. If the message is about **downloading the vulnerability database**, the build Pod cannot reach the internet host the scanner needs (`mirror.gcr.io` / `ghcr.io`): common in locked-down labs. In `enforce` mode that is the gate failing *closed*, which is correct. Run **Build with Parameters** and choose:
-> - `SCAN_MODE=report`: the scan runs and shows findings, but **nothing it reports (or fails to do) blocks the build**. A scanner that cannot start prints a ⚠ line and the pipeline continues.
-> - `SCAN_MODE=skip`: do not scan at all (labs only, never real life).
+> ℹ️ **The scan stage and the network.** The scanner downloads its vulnerability database (from `mirror.gcr.io`, then `public.ecr.aws`, then `ghcr.io`: each is tried, twice) once per build. The default is `SCAN_MODE=report`: findings are shown and **nothing blocks**, even if no mirror is reachable (the log then says plainly that the image was *not* scanned). That is what lets the pipeline run on any cluster.
 >
-> Either way the rest of the pipeline (staging, approval, production) runs, so you can keep going while the network question is sorted out.
+> To see the gate bite, run **Build with Parameters** with `SCAN_MODE=enforce`: a CRITICAL finding fails the build, and so does a scanner that cannot get its database (a gate that cannot check must not wave things through). If that fails with "no vulnerability database is reachable", your cluster has no route to those mirrors: use `report`. `skip` does not scan at all (labs only, never real life).
 
 When it is green:
 ```bash
