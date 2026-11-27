@@ -70,12 +70,13 @@ out=$(kubectl -n cicd exec deploy/gitea -- gitea admin user create --username "$
   --email "z2h@stall.local" --admin --must-change-password=false 2>&1 || true)
 echo "$out" | grep -qE "successfully created|already exists" || warn "unexpected answer from Gitea: $out"
 
+HELM_LOG=$(mktemp); trap 'rm -f "$HELM_LOG"' EXIT      # helm's harmless "watch ended" lines stay out of your terminal unless the install fails
 say "Installing Jenkins ${CHART_VERSION} (3 to 5 minutes the first time: it downloads plugins)"
 helm repo add jenkins https://charts.jenkins.io >/dev/null 2>&1 || true
 helm repo update jenkins >/dev/null
 helm upgrade --install jenkins jenkins/jenkins --version "$CHART_VERSION" -n cicd \
-  -f "$K8S_DIR/platform/jenkins-values.yaml" --wait --timeout 10m >/dev/null \
-  || die "Jenkins did not finish installing. Look: kubectl -n cicd get pods ; kubectl -n cicd logs jenkins-0 -c jenkins | tail -30"
+  -f "$K8S_DIR/platform/jenkins-values.yaml" --wait --timeout 10m >/dev/null 2>"$HELM_LOG" \
+  || { grep -v 'reflector.go' "$HELM_LOG" | tail -15 >&2; die "Jenkins did not finish installing. Look: kubectl -n cicd get pods ; kubectl -n cicd logs jenkins-0 -c jenkins | tail -30"; }
 
 if [ "$WITH_GATEWAY" = 1 ]; then
   say "Gateway API controller (Envoy Gateway) and production's Gateway + HTTPRoute"

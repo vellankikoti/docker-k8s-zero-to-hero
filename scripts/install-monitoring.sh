@@ -36,11 +36,14 @@ say "Adding the prometheus-community chart repository"
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts >/dev/null 2>&1 || true
 helm repo update prometheus-community >/dev/null
 
+# Helm (client-go) prints harmless "watch ended ... http2: client connection lost" lines while it waits. They scare people and
+# mean nothing, so keep helm's messages in a file and show them only if the install really fails.
+HELM_LOG=$(mktemp); trap 'rm -f "$HELM_LOG"' EXIT
 say "Installing kube-prometheus-stack ${CHART_VERSION} into namespace ${NS} (the first time takes a few minutes)"
 helm upgrade --install "$RELEASE" prometheus-community/kube-prometheus-stack \
   --version "$CHART_VERSION" --namespace "$NS" --create-namespace \
-  -f "$VALUES" "${EXTRA[@]}" --wait --timeout 10m >/dev/null \
-  || die "The install did not finish. Look: kubectl get pods -n ${NS}   and   helm status ${RELEASE} -n ${NS}"
+  -f "$VALUES" ${EXTRA[@]+"${EXTRA[@]}"} --wait --timeout 10m >/dev/null 2>"$HELM_LOG" \
+  || { grep -v 'reflector.go' "$HELM_LOG" | tail -15 >&2; die "The install did not finish. Look: kubectl get pods -n ${NS}   and   helm status ${RELEASE} -n ${NS}"; }
 
 PROM="/api/v1/namespaces/${NS}/services/${RELEASE}-prometheus:9090/proxy/api/v1/query?query=up"
 say "Waiting for Prometheus to answer its first query"
