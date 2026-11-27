@@ -31,6 +31,11 @@ resource "kubernetes_resource_quota_v1" "this" {
     namespace = kubernetes_namespace_v1.this.metadata[0].name
     labels    = local.labels
   }
+  # After creating a quota, the provider waits until the cluster has filled in its usage numbers. The default patience is 30 s,
+  # which a busy cluster can exceed ("Quotas don't match after creation"). Give it five minutes; up.sh also checks the controller first.
+  timeouts {
+    create = "5m"
+  }
   spec {
     hard = {
       "pods"            = var.quota.pods
