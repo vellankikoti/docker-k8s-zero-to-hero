@@ -1,0 +1,192 @@
+# Logs (Loki + Alloy) and traces (Jaeger). Lab K10-style storage is emptyDir: fine for a lab, gone when the Pod restarts.
+# Every container is "restricted"-clean: non-root, no privilege escalation, all capabilities dropped, seccomp on.
+
+# ───────── Loki: stores log lines, indexed only by labels (cheap) ─────────
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: loki-config, namespace: observability }
+data:
+  loki.yml: |
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+    common:
+      instance_addr: 127.0.0.1
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        kvstore: { store: inmemory }
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index: { prefix: index_, period: 24h }
+    limits_config:
+      retention_period: 48h
+      allow_structured_metadata: true
+    analytics:
+      reporting_enabled: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: loki, namespace: observability, labels: { app: loki } }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: loki } }
+  template:
+    metadata: { labels: { app: loki } }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, fsGroup: 10001, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: loki
+          image: grafana/loki:3.5.1
+          args: [-config.file=/etc/loki/loki.yml]
+          ports: [{ name: http, containerPort: 3100 }]
+          readinessProbe: { httpGet: { path: /ready, port: http }, periodSeconds: 5, initialDelaySeconds: 5 }
+          securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } }
+          resources: { requests: { cpu: 50m, memory: 128Mi }, limits: { memory: 512Mi } }
+          volumeMounts:
+            - { name: config, mountPath: /etc/loki, readOnly: true }
+            - { name: data, mountPath: /loki }
+      volumes:
+        - { name: config, configMap: { name: loki-config } }
+        - { name: data, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: loki, namespace: observability }
+spec:
+  selector: { app: loki }
+  ports: [{ name: http, port: 3100, targetPort: http }]
+
+# ───────── Jaeger: stores and shows traces. Apps send OTLP over HTTP to port 4318 ─────────
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: jaeger, namespace: observability, labels: { app: jaeger } }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: jaeger } }
+  template:
+    metadata: { labels: { app: jaeger } }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 10001, runAsGroup: 10001, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: jaeger
+          image: jaegertracing/jaeger:2.7.0
+          ports:
+            - { name: ui, containerPort: 16686 }
+            - { name: otlp-http, containerPort: 4318 }
+            - { name: otlp-grpc, containerPort: 4317 }
+          readinessProbe: { httpGet: { path: /, port: ui }, periodSeconds: 5, initialDelaySeconds: 3 }
+          securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } }
+          resources: { requests: { cpu: 50m, memory: 128Mi }, limits: { memory: 512Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: jaeger, namespace: observability }
+spec:
+  selector: { app: jaeger }
+  ports:
+    - { name: ui, port: 16686, targetPort: ui }
+    - { name: otlp-http, port: 4318, targetPort: otlp-http }
+    - { name: otlp-grpc, port: 4317, targetPort: otlp-grpc }
+
+# ───────── Alloy: the log shipper. It asks the Kubernetes API for the Chai Stall's logs (no host access needed) ─────────
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: alloy, namespace: observability }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata: { name: alloy-log-reader }
+rules:
+  - apiGroups: [""]
+    resources: [pods, pods/log, namespaces]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata: { name: alloy-log-reader }
+subjects: [{ kind: ServiceAccount, name: alloy, namespace: observability }]
+roleRef: { kind: ClusterRole, name: alloy-log-reader, apiGroup: rbac.authorization.k8s.io }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: alloy-config, namespace: observability }
+data:
+  config.alloy: |
+    // Find the Chai Stall's Pods (any namespace), read their logs through the API server, send them to Loki.
+    discovery.kubernetes "pods" {
+      role = "pod"
+      selectors {
+        role  = "pod"
+        label = "app.kubernetes.io/name=chai-stall"
+      }
+    }
+
+    discovery.relabel "pods" {
+      targets = discovery.kubernetes.pods.targets
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+        target_label  = "service"
+      }
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_instance"]
+        target_label  = "release"
+      }
+    }
+
+    loki.source.kubernetes "pods" {
+      targets    = discovery.relabel.pods.output
+      forward_to = [loki.write.local.receiver]
+    }
+
+    loki.write "local" {
+      endpoint {
+        url = "http://loki.observability.svc.cluster.local:3100/loki/api/v1/push"
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: alloy, namespace: observability, labels: { app: alloy } }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }
+  selector: { matchLabels: { app: alloy } }
+  template:
+    metadata: { labels: { app: alloy } }
+    spec:
+      serviceAccountName: alloy
+      securityContext: { runAsNonRoot: true, runAsUser: 473, runAsGroup: 473, fsGroup: 473, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: alloy
+          image: grafana/alloy:v1.9.1
+          args: [run, --server.http.listen-addr=0.0.0.0:12345, --storage.path=/tmp/alloy, /etc/alloy/config.alloy]
+          ports: [{ name: http, containerPort: 12345 }]
+          readinessProbe: { httpGet: { path: /-/ready, port: http }, periodSeconds: 5, initialDelaySeconds: 3 }
+          securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } }
+          resources: { requests: { cpu: 25m, memory: 96Mi }, limits: { memory: 384Mi } }
+          volumeMounts:
+            - { name: config, mountPath: /etc/alloy, readOnly: true }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: config, configMap: { name: alloy-config } }
+        - { name: tmp, emptyDir: {} }

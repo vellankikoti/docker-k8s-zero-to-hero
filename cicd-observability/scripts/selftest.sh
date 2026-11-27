@@ -43,6 +43,7 @@ if command -v docker >/dev/null && docker info >/dev/null 2>&1; then
   PT="docker run --rm -v $P2:/w -w /w --entrypoint promtool prom/prometheus:v3.5.0"
   run "promtool check rules" $PT check rules prometheus/rules/recording.yml prometheus/rules/alerts.yml
   run "promtool test rules" $PT test rules tests/rules_test.yml
+  run "see-everything (Kubernetes): promtool check + unit tests of the PrometheusRule" bash $U/projects/see-everything/tests/run.sh
   run "actionlint on the workflow" docker run --rm -v "$PWD":/repo -w /repo rhysd/actionlint:1.7.7 -color=false .github/workflows/chai-stall-ci.yml
 else
   echo "  • docker not available: skipped compose, promtool and actionlint"

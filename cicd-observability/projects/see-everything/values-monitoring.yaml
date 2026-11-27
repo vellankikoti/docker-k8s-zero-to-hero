@@ -1,0 +1,6 @@
+# Layered on top of kubernetes/19-observability/monitoring-values.yml by scripts/up.sh (MONITORING_EXTRA_VALUES).
+grafana:
+  sidecar:
+    datasources:
+      enabled: true
+      searchNamespace: ALL      # also load datasource ConfigMaps from any namespace

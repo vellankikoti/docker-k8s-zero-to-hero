@@ -1,0 +1,27 @@
+# Tells Grafana where Loki (logs) and Jaeger (traces) live. Grafana's sidecar watches for ConfigMaps labelled grafana_datasource
+# and loads them by itself. (Prometheus is already wired by the chart, uid "prometheus".)
+# The Loki entry has a "derived field": a trace_id inside a log line becomes a link that opens that trace in Jaeger.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: see-everything-datasources
+  namespace: monitoring
+  labels:
+    grafana_datasource: "1"
+data:
+  see-everything.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        uid: loki
+        type: loki
+        access: proxy
+        url: http://loki.observability.svc.cluster.local:3100
+        jsonData:
+          derivedFields:
+            - { name: trace_id, matcherRegex: '"trace_id": "(\w+)"', url: "$${__value.raw}", datasourceUid: jaeger }
+      - name: Jaeger
+        uid: jaeger
+        type: jaeger
+        access: proxy
+        url: http://jaeger.observability.svc.cluster.local:16686

@@ -1,0 +1,9 @@
+# How the demo Chai Stall is released into stall-demo (chart: cicd-observability/k8s/chart/chai-stall).
+replicaCount: 2
+serviceMonitor:
+  enabled: true                 # Prometheus now scrapes /metrics by itself (Lab K19)
+  interval: 5s
+  labels: { release: kube-prometheus-stack }
+otlpEndpoint: http://jaeger.observability.svc.cluster.local:4318      # every request sends one trace span here
+podDisruptionBudget:
+  enabled: false

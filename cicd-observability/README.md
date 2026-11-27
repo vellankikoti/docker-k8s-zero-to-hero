@@ -18,7 +18,7 @@ You will build a small delivery factory (Git → Jenkins → registry → stagin
 | Start | [`doctor.sh --k8s`](scripts/doctor.sh) → [Ship It](projects/ship-it/README.md) | [Compose edition](compose-edition/README.md) |
 | Best for | learners who finished the Docker and Kubernetes tracks: it **connects this track to the 60 scenarios** | no cluster available, or a quick first look |
 
-> The ten labs below teach the concepts; their hands-on steps are being moved onto Kubernetes (next PRs). Ship It above already runs fully on Kubernetes.
+> The ten labs below teach the concepts; the projects below run fully on Kubernetes. The lab steps still use the Compose edition and are being moved over.
 
 ## 🎯 Who this is for
 Anyone can follow this track. If you can run `docker run` ([D01](../docker/01-first-steps/README.md)) and `git commit` ([G01](../git/01-first-repo/README.md)), you are ready. Never used Compose? Skim [D08](../docker/08-compose/README.md) first (20 minutes).
@@ -37,8 +37,8 @@ Anyone can follow this track. If you can run `docker run` ([D01](../docker/01-fi
 | [C07](C07-alerting-grafana/README.md) | **alerting** and **Grafana**: rules, Alertmanager routing, dashboards as code | 📬 the alert email arrives while you are still breaking it | 60m |
 | [C08](C08-logs-and-traces/README.md) | **centralized logging** (Loki) and **traces** (Jaeger): the three pillars joined | 🔗 click a trace_id in a log line, land on the trace | 50m |
 | [C09](C09-slo-incident-response/README.md) | **SLIs, SLOs, SLAs** and **incident response**: error budgets, burn-rate alerts, runbooks, postmortems | 🔥 a game day: three incidents, one timeline | 75m |
-| [🏁 **Ship It**](compose-edition/ship-it/README.md) | a complete CI/CD factory: Jenkins + GitHub Actions / GitLab CI, automated build, test, scan, push and deploy | 🚀 your commit reaches production with no human typing a deploy command | 2–3h |
-| [🏁 **See Everything**](compose-edition/see-everything/README.md) | Prometheus, Alertmanager, Grafana (+ logs and traces) around a live app, with a game day | 🔔 break it, get the email, find the cause | 2–3h |
+| [🏁 **Ship It**](projects/ship-it/README.md) ([Compose](compose-edition/ship-it/README.md)) | a complete CI/CD factory: Jenkins + GitHub Actions / GitLab CI, automated build, test, scan, push and deploy | 🚀 your commit reaches production with no human typing a deploy command | 2–3h |
+| [🏁 **See Everything**](projects/see-everything/README.md) ([Compose](compose-edition/see-everything/README.md)) | Prometheus, Alertmanager, Grafana (+ logs and traces) around a live app, with a game day | 🔔 break it, get the email, find the cause | 2–3h |
 
 > **Suggested path:** C00 → C01 → C02–C05 (then **Ship It**) → C06–C09 (then **See Everything**). The labs teach one topic at a time on the same running stack; the projects make you assemble and operate it end to end. In a hurry? Do the two projects: each one's README links to the lab that explains every step.
 

@@ -1,0 +1,129 @@
+# Unit tests for the alert rules: no Prometheus server and no cluster needed. Run:  ./tests/run.sh
+# (run.sh pulls the rules out of manifests/20-rules.yaml, the SAME file the cluster gets, then calls promtool.)
+rule_files:
+  - rules.generated.yml
+
+evaluation_interval: 15s
+
+tests:
+  - name: nobody can order when no instance is healthy
+    interval: 15s
+    input_series:
+      - series: 'up{job="chai-stall",pod="chai-stall-a"}'
+        values: '1 1 1 stale stale stale stale stale stale stale'   # the Pod disappears from the targets
+    alert_rule_test:
+      - eval_time: 30s
+        alertname: ChaiStallDown
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: ChaiStallDown
+        exp_alerts:
+          - exp_labels: { severity: critical, team: stall, notify: email }
+            exp_annotations:
+              summary: "No healthy Chai Stall instance at all"
+              description: "Prometheus sees no ready instance. Runbook: docs/runbook.md#nobody-can-order"
+
+  - name: one healthy instance of two is not an outage
+    interval: 15s
+    input_series:
+      - series: 'up{job="chai-stall",pod="chai-stall-a"}'
+        values: '1 1 1 1 1 1 1 1 1 1'
+      - series: 'up{job="chai-stall",pod="chai-stall-b"}'
+        values: '1 1 1 0 0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: ChaiStallDown
+        exp_alerts: []
+
+  - name: 50 percent failing orders burns the budget fast
+    interval: 15s
+    input_series:
+      - series: 'http_requests_total{job="chai-stall",path="/order",status="200"}'
+        values: '0+30x40'
+      - series: 'http_requests_total{job="chai-stall",path="/order",status="500"}'
+        values: '0+30x40'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: OrderSLOFastBurn
+        exp_alerts:
+          - exp_labels: { severity: critical, team: stall, notify: email }
+            exp_annotations:
+              summary: "Orders are failing fast: the error budget is burning at 14x+"
+              description: "50% of orders failing (SLO allows 1%). Runbook: docs/runbook.md#high-error-rate"
+
+  - name: a healthy service stays quiet
+    interval: 15s
+    input_series:
+      - series: 'http_requests_total{job="chai-stall",path="/order",status="200"}'
+        values: '0+30x40'
+      - series: 'http_requests_total{job="chai-stall",path="/order",status="500"}'
+        values: '0+0x40'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: OrderSLOFastBurn
+        exp_alerts: []
+      - eval_time: 9m
+        alertname: OrderSLOSlowBurn
+        exp_alerts: []
+
+  - name: no error series at all still gives an error ratio of zero (not "no data")
+    interval: 15s
+    input_series:
+      - series: 'http_requests_total{job="chai-stall",path="/order",status="200"}'
+        values: '0+30x40'
+    promql_expr_test:
+      - expr: sli:order_errors:ratio_rate5m
+        eval_time: 5m
+        exp_samples:
+          - labels: 'sli:order_errors:ratio_rate5m'
+            value: 0
+
+  - name: slow orders raise the latency alert
+    interval: 15s
+    input_series:
+      # every order takes between 0.5 s and 1 s: nothing lands in the 0.5 bucket or below
+      - series: 'http_request_duration_seconds_bucket{job="chai-stall",path="/order",le="0.5"}'
+        values: '0+0x40'
+      - series: 'http_request_duration_seconds_bucket{job="chai-stall",path="/order",le="1"}'
+        values: '0+30x40'
+      - series: 'http_request_duration_seconds_bucket{job="chai-stall",path="/order",le="+Inf"}'
+        values: '0+30x40'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: ChaiStallHighLatency
+        exp_alerts:
+          - exp_labels: { severity: warning, team: stall, notify: email }
+            exp_annotations:
+              summary: "p95 order latency is 975ms"
+              description: "Customers wait too long. Runbook: docs/runbook.md#slow-orders"
+
+  - name: a rollout stuck behind healthy old Pods is noticed (the old Pods hide it from users)
+    interval: 15s
+    input_series:
+      - series: 'kube_deployment_status_replicas_unavailable{namespace="stall-demo",deployment="chai-stall"}'
+        values: '0 0 1 1 1 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 30s
+        alertname: ChaiStallReplicasUnavailable
+        exp_alerts: []
+      - eval_time: 2m
+        alertname: ChaiStallReplicasUnavailable
+        exp_alerts:
+          - exp_labels: { severity: warning, team: stall, notify: email, namespace: stall-demo, deployment: chai-stall }
+            exp_annotations:
+              summary: "stall-demo/chai-stall has 1 Pod(s) that are not Ready"
+              description: "Pending? ImagePullBackOff? CrashLoopBackOff? A rollout stuck behind healthy old Pods looks exactly like this. Runbook: docs/runbook.md#replicas-missing"
+
+  - name: a crash loop is noticed from the restart counter
+    interval: 15s
+    input_series:
+      - series: 'kube_pod_container_status_restarts_total{namespace="stall-demo",pod="chai-stall-abc",container="chai-stall"}'
+        values: '0+1x40'                       # one restart every 15 s
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ChaiStallPodRestarting
+        exp_alerts:
+          - exp_labels: { severity: warning, team: stall, notify: email, namespace: stall-demo, pod: chai-stall-abc, container: chai-stall }
+            exp_annotations:
+              summary: "chai-stall-abc restarted 12 times in 5 minutes"
+              description: "A crash loop or an OOM kill. Runbook: docs/runbook.md#replicas-missing"

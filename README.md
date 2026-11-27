@@ -110,8 +110,8 @@ It's ~250 lines of standard-library Python plus one HTML page: no frameworks, no
 | [C07](cicd-observability/C07-alerting-grafana/README.md) | **Alertmanager** and **Grafana** dashboards as code | 📬 the alert email lands while you break it |
 | [C08](cicd-observability/C08-logs-and-traces/README.md) | **centralized logging** (Loki) and **traces** (Jaeger) | 🔗 click a trace_id, land on the trace |
 | [C09](cicd-observability/C09-slo-incident-response/README.md) | **SLIs, SLOs, SLAs** and **incident response** | 🔥 a game day with three incidents |
-| [🏁 Ship It](cicd-observability/compose-edition/ship-it/README.md) | a CI/CD factory with Jenkins and GitHub Actions / GitLab CI | 🚀 a commit reaches production on its own |
-| [🏁 See Everything](cicd-observability/compose-edition/see-everything/README.md) | Prometheus, Alertmanager and Grafana (+ logs and traces) | 🔔 break it, get the email, find the cause |
+| [🏁 Ship It](cicd-observability/projects/ship-it/README.md) | a CI/CD factory with Jenkins and GitHub Actions / GitLab CI | 🚀 a commit reaches production on its own |
+| [🏁 See Everything](cicd-observability/projects/see-everything/README.md) | Prometheus, Alertmanager and Grafana (+ logs and traces) | 🔔 break it, get the email, find the cause |
 
 ## 🚀 Quick start
 ```bash

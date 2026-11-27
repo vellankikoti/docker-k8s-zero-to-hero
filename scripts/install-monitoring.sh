@@ -12,6 +12,9 @@ RELEASE="kube-prometheus-stack"
 NS="monitoring"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 VALUES="$HERE/../kubernetes/19-observability/monitoring-values.yml"
+# Optional: a second values file layered on top (the See Everything project adds Loki and Jaeger to Grafana this way).
+EXTRA=()
+[ -n "${MONITORING_EXTRA_VALUES:-}" ] && EXTRA=(-f "$MONITORING_EXTRA_VALUES")
 
 say()  { printf '\033[1;36m▶ %s\033[0m\n' "$*"; }
 ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
@@ -36,7 +39,7 @@ helm repo update prometheus-community >/dev/null
 say "Installing kube-prometheus-stack ${CHART_VERSION} into namespace ${NS} (the first time takes a few minutes)"
 helm upgrade --install "$RELEASE" prometheus-community/kube-prometheus-stack \
   --version "$CHART_VERSION" --namespace "$NS" --create-namespace \
-  -f "$VALUES" --wait --timeout 10m >/dev/null \
+  -f "$VALUES" "${EXTRA[@]}" --wait --timeout 10m >/dev/null \
   || die "The install did not finish. Look: kubectl get pods -n ${NS}   and   helm status ${RELEASE} -n ${NS}"
 
 PROM="/api/v1/namespaces/${NS}/services/${RELEASE}-prometheus:9090/proxy/api/v1/query?query=up"

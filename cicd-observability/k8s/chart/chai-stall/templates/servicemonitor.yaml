@@ -7,6 +7,9 @@ metadata:
     {{- include "chai.labels" . | nindent 4 }}
     {{- with .Values.serviceMonitor.labels }}{{ toYaml . | nindent 4 }}{{ end }}
 spec:
+  # Every release (chai-stall, chai-blue, chai-green) reports as job="chai-stall"; the Service name tells them apart.
+  # One name for the rules and the dashboard, whatever the release is called.
+  jobLabel: app.kubernetes.io/name
   selector:
     matchLabels:
       {{- include "chai.selectorLabels" . | nindent 6 }}
