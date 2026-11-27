@@ -86,14 +86,14 @@ spec:
     - name: chai-stall-capacity
       rules:
         - alert: ChaiStallReplicasUnavailable
-          expr: kube_deployment_status_replicas_unavailable{namespace=~"stall-.*",deployment=~"chai-.*"} > 0
+          expr: kube_deployment_status_replicas_unavailable{namespace=~"stall-.*|iac-.*",deployment=~"chai-.*"} > 0
           for: 1m
           labels: { severity: warning, team: stall, notify: email }
           annotations:
             summary: "{{ $labels.namespace }}/{{ $labels.deployment }} has {{ $value }} Pod(s) that are not Ready"
             description: "Pending? ImagePullBackOff? CrashLoopBackOff? A rollout stuck behind healthy old Pods looks exactly like this. Runbook: docs/runbook.md#replicas-missing"
         - alert: ChaiStallPodRestarting
-          expr: increase(kube_pod_container_status_restarts_total{namespace=~"stall-.*",pod=~"chai-.*"}[5m]) > 2
+          expr: increase(kube_pod_container_status_restarts_total{namespace=~"stall-.*|iac-.*",pod=~"chai-.*"}[5m]) > 2
           for: 0m
           labels: { severity: warning, team: stall, notify: email }
           annotations:

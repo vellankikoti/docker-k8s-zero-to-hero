@@ -29,6 +29,8 @@ resource "helm_release" "chai_stall" {
       targetCPUUtilizationPercentage = var.autoscaling.cpu
     }
     podDisruptionBudget = { enabled = var.env == "prod" }
+    commonLabels        = var.common_labels
+    serviceMonitor      = { enabled = var.monitoring, interval = "10s", labels = { release = "kube-prometheus-stack" } }
     otlpEndpoint        = var.otlp_endpoint
   })]
 }

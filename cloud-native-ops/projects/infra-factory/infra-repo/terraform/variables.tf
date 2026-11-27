@@ -71,6 +71,12 @@ variable "wait_for_pods" {
   default     = true
 }
 
+variable "monitoring" {
+  description = "Let Prometheus scrape the app (creates a ServiceMonitor; needs the Prometheus Operator, see the See Everything project)."
+  type        = bool
+  default     = false
+}
+
 variable "otlp_endpoint" {
   description = "Send traces here (empty = off). The See Everything project's Jaeger is http://jaeger.observability.svc.cluster.local:4318"
   type        = string

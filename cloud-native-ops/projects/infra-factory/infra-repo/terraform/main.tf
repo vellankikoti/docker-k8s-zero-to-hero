@@ -23,4 +23,6 @@ module "app" {
   autoscaling   = var.autoscaling
   wait          = var.wait_for_pods
   otlp_endpoint = var.otlp_endpoint
+  monitoring    = var.monitoring
+  common_labels = { "z2h/owner" = var.owner, "z2h/cost-center" = var.cost_center, "z2h/env" = var.env }
 }

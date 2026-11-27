@@ -1,0 +1,116 @@
+# Cost optimisation by automation: nobody uses dev and staging between 10 pm and 7 am, so switch them off, and back on.
+#   night-shift-down   22:00 India time  → remembers each Deployment's replica count, scales it to 0
+#   night-shift-up     07:00 India time  → puts the remembered count back
+# It only touches namespaces labelled z2h/env=dev or staging. Production is never touched: no permission, and the
+# admission policy "z2h-prod-never-scaled-to-zero" would refuse it anyway (two locks on one door).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: chai-ops
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    app.kubernetes.io/part-of: production-ready
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: night-shift, namespace: chai-ops }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata: { name: z2h-night-shift-find }
+rules:
+  - apiGroups: [""]
+    resources: [namespaces]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata: { name: z2h-night-shift-find }
+subjects: [{ kind: ServiceAccount, name: night-shift, namespace: chai-ops }]
+roleRef: { kind: ClusterRole, name: z2h-night-shift-find, apiGroup: rbac.authorization.k8s.io }
+---
+# The power to scale, handed out PER NAMESPACE by scripts/night-shift.sh (a RoleBinding in iac-dev and in iac-staging only).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata: { name: z2h-night-shift-scale }
+rules:
+  - apiGroups: [apps]
+    resources: [deployments]
+    verbs: [get, list, patch]
+  - apiGroups: [apps]
+    resources: [deployments/scale]
+    verbs: [get, update, patch]
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata: { name: night-shift-down, namespace: chai-ops }
+spec:
+  schedule: "0 22 * * *"
+  timeZone: Asia/Kolkata
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          serviceAccountName: night-shift
+          restartPolicy: Never
+          securityContext: { runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, seccompProfile: { type: RuntimeDefault } }
+          containers:
+            - name: scale
+              image: alpine/k8s:1.34.1
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  for ns in $(kubectl get ns -l 'z2h/env in (dev,staging)' -o jsonpath='{.items[*].metadata.name}'); do
+                    for d in $(kubectl -n "$ns" get deploy -o jsonpath='{.items[*].metadata.name}'); do
+                      r=$(kubectl -n "$ns" get deploy "$d" -o jsonpath='{.spec.replicas}')
+                      if [ "${r:-0}" -gt 0 ]; then
+                        kubectl -n "$ns" annotate deploy "$d" z2h/replicas-before-night="$r" --overwrite >/dev/null
+                        kubectl -n "$ns" scale deploy "$d" --replicas=0
+                      fi
+                    done
+                  done
+              securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } }
+              resources: { requests: { cpu: 10m, memory: 32Mi }, limits: { memory: 128Mi } }
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata: { name: night-shift-up, namespace: chai-ops }
+spec:
+  schedule: "0 7 * * *"
+  timeZone: Asia/Kolkata
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          serviceAccountName: night-shift
+          restartPolicy: Never
+          securityContext: { runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, seccompProfile: { type: RuntimeDefault } }
+          containers:
+            - name: scale
+              image: alpine/k8s:1.34.1
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  for ns in $(kubectl get ns -l 'z2h/env in (dev,staging)' -o jsonpath='{.items[*].metadata.name}'); do
+                    for d in $(kubectl -n "$ns" get deploy -o jsonpath='{.items[*].metadata.name}'); do
+                      r=$(kubectl -n "$ns" get deploy "$d" -o jsonpath='{.metadata.annotations.z2h/replicas-before-night}')
+                      if [ -n "$r" ]; then
+                        kubectl -n "$ns" scale deploy "$d" --replicas="$r"
+                        kubectl -n "$ns" annotate deploy "$d" z2h/replicas-before-night- >/dev/null
+                      fi
+                    done
+                  done
+              securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } }
+              resources: { requests: { cpu: 10m, memory: 32Mi }, limits: { memory: 128Mi } }

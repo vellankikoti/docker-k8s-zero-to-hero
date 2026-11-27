@@ -11,4 +11,7 @@ helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 {{- if .Values.slot }}
 slot: {{ .Values.slot }}
 {{- end }}
+{{- with .Values.commonLabels }}
+{{ toYaml . }}
+{{- end }}
 {{- end -}}
