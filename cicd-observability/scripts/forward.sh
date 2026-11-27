@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# forward.sh start [--lab|--local] | stop | status: open (or close) every door into the cluster with background port-forwards.
+# forward.sh start [SET] [--lab|--local] | stop | status: open (or close) the doors into the cluster with background port-forwards.
+#   SET = ship-it (default) | observability | all
 #
 # Where the doors listen:
 #   on your laptop       127.0.0.1  (only you can reach them)
@@ -13,16 +14,28 @@
 #   Inbox      http://localhost:8025   (every email the platform sends lands here)
 #   Staging    http://localhost:8082   the staging release of the Chai Stall
 #   Production http://localhost:8090   through the Gateway (needs Envoy Gateway)
+#   observability set:
+#   Grafana    http://localhost:3000   admin / z2h-grafana        Prometheus   http://localhost:9090
+#   Alertmanager http://localhost:9093                            Jaeger       http://localhost:16686
+#   Inbox      http://localhost:8025                              The app      http://localhost:8083
 set -uo pipefail
 . "$(dirname "$0")/k8s-lib.sh"
 PIDFILE=${TMPDIR:-/tmp}/z2h-forward.pids
 
 # --- where to listen -------------------------------------------------------------------------------------------------
-ARG=${2:-}
+SET=ship-it; MODE=auto
+for a in "${@:2}"; do
+  case "$a" in
+    --lab) MODE=lab ;;
+    --local) MODE=local ;;
+    ship-it|observability|all) SET=$a ;;
+    *) die "unknown option: $a   (SET: ship-it | observability | all;  mode: --lab | --local)" ;;
+  esac
+done
 LAB=0
-case "$ARG" in
-  --lab) LAB=1 ;;
-  --local) LAB=0 ;;
+case "$MODE" in
+  lab) LAB=1 ;;
+  local) LAB=0 ;;
   *) if [ "${USER:-$(id -un 2>/dev/null)}" = laborant ]; then LAB=1; fi ;;      # Killercoda / iximuz run you as "laborant"
 esac
 if [ -n "${FORWARD_ADDRESS:-}" ]; then ADDR=$FORWARD_ADDRESS
@@ -40,6 +53,11 @@ hint() {
     mailpit)    echo "kubectl -n mail get pods. Is local port 8025 used by something else?" ;;
     staging)    echo "kubectl -n stall-staging get pods. Is local port 8082 used by something else?" ;;
     production) echo "is the Gateway's Envoy proxy Ready?  kubectl -n envoy-gateway-system get pods. Is local port 8090 used by something else?" ;;
+    grafana)    echo "kubectl -n monitoring get pods -l app.kubernetes.io/name=grafana. Is local port 3000 used by something else?" ;;
+    prometheus) echo "kubectl -n monitoring get pods -l app.kubernetes.io/name=prometheus. Is local port 9090 used by something else?" ;;
+    alertmanager) echo "kubectl -n monitoring get pods -l app.kubernetes.io/name=alertmanager. Is local port 9093 used by something else?" ;;
+    jaeger)     echo "kubectl -n observability get pods -l app=jaeger. Is local port 16686 used by something else?" ;;
+    app)        echo "kubectl -n stall-demo get pods. Is local port 8083 used by something else?" ;;
   esac
 }
 
@@ -64,18 +82,29 @@ stop_all() {
 case "${1:-status}" in
   start)
     need_cluster; stop_all
-    start_one jenkins    cicd          svc/jenkins        8081:8080
-    start_one gitea      cicd          svc/gitea          3001:3000
-    start_one mailpit    mail          svc/mailpit        8025:8025
-    start_one staging    stall-staging svc/chai-stall     8082:80
-    envoy=$(kubectl -n envoy-gateway-system get svc -l gateway.envoyproxy.io/owning-gateway-name=chai -o name 2>/dev/null | head -1)
-    if [ -n "$envoy" ]; then start_one production envoy-gateway-system "$envoy" 8090:80; else warn "production: the Gateway has no proxy Service yet (install Envoy Gateway, then run this again)"; fi
+    if [ "$SET" = ship-it ] || [ "$SET" = all ]; then
+      start_one jenkins    cicd          svc/jenkins        8081:8080
+      start_one gitea      cicd          svc/gitea          3001:3000
+      start_one mailpit    mail          svc/mailpit        8025:8025
+      start_one staging    stall-staging svc/chai-stall     8082:80
+      envoy=$(kubectl -n envoy-gateway-system get svc -l gateway.envoyproxy.io/owning-gateway-name=chai -o name 2>/dev/null | head -1)
+      if [ -n "$envoy" ]; then start_one production envoy-gateway-system "$envoy" 8090:80; else warn "production: the Gateway has no proxy Service yet (install Envoy Gateway, then run this again)"; fi
+    fi
+    if [ "$SET" = observability ] || [ "$SET" = all ]; then
+      [ "$SET" = all ] || start_one mailpit mail svc/mailpit 8025:8025
+      start_one grafana      monitoring    svc/kube-prometheus-stack-grafana        3000:80
+      start_one prometheus   monitoring    svc/kube-prometheus-stack-prometheus     9090:9090
+      start_one alertmanager monitoring    svc/kube-prometheus-stack-alertmanager   9093:9093
+      start_one jaeger       observability svc/jaeger                               16686:16686
+      start_one app          stall-demo    svc/chai-stall                           8083:80
+    fi
     sleep 4; "$0" status
     if [ "$ADDR" = 0.0.0.0 ]; then
       echo
       echo "  Browser lab detected: the doors listen on every interface so your lab can expose them."
       echo "  To open one in your browser, use your lab's port feature and give it the port number:"
-      echo "    Killercoda: the menu's  Traffic / Ports  →  enter 8081 (Jenkins), 3001 (Git server), 8025 (inbox), 8082 (staging), 8090 (production)"
+      echo "    Killercoda: the menu's  Traffic / Ports  →  enter the port number: 8081 Jenkins, 3001 Git server, 8025 inbox, 8082 staging, 8090 production,"
+      echo "                3000 Grafana, 9090 Prometheus, 9093 Alertmanager, 16686 Jaeger, 8083 the demo app"
       echo "    iximuz Labs: expose the same port from the lab's ports / web-access panel"
       echo "  (Inside the lab terminal, curl and git keep using http://localhost:PORT as usual.)"
     fi ;;

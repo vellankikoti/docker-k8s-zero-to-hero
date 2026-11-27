@@ -5,9 +5,9 @@ name: Chai Stall CI/CD
 on:
   push:
     branches: [main]
-    paths: ['cicd-observability/app/**', 'cicd-observability/compose-edition/see-everything/prometheus/**', 'cicd-observability/compose-edition/see-everything/tests/**', 'cicd-observability/k8s/**', 'cicd-observability/projects/ship-it/app-repo/**', '.github/workflows/chai-stall-ci.yml']
+    paths: ['cicd-observability/app/**', 'cicd-observability/compose-edition/see-everything/prometheus/**', 'cicd-observability/compose-edition/see-everything/tests/**', 'cicd-observability/k8s/**', 'cicd-observability/projects/see-everything/**', 'cicd-observability/projects/ship-it/app-repo/**', '.github/workflows/chai-stall-ci.yml']
   pull_request:
-    paths: ['cicd-observability/app/**', 'cicd-observability/compose-edition/see-everything/prometheus/**', 'cicd-observability/compose-edition/see-everything/tests/**', 'cicd-observability/k8s/**', 'cicd-observability/projects/ship-it/app-repo/**', '.github/workflows/chai-stall-ci.yml']
+    paths: ['cicd-observability/app/**', 'cicd-observability/compose-edition/see-everything/prometheus/**', 'cicd-observability/compose-edition/see-everything/tests/**', 'cicd-observability/k8s/**', 'cicd-observability/projects/see-everything/**', 'cicd-observability/projects/ship-it/app-repo/**', '.github/workflows/chai-stall-ci.yml']
   workflow_dispatch:
     inputs:
       push_image:
@@ -54,6 +54,10 @@ jobs:
         run: |
           docker run --rm -v "$PWD/$P2_DIR":/w -w /w --entrypoint promtool prom/prometheus:v3.5.0 check rules prometheus/rules/recording.yml prometheus/rules/alerts.yml
           docker run --rm -v "$PWD/$P2_DIR":/w -w /w --entrypoint promtool prom/prometheus:v3.5.0 test rules tests/rules_test.yml
+      - name: promtool check + test (the Kubernetes PrometheusRule)
+        run: |
+          pip install pyyaml
+          cicd-observability/projects/see-everything/tests/run.sh
 
   helm-chart:
     name: Lint and render the Helm chart

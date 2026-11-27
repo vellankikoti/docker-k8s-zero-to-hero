@@ -21,6 +21,7 @@ Hands-on labs for complete beginners: students, teachers, career-switchers, and 
 - **Used Docker a bit?** Jump to [D05 production Dockerfiles](docker/05-production-dockerfiles/README.md) or [Kubernetes K01](kubernetes/01-cluster-tour/README.md).
 - **Know the basics, want the debugging muscle?** Go straight to the [Kubernetes scenarios](kubernetes/scenarios/README.md): 30 break-and-fix scenarios in six sections, plus 30 exercises. Each starts from a diagram, makes you predict, then lets you investigate with `kubectl`; a `./check.sh` tells you when you are done.
 - **Here for CI/CD, monitoring and observability?** Go to [Track 3: CI/CD & Observability](cicd-observability/README.md): ten labs and two projects (Jenkins + GitHub Actions/GitLab CI, then Prometheus + Alertmanager + Grafana), all on plain Docker Compose.
+- **Here for Terraform, production operations and DevOps in the cloud?** Go to [Track 4: Cloud-Native DevOps and Infrastructure as Code](cloud-native-ops/README.md): seven short labs and two projects (build dev, staging and prod with Terraform and a pipeline, then make the app production-ready), all on the cluster you already have.
 - **Teaching this?** Read [🎤 SHOWTIME.md](SHOWTIME.md), a keynote-style run-of-show with timings, lines, and "wow" moments.
 
 ## 🐱🐶 The star of the show: *The Showdown*
@@ -110,8 +111,21 @@ It's ~250 lines of standard-library Python plus one HTML page: no frameworks, no
 | [C07](cicd-observability/C07-alerting-grafana/README.md) | **Alertmanager** and **Grafana** dashboards as code | 📬 the alert email lands while you break it |
 | [C08](cicd-observability/C08-logs-and-traces/README.md) | **centralized logging** (Loki) and **traces** (Jaeger) | 🔗 click a trace_id, land on the trace |
 | [C09](cicd-observability/C09-slo-incident-response/README.md) | **SLIs, SLOs, SLAs** and **incident response** | 🔥 a game day with three incidents |
-| [🏁 Ship It](cicd-observability/compose-edition/ship-it/README.md) | a CI/CD factory with Jenkins and GitHub Actions / GitLab CI | 🚀 a commit reaches production on its own |
-| [🏁 See Everything](cicd-observability/compose-edition/see-everything/README.md) | Prometheus, Alertmanager and Grafana (+ logs and traces) | 🔔 break it, get the email, find the cause |
+| [🏁 Ship It](cicd-observability/projects/ship-it/README.md) | a CI/CD factory with Jenkins and GitHub Actions / GitLab CI | 🚀 a commit reaches production on its own |
+| [🏁 See Everything](cicd-observability/projects/see-everything/README.md) | Prometheus, Alertmanager and Grafana (+ logs and traces) | 🔔 break it, get the email, find the cause |
+
+### ☁️ Track 4: Cloud-Native DevOps, Infrastructure as Code & Production Operations ([overview](cloud-native-ops/README.md))
+| Lab | You will… | Wow moment |
+|---|---|---|
+| [O00](cloud-native-ops/O00-foundations/README.md) ⭐ | **foundations**: IaC, Terraform vocabulary, the cloud-native workflow, reliability, DORA | 🏗️ "the blueprint is the backup" |
+| [O01](cloud-native-ops/O01-terraform-first-steps/README.md) | **Terraform first steps**: plan, apply, drift, a Secret that is not secret | 🔍 read a plan like a detective |
+| [O02](cloud-native-ops/O02-state-modules-environments/README.md) | **state, modules, environments**; import and move | 🔒 the lock refuses a second writer |
+| [O03](cloud-native-ops/O03-iac-in-cicd/README.md) | **infrastructure in a pipeline**: saved plans, policy, approval, image lifecycle | 🛂 the inspector says no to `latest` |
+| [O04](cloud-native-ops/O04-scale-balance-survive/README.md) | **autoscaling, load balancing, reliability** | 💀 kill a Pod mid-rush |
+| [O05](cloud-native-ops/O05-backup-security-cost/README.md) | **backup, security, cost, DORA, failure analysis** | 💾 get the order book back |
+| [O06](cloud-native-ops/O06-managed-kubernetes/README.md) | **managed Kubernetes** (EKS · GKE · AKS) and day-2 operations | ☁️ same workflow, bigger cluster |
+| [🏁 Infra Factory](cloud-native-ops/projects/infra-factory/README.md) | **Terraform + a pipeline** build environments and deploy a containerised app | 🚀 a commit builds prod, after a human says yes |
+| [🏁 Production Ready](cloud-native-ops/projects/production-ready/README.md) | the **end-to-end project**: CI/CD + Kubernetes + monitoring + policy + backup + cost + DORA | 🪔 survive the Diwali rush |
 
 ## 🚀 Quick start
 ```bash
@@ -127,7 +141,9 @@ open http://localhost:8080            # 🐱 vs 🐶  (Linux: xdg-open; or just 
 ## 🧪 Tested, not just written
 Every Kubernetes break-and-fix scenario has an automated test that runs against a real [kind](https://kind.sigs.k8s.io/) cluster (Kubernetes v1.37); the read-and-answer question exercises have none. One command (`./tests/scenarios/k8s.sh`) runs each scenario twice: break it, check the symptom, fix it, check it is fixed, clean up, and make sure nothing is left behind. The harness lives in [`tests/scenarios/`](tests/scenarios/); it needs a throwaway cluster and refuses to run against any other. The lab manifests (K02 to K18) have a lighter check: `./tests/labs/validate-labs.sh` asks the cluster's API server to validate every file, without starting a single Pod.
 
-This track has its own check: `./cicd-observability/scripts/selftest.sh` runs the app's tests, validates every YAML/JSON file, the Compose files and the GitHub Actions workflow, **unit-tests the Prometheus alert rules** with `promtool`, and checks every link.
+Track 4 checks itself too: `./cloud-native-ops/scripts/selftest.sh` (Terraform validity, policy unit tests, scripts, links), and `./cloud-native-ops/projects/infra-factory/tests/iac-test.sh` runs real Terraform against a throwaway cluster.
+
+The CI/CD track has its own check: `./cicd-observability/scripts/selftest.sh` runs the app's tests, validates every YAML/JSON file, the Compose files and the GitHub Actions workflow, **unit-tests the Prometheus alert rules** with `promtool`, and checks every link.
 
 ## 🔥 The Troubleshooting Arena
 ```bash
@@ -150,8 +166,9 @@ docker-k8s-zero-to-hero/
 ├── docker/                  D00–D11 + scenarios/ (15 scenarios)
 ├── kubernetes/              K00–K20 + stack/ (shared manifests) + scenarios/ (6 sections: 30 scenarios + 30 exercises)
 ├── cicd-observability/      C00–C09 + 2 projects: Jenkins, GitHub Actions, GitLab CI, Prometheus, Grafana, Loki, Jaeger
+├── cloud-native-ops/        O00–O06 + 2 projects: Terraform, policy as code, autoscaling, backup and restore, cost, DORA
 ├── .github/workflows/       chai-stall-ci.yml: the Chai Stall pipeline on GitHub Actions
-├── cheatsheets/             git.md · docker.md · kubectl.md · cicd-observability.md
+├── cheatsheets/             git.md · docker.md · kubectl.md · cicd-observability.md · cloud-native-ops.md
 ├── scripts/                 check-prereqs.sh · install-metrics-server.sh · install-monitoring.sh · install-jenkins.sh · load-image.sh · link-check.py
 ├── tests/                   scenario harness (git, docker, kubernetes) + lab manifest check
 ├── z2h.py                   🐍 run any scenario: python3 z2h.py break S1.2
@@ -162,7 +179,7 @@ docker-k8s-zero-to-hero/
 🎯 what you'll learn → 🧠 the concept in 60 seconds (with a diagram) → 🧪 hands-on steps with expected output → 🏭 what changes in production → 🏆 a challenge you solve yourself (answer hidden) → ✅ checkpoint quiz (answers hidden) → 🔥 scenarios that break the same idea → 🧹 cleanup
 
 ## 📚 Cheat sheets
-[Git](cheatsheets/git.md) (checkout *and* switch) · [Docker](cheatsheets/docker.md) · [kubectl](cheatsheets/kubectl.md) · [CI/CD & observability](cheatsheets/cicd-observability.md)
+[Git](cheatsheets/git.md) (checkout *and* switch) · [Docker](cheatsheets/docker.md) · [kubectl](cheatsheets/kubectl.md) · [Cloud-native ops](cheatsheets/cloud-native-ops.md) · [CI/CD & observability](cheatsheets/cicd-observability.md)
 
 ---
 *Learn the **why**, then the command.*

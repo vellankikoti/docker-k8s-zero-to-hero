@@ -7,6 +7,9 @@ image:
 
 replicaCount: 2
 
+# Labels added to everything this chart creates: who owns it, who pays (cost allocation, Lab O05). Terraform fills these in.
+commonLabels: {}
+
 # Which "slot" this release is when used for blue/green and canary (blue | green | ""). Becomes a Pod label.
 slot: ""
 

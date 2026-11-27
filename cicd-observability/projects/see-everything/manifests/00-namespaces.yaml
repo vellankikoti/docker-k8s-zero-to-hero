@@ -1,0 +1,18 @@
+# Two rooms. Both ENFORCE Pod Security "restricted" (Lab K16): everything we run here has to behave, like in a real company.
+#   observability = Loki (logs), Jaeger (traces), Alloy (the log shipper)
+#   stall-demo    = the Chai Stall we are going to watch, plus a little load generator
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    app.kubernetes.io/part-of: see-everything
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stall-demo
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    app.kubernetes.io/part-of: see-everything

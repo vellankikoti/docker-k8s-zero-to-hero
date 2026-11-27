@@ -1,0 +1,101 @@
+# The alert rules, as a Kubernetes object. The Prometheus Operator watches PrometheusRule objects in every namespace and loads them
+# into Prometheus by itself: no file to mount, no restart (Lab K19). Alerts labelled notify=email are mailed by Alertmanager.
+#
+# Layers, from "what do customers feel" down to "what is Kubernetes doing":
+#   sli        recording rules the alerts and the dashboard share
+#   symptoms   latency and nobody-can-order                      (customers are hurt NOW)
+#   slo        burn rates                                        (how fast is the error budget going?)
+#   capacity   replicas missing, pods restarting                 (the cause is probably in the cluster)
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: chai-stall
+  namespace: observability
+  labels:
+    app.kubernetes.io/part-of: see-everything
+spec:
+  groups:
+    - name: sli
+      rules:
+        # SLI 1 (availability): the share of /order requests that FAILED (5xx). "or vector(0)" matters: with no errors there is
+        # no 5xx series at all, and without it the SLI would be empty ("no data") instead of 0.
+        - record: sli:order_errors:ratio_rate1m
+          expr: |
+            (sum(rate(http_requests_total{job="chai-stall",path="/order",status=~"5.."}[1m])) or vector(0))
+            / sum(rate(http_requests_total{job="chai-stall",path="/order"}[1m]))
+        - record: sli:order_errors:ratio_rate5m
+          expr: |
+            (sum(rate(http_requests_total{job="chai-stall",path="/order",status=~"5.."}[5m])) or vector(0))
+            / sum(rate(http_requests_total{job="chai-stall",path="/order"}[5m]))
+        - record: sli:order_errors:ratio_rate30m
+          expr: |
+            (sum(rate(http_requests_total{job="chai-stall",path="/order",status=~"5.."}[30m])) or vector(0))
+            / sum(rate(http_requests_total{job="chai-stall",path="/order"}[30m]))
+        # SLI 2 (latency): the share of /order requests answered in 250 ms or less.
+        - record: sli:order_latency_good:ratio_rate5m
+          expr: |
+            sum(rate(http_request_duration_seconds_bucket{job="chai-stall",path="/order",le="0.25"}[5m]))
+            / sum(rate(http_request_duration_seconds_count{job="chai-stall",path="/order"}[5m]))
+        - record: job:http_requests:rate1m
+          expr: sum by (status) (rate(http_requests_total{job="chai-stall"}[1m]))
+        - record: job:order_latency_p95:5m
+          expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{job="chai-stall",path="/order"}[5m])))
+
+    - name: chai-stall-symptoms
+      rules:
+        # Nobody can order at all: not one healthy instance is being scraped.
+        - alert: ChaiStallDown
+          expr: absent(up{job="chai-stall"} == 1)
+          for: 30s
+          labels: { severity: critical, team: stall, notify: email }
+          annotations:
+            summary: "No healthy Chai Stall instance at all"
+            description: "Prometheus sees no ready instance. Runbook: docs/runbook.md#nobody-can-order"
+        - alert: ChaiStallHighLatency
+          expr: job:order_latency_p95:5m > 0.5
+          for: 30s
+          labels: { severity: warning, team: stall, notify: email }
+          annotations:
+            summary: "p95 order latency is {{ $value | humanizeDuration }}"
+            description: "Customers wait too long. Runbook: docs/runbook.md#slow-orders"
+
+    # SLO: 99% of /order requests succeed, so the error budget is 1%. "Burn rate" = how many times faster than allowed we spend it.
+    # Lab windows are short so you SEE alerts in minutes. Production would use 1h/5m and 6h/30m (Lab C09).
+    - name: chai-stall-slo
+      rules:
+        - alert: OrderSLOFastBurn
+          expr: |
+            sli:order_errors:ratio_rate5m > (14.4 * 0.01)
+            and sli:order_errors:ratio_rate1m > (14.4 * 0.01)
+          for: 15s
+          labels: { severity: critical, team: stall, notify: email }
+          annotations:
+            summary: "Orders are failing fast: the error budget is burning at 14x+"
+            description: "{{ $value | humanizePercentage }} of orders failing (SLO allows 1%). Runbook: docs/runbook.md#high-error-rate"
+        - alert: OrderSLOSlowBurn
+          expr: |
+            sli:order_errors:ratio_rate30m > (3 * 0.01)
+            and sli:order_errors:ratio_rate5m > (3 * 0.01)
+          for: 1m
+          labels: { severity: warning, team: stall, notify: email }
+          annotations:
+            summary: "Orders are failing steadily: the error budget is burning at 3x+"
+            description: "A slow leak. Fix it today, before the budget is gone."
+
+    # The Kubernetes view: the same incident, seen from the cluster (these numbers come from kube-state-metrics).
+    - name: chai-stall-capacity
+      rules:
+        - alert: ChaiStallReplicasUnavailable
+          expr: kube_deployment_status_replicas_unavailable{namespace=~"stall-.*|iac-.*",deployment=~"chai-.*"} > 0
+          for: 1m
+          labels: { severity: warning, team: stall, notify: email }
+          annotations:
+            summary: "{{ $labels.namespace }}/{{ $labels.deployment }} has {{ $value }} Pod(s) that are not Ready"
+            description: "Pending? ImagePullBackOff? CrashLoopBackOff? A rollout stuck behind healthy old Pods looks exactly like this. Runbook: docs/runbook.md#replicas-missing"
+        - alert: ChaiStallPodRestarting
+          expr: increase(kube_pod_container_status_restarts_total{namespace=~"stall-.*|iac-.*",pod=~"chai-.*"}[5m]) > 2
+          for: 0m
+          labels: { severity: warning, team: stall, notify: email }
+          annotations:
+            summary: "{{ $labels.pod }} restarted {{ $value | humanize }} times in 5 minutes"
+            description: "A crash loop or an OOM kill. Runbook: docs/runbook.md#replicas-missing"

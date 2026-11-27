@@ -1,0 +1,129 @@
+# Rules the API server enforces on EVERY change, whoever makes it: you, the pipeline, Terraform, or a tired colleague at 2 a.m.
+# (ValidatingAdmissionPolicy: built into Kubernetes 1.30+, written in CEL, no extra software to install.)
+#
+# They apply only to namespaces that have a "z2h/owner" label, i.e. the ones Terraform built in the infra-factory project.
+# Every other namespace in your cluster is untouched, so installing these can never break your other labs.
+#
+# Rolling out a rule safely: first change "validationActions" to [Warn, Audit] (people SEE the message, nothing is blocked),
+# watch for a week, then switch to [Deny]. A rule that blocks on day one makes people hate rules.
+
+# ───────── 1. An image names ONE build ─────────
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: { name: z2h-image-needs-a-version }
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - { apiGroups: [apps], apiVersions: [v1], operations: [CREATE, UPDATE], resources: [deployments, statefulsets] }
+  validations:
+    - expression: >-
+        object.spec.template.spec.containers.all(c,
+          c.image.split('/')[size(c.image.split('/')) - 1].contains(':') && !c.image.endsWith(':latest'))
+      message: "every image needs a version tag, and it must not be 'latest': a tag has to name ONE build (Lab D10)"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: { name: z2h-image-needs-a-version }
+spec:
+  policyName: z2h-image-needs-a-version
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchExpressions: [{ key: z2h/owner, operator: Exists }]
+---
+# ───────── 2. Every container says how much it needs, and the most it may use ─────────
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: { name: z2h-containers-need-resources }
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - { apiGroups: [apps], apiVersions: [v1], operations: [CREATE, UPDATE], resources: [deployments, statefulsets] }
+  validations:
+    - expression: >-
+        object.spec.template.spec.containers.all(c,
+          has(c.resources.requests) && 'cpu' in c.resources.requests && 'memory' in c.resources.requests &&
+          has(c.resources.limits) && 'memory' in c.resources.limits)
+      message: "every container needs cpu and memory requests and a memory limit (Lab K09): otherwise it can eat the whole node"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: { name: z2h-containers-need-resources }
+spec:
+  policyName: z2h-containers-need-resources
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchExpressions: [{ key: z2h/owner, operator: Exists }]
+---
+# ───────── 3. Everything has an owner and a cost centre ─────────
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: { name: z2h-workloads-need-owner-labels }
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - { apiGroups: [apps], apiVersions: [v1], operations: [CREATE, UPDATE], resources: [deployments, statefulsets] }
+  validations:
+    - expression: "has(object.metadata.labels) && 'z2h/owner' in object.metadata.labels && 'z2h/cost-center' in object.metadata.labels"
+      message: "label it with z2h/owner and z2h/cost-center: who answers when it breaks, and who pays for it"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: { name: z2h-workloads-need-owner-labels }
+spec:
+  policyName: z2h-workloads-need-owner-labels
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchExpressions: [{ key: z2h/owner, operator: Exists }]
+---
+# ───────── 4. Production is never scaled to zero (the "one typo" guard) ─────────
+# In 2017 a mistyped command removed far more servers than intended and a huge part of the internet stopped for hours.
+# The fix was not "be careful": it was a guardrail that refuses to remove too much at once.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: { name: z2h-prod-never-scaled-to-zero }
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - { apiGroups: [apps], apiVersions: [v1], operations: [CREATE, UPDATE], resources: [deployments] }
+  validations:
+    - expression: "!has(object.spec.replicas) || object.spec.replicas >= 1"
+      message: "production may not be scaled to zero. If you really mean to switch it off, change the policy first (a reviewed change)"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata: { name: z2h-prod-never-scaled-to-zero-scale }
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - { apiGroups: [apps], apiVersions: [v1], operations: [UPDATE], resources: [deployments/scale] }   # kubectl scale, and the autoscaler
+  validations:
+    - expression: "has(object.spec.replicas) && object.spec.replicas >= 1"
+      message: "production may not be scaled to zero. If you really mean to switch it off, change the policy first (a reviewed change)"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: { name: z2h-prod-never-scaled-to-zero }
+spec:
+  policyName: z2h-prod-never-scaled-to-zero
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels: { z2h/env: prod }
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata: { name: z2h-prod-never-scaled-to-zero-scale }
+spec:
+  policyName: z2h-prod-never-scaled-to-zero-scale
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels: { z2h/env: prod }

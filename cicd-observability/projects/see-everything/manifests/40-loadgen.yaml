@@ -1,0 +1,27 @@
+# A tiny customer: places an order every ~0.3 s, forever, so the graphs have something to draw. cleanup.sh removes it.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: loadgen, namespace: stall-demo, labels: { app: loadgen } }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: loadgen } }
+  template:
+    metadata: { labels: { app: loadgen } }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 100, runAsGroup: 101, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: curl
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - |
+              i=0
+              while true; do
+                i=$((i+1))
+                case $((i % 4)) in 0) item=chai;; 1) item=samosa;; 2) item=coffee;; 3) item=biscuit;; esac
+                curl -s -o /dev/null -m 3 -X POST "http://chai-stall/order?item=$item"
+                sleep 0.3
+              done
+          securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } }
+          resources: { requests: { cpu: 5m, memory: 8Mi }, limits: { memory: 32Mi } }

@@ -1,0 +1,94 @@
+# The ledger: the stall's book of orders. This is the one place with data worth losing, so it gets a backup.
+#   ledger          Redis, saving its data to a disk (PVC) every 60 s if anything changed
+#   ledger-backup   a CronJob that copies the ledger to a SECOND disk every 5 minutes and keeps the last 5 copies
+# If the first disk is lost or the data is wiped, scripts/ledger.sh restore brings back the newest copy.
+#
+# Two numbers every backup plan must state (write them down!):
+#   RPO (how much data can we lose?)        = the time between backups = 5 minutes here
+#   RTO (how long until we are back?)       = the time a restore takes = about a minute here
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: chai-ledger
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    app.kubernetes.io/part-of: production-ready
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: ledger-data, namespace: chai-ledger }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 200Mi } }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: ledger-backups, namespace: chai-ledger }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 500Mi } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: ledger, namespace: chai-ledger, labels: { app: ledger } }
+spec:
+  replicas: 1
+  strategy: { type: Recreate }                # one volume (ReadWriteOnce): stop the old Pod before starting the new one (Lab K10)
+  selector: { matchLabels: { app: ledger } }
+  template:
+    metadata: { labels: { app: ledger } }
+    spec:
+      securityContext: { runAsNonRoot: true, runAsUser: 999, runAsGroup: 999, fsGroup: 999, seccompProfile: { type: RuntimeDefault } }
+      containers:
+        - name: redis
+          image: redis:7.4-alpine
+          args: [redis-server, --dir, /data, --save, "60", "1", --appendonly, "no"]
+          ports: [{ name: redis, containerPort: 6379 }]
+          readinessProbe: { exec: { command: [redis-cli, ping] }, periodSeconds: 5 }
+          securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } }
+          resources: { requests: { cpu: 25m, memory: 32Mi }, limits: { memory: 128Mi } }
+          volumeMounts: [{ name: data, mountPath: /data }]
+      volumes:
+        - { name: data, persistentVolumeClaim: { claimName: ledger-data } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: ledger, namespace: chai-ledger }
+spec:
+  selector: { app: ledger }
+  ports: [{ name: redis, port: 6379, targetPort: redis }]
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata: { name: ledger-backup, namespace: chai-ledger }
+spec:
+  schedule: "*/5 * * * *"                      # lab speed. A real shop: hourly, or every few minutes for money.
+  concurrencyPolicy: Forbid                    # never two backups at once
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        spec:
+          restartPolicy: Never
+          securityContext: { runAsNonRoot: true, runAsUser: 999, runAsGroup: 999, fsGroup: 999, seccompProfile: { type: RuntimeDefault } }
+          containers:
+            - name: backup
+              image: redis:7.4-alpine
+              command:
+                - sh
+                - -c
+                - |
+                  set -eu
+                  f=/backup/ledger-$(date +%Y%m%d-%H%M%S).rdb
+                  redis-cli -h ledger --rdb "$f" >/dev/null
+                  # a backup that was never checked is a hope, not a backup: it must exist and start with the Redis magic bytes
+                  [ -s "$f" ] && [ "$(head -c 5 "$f")" = REDIS ] || { echo "BACKUP FAILED: $f is empty or not a Redis dump"; rm -f "$f"; exit 1; }
+                  echo "backup ok: $f ($(wc -c < "$f") bytes)"
+                  ls -1t /backup/ledger-*.rdb | tail -n +6 | xargs -r rm -f          # keep only the newest 5
+              securityContext: { allowPrivilegeEscalation: false, capabilities: { drop: [ALL] } }
+              resources: { requests: { cpu: 10m, memory: 16Mi }, limits: { memory: 64Mi } }
+              volumeMounts: [{ name: backup, mountPath: /backup }]
+          volumes:
+            - { name: backup, persistentVolumeClaim: { claimName: ledger-backups } }
