@@ -1,0 +1,41 @@
+# Ship It: "Ship It". A CI/CD factory on your laptop: Git -> Jenkins -> registry -> staging / production.
+#   cp .env.example .env && docker compose up -d --build        then follow README.md
+name: shipit
+
+services:
+  registry:                 # the artifact store for container images
+    image: registry:2
+    ports: ["5001:5000"]    # 5001, because macOS uses 5000 for AirPlay
+    volumes: [registry-data:/var/lib/registry]
+    restart: unless-stopped
+
+  jenkins:
+    build: ./jenkins
+    image: z2h/jenkins:lab
+    user: root              # LAB ONLY: needed to use the Docker socket. Lab 06 explains why this is dangerous.
+    env_file:
+      - path: .env
+        required: false      # optional: every setting has a safe lab default (needs Docker Compose 2.24+)
+    environment:
+      ROUTER_URL: http://chai-router        # inside the Jenkins container, "localhost" is Jenkins itself: use the router's name
+    ports: ["8080:8080"]
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock       # Jenkins drives YOUR Docker engine (build, push, deploy)
+      - ../../..:/repo:ro                                # this very repository, read-only
+    restart: unless-stopped
+
+  router:                   # the production front door: blue/green, canary and rolling are all just nginx config
+    build: ./router
+    image: z2h/router:lab
+    container_name: chai-router
+    ports: ["8090:80"]
+    restart: unless-stopped
+
+networks:
+  default:
+    name: shipit            # the deploy script attaches staging and production containers to this network
+
+volumes:
+  registry-data:
+  jenkins-home:

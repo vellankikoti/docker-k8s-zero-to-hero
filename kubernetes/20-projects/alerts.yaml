@@ -1,4 +1,4 @@
-# Lab K20, project 2: the alerts the Showdown team wants to hear about.
+# Lab K20, "Know before your users do": the alerts the Showdown team wants to hear about.
 # The label notify=email is what routes them to the inbox (see monitoring-values.yml).
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule

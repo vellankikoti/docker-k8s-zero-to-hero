@@ -7,7 +7,7 @@
 ⬇️ First run downloads about 24 MB (the IT-Tools image, see [IMAGES.md](../IMAGES.md)). Quick, but do it before the session anyway.
 
 ## 📖 The story
-It's the night before the hackathon demo at Christ University. The team wants IT-Tools on a laptop, with a small "Campus IT-Tools is live" page of their own next to it. Ravi has written the Dockerfile: *"Relax, I know the version."* He hits Enter at 11:40 pm and goes to make chai. Ten minutes later the demo page still doesn't open. The code is fine. The laptop is fine. Something in the Dockerfile isn't.
+It's the night before the hackathon demo at the college. The team wants IT-Tools on a laptop, with a small "Campus IT-Tools is live" page of their own next to it. Ravi has written the Dockerfile: *"Relax, I know the version."* He hits Enter at 11:40 pm and goes to make chai. Ten minutes later the demo page still doesn't open. The code is fine. The laptop is fine. Something in the Dockerfile isn't.
 
 ## 🧠 The concept: why, what, how
 Every image has an address: **`registry / repository : tag`**, for example `docker.io / corentinth / it-tools : <tag>`. A Dockerfile starts with **`FROM`**: "begin with this image". Before it does anything else, `docker build` goes to the registry (Docker Hub by default) and asks for exactly that tag.

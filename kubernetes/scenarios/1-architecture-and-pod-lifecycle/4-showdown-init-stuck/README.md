@@ -9,7 +9,7 @@
 Output columns and wording can differ a little between kubectl, container runtimes and clusters (kind, minikube, Docker Desktop, playgrounds). The ideas never change.
 
 ## 📖 The story
-It is the evening before the Christ University inter-department showdown, and Ravi has added a real database to the "Cats vs Dogs" poll: Redis, so votes survive an app restart. He deploys both, sees `created` twice, and goes to get chai. Redis is green. The poll page never loads, and the vote count is stuck at zero because the app Pod never shows `Running`. The status column shows a word he has never seen before. Everyone assumes the app is broken. He opens its logs, and Kubernetes answers... with an error instead of logs.
+It is the evening before the the college inter-department showdown, and Ravi has added a real database to the "Cats vs Dogs" poll: Redis, so votes survive an app restart. He deploys both, sees `created` twice, and goes to get chai. Redis is green. The poll page never loads, and the vote count is stuck at zero because the app Pod never shows `Running`. The status column shows a word he has never seen before. Everyone assumes the app is broken. He opens its logs, and Kubernetes answers... with an error instead of logs.
 
 ![Diagram: the setup for S1.4, who talks to whom and what your mission is](../../images/k26-context.svg)
 

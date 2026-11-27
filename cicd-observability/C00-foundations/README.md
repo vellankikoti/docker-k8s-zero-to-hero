@@ -52,7 +52,7 @@ flowchart LR
 | **Continuous Delivery** | every change that passes is **always ready** to release; a human presses the final button | "Could we ship this right now?" |
 | **Continuous Deployment** | every change that passes is **released automatically**, no button | "Does shipping need a human at all?" |
 
-Most real teams do continuous *delivery* to production (a button, or an approval) and continuous *deployment* to staging. You will do exactly that in [Project 1](../compose-edition/project-1-ship-it/README.md).
+Most real teams do continuous *delivery* to production (a button, or an approval) and continuous *deployment* to staging. You will do exactly that in [Ship It](../compose-edition/ship-it/README.md).
 
 ## 3. Designing a pipeline
 
@@ -121,7 +121,7 @@ flowchart TB
 | **Blue/Green** | no | **double** | **instant** (flip back) | big, risky changes; databases with care | cost; both versions must be tested |
 | **Canary** | no | a little | instant (set weight to 0) | verifying with **real traffic** before everyone gets it | needs good metrics to judge "healthy" |
 
-All four are **live in this track**: [`deploy.sh`](../compose-edition/project-1-ship-it/deploy/deploy.sh) implements them with nothing but Docker and nginx, so you can watch each one in a terminal ([C05](../C05-images-and-deployment/README.md)). Kubernetes does rolling by default ([K06](../../kubernetes/06-rollouts/README.md)) and canary with the Gateway API ([K12](../../kubernetes/12-gateway-ingress/README.md)).
+All four are **live in this track**: [`deploy.sh`](../compose-edition/ship-it/deploy/deploy.sh) implements them with nothing but Docker and nginx, so you can watch each one in a terminal ([C05](../C05-images-and-deployment/README.md)). Kubernetes does rolling by default ([K06](../../kubernetes/06-rollouts/README.md)) and canary with the Gateway API ([K12](../../kubernetes/12-gateway-ingress/README.md)).
 
 **Feature flags** are the fifth tool: deploy the code dark, then turn the feature on for 1% of users. Deployment (code reaches servers) and release (users see it) become separate decisions.
 
@@ -229,9 +229,9 @@ Roles for anything bigger than a one-person problem: an **incident commander** (
 
 **Mitigate first, diagnose later.** If a release caused the problem, the fastest fix is almost always a rollback, not a clever patch.
 
-**Blameless postmortems.** People did the reasonable thing with the information they had; the *system* allowed the mistake. A good postmortem has: a timeline, impact (how many users, how long, how much budget burned), the root cause(s), what went well, what went badly, and **action items with owners and dates**. You get a template in [Project 2](../compose-edition/project-2-see-everything/docs/postmortem-template.md).
+**Blameless postmortems.** People did the reasonable thing with the information they had; the *system* allowed the mistake. A good postmortem has: a timeline, impact (how many users, how long, how much budget burned), the root cause(s), what went well, what went badly, and **action items with owners and dates**. You get a template in [See Everything](../compose-edition/see-everything/docs/postmortem-template.md).
 
-**Runbooks** are the on-call engineer's recipe card for a specific alert: *what does this mean, how do I check, how do I fix, who do I call*. An alert without a runbook is an alarm without an exit sign. Every alert in this track links to [one](../compose-edition/project-2-see-everything/docs/runbook.md).
+**Runbooks** are the on-call engineer's recipe card for a specific alert: *what does this mean, how do I check, how do I fix, who do I call*. An alert without a runbook is an alarm without an exit sign. Every alert in this track links to [one](../compose-edition/see-everything/docs/runbook.md).
 
 ## 8. How this track maps onto the tools
 
@@ -246,7 +246,7 @@ flowchart LR
   PROD -.traces.-> JG[Jaeger] -.-> GR
   PR -.-> GR
 ```
-The solid arrows are [Project 1](../compose-edition/project-1-ship-it/README.md); the dotted ones are [Project 2](../compose-edition/project-2-see-everything/README.md). In Phase 7 of Project 2 they connect: you ship a bad canary with Project 1's pipeline and watch it appear on Project 2's dashboard.
+The solid arrows are [Ship It](../compose-edition/ship-it/README.md); the dotted ones are [See Everything](../compose-edition/see-everything/README.md). In Phase 7 of See Everything they connect: you ship a bad canary with Ship It's pipeline and watch it appear on See Everything's dashboard.
 
 ## 🏆 Challenge
 Your SLO is 99.9% of orders succeed over 30 days. The stall handles about 100,000 orders a month. (a) How many failed orders are in the budget? (b) A bad release fails 2% of orders for 3 hours at the stall's normal rate of ~140 orders/hour. How much of the budget is gone?

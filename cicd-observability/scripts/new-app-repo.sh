@@ -23,7 +23,7 @@ mkdir -p "$DIR/chart"
 cp -r "$COURSE_ROOT/cicd-observability/app" "$DIR/app"
 find "$DIR/app" -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
 cp -r "$K8S_DIR/chart/chai-stall" "$DIR/chart/chai-stall"
-cp -r "$COURSE_ROOT/cicd-observability/projects/project-1-ship-it/app-repo/." "$DIR/"
+cp -r "$COURSE_ROOT/cicd-observability/projects/ship-it/app-repo/." "$DIR/"
 cat > "$DIR/README.md" <<'MD'
 # chai-stall (your repository)
 Your own Chai Stall service and its pipeline. `git push` here and Jenkins builds, tests and ships it.

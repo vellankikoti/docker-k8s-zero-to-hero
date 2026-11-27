@@ -1,13 +1,13 @@
 # 🏁 The two projects: build them with us, then build your own
 
-These are the **lab exercises 5 and 6** of the syllabus, written as two complete, end-to-end projects. Each one is meant to end up on your GitHub and on your CV. We build the reference version together in class. **You then build your own version with your own idea.** Our versions are the guide you check yourself against.
+These are two complete, end-to-end projects. Each one is meant to end up on your GitHub and on your CV. We build the reference version together in class. **You then build your own version with your own idea.** Our versions are the guide you check yourself against.
 
-| | Project 1 · Canteen Rush | Project 2 · Canteen Rush, packaged |
+| | Canteen Rush | Canteen Rush, packaged |
 |---|---|---|
-| **Lab exercise** | 5: deploy containerised applications, configure Deployments, Services, scaling and rolling updates | 6: create Jobs and CronJobs, manage configuration with ConfigMaps and Secrets, deploy applications using Helm |
+| **The skill** | deploy containerised applications, configure Deployments, Services, scaling and rolling updates | create Jobs and CronJobs, manage configuration with ConfigMaps and Secrets, deploy applications using Helm |
 | **You build** | a containerised ordering app, deployed, scaled under load, updated with no downtime, rolled back when bad | a menu you can change live, a rotatable secret, a one-time Job, a nightly CronJob, and a Helm chart with dev and prod values |
 | **The big moment** | version 2 ships while customers are ordering, and not one request fails | the nightly job closes the day by itself, and one `helm rollback` undoes a bad upgrade |
-| **Guide** | [Project 1](project-1-canteen-rush/README.md) | [Project 2](project-2-canteen-helm/README.md) |
+| **Guide** | [Canteen Rush](canteen-rush/README.md) | [Canteen Rush, packaged](canteen-helm/README.md) |
 | **Time** | about 2.5 hours (45-minute live path) | about 2.5 hours (50-minute live path) |
 
 ## The app
@@ -23,7 +23,7 @@ Both projects use one small ordering app, [`apps/canteen`](../../apps/canteen): 
 ```bash
 ./scripts/install-metrics-server.sh                      # kubectl top, and the autoscaler
 ```
-The app image is public on Docker Hub: `vellankikoti/canteen-rush:1.0.0` and `:2.0.0` (amd64 and arm64), so any cluster, Killercoda's two nodes included, pulls it by itself. Project 1, Phase 1 still has you build it with Docker, to see how it is made.
-Project 2 also needs [`helm`](../README.md).
+The app image is public on Docker Hub: `vellankikoti/canteen-rush:1.0.0` and `:2.0.0` (amd64 and arm64), so any cluster, Killercoda's two nodes included, pulls it by itself. Canteen Rush, Phase 1 still has you build it with Docker, to see how it is made.
+The packaged project also needs [`helm`](../README.md).
 
 Want a CI/CD and monitoring bonus on top? Lab [K20](../20-projects/README.md) deploys with Jenkins and emails you when it breaks.

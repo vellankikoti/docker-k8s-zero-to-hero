@@ -9,7 +9,7 @@
 Output columns and wording can differ a little between kubectl, container runtimes and registries (kind, minikube, Docker Desktop, playgrounds). The ideas never change.
 
 ## 📖 The story
-It's the night before the Christ University fest demo. Ravi is tidying the whiteboard's YAML, and while "cleaning up" the image line he drops one letter: `excalidrw` instead of `excalidraw`. He applies it, `kubectl` happily says `created`, and goes to get chai. When he comes back, the Pod is not running. It isn't crashing either. It just says `ImagePullBackOff`, and keeps saying it.
+It's the night before the the college fest demo. Ravi is tidying the whiteboard's YAML, and while "cleaning up" the image line he drops one letter: `excalidrw` instead of `excalidraw`. He applies it, `kubectl` happily says `created`, and goes to get chai. When he comes back, the Pod is not running. It isn't crashing either. It just says `ImagePullBackOff`, and keeps saying it.
 
 ![Diagram: the setup for S1.2, who talks to whom and what your mission is](../../images/k02-context.svg)
 

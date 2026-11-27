@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # k8s-deploy.sh: release the Chai Stall to production (namespace stall-prod) with one of four strategies.
-# Plain Kubernetes + Helm: nothing here you did not meet in Unit 3.
+# Plain Kubernetes + Helm: nothing here you did not meet in the Kubernetes track.
 #
 #   k8s-deploy.sh rolling   TAG          update the live release in place, Pod by Pod       (K06: RollingUpdate)
 #   k8s-deploy.sh recreate  TAG          stop all old Pods, then start new ones: an outage  (K06: Recreate)

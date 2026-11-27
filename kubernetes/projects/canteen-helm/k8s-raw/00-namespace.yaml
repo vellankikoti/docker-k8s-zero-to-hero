@@ -1,0 +1,7 @@
+# Canteen Rush packaged: a fresh room for the by-hand phases.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: canteen2
+  labels:
+    project: canteen-helm

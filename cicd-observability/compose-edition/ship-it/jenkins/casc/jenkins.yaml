@@ -1,0 +1,59 @@
+# Jenkins Configuration as Code: the whole Jenkins setup, in Git. No clicking in "Manage Jenkins".
+jenkins:
+  systemMessage: "☕ Chai Stall lab Jenkins. Everything here is configured by jenkins/casc/jenkins.yaml"
+  numExecutors: 2
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "${JENKINS_ADMIN_PASSWORD:-z2h-jenkins}"      # lab only. Real life: SSO / LDAP / a secret store
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+unclassified:
+  location:
+    adminAddress: "jenkins@stall.local"
+    url: "http://localhost:8080/"
+
+security:
+  globalJobDslSecurityConfiguration:
+    useScriptSecurity: false        # lab only: lets our seed job run Job DSL from Git without admin approval clicks
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          # A secret, injected from the environment (.env), never written in this file or in Git.
+          - string:
+              scope: GLOBAL
+              id: "deploy-token"
+              description: "Pretend production deploy token"
+              secret: "${DEPLOY_TOKEN:-change-me-in-dot-env}"
+          - usernamePassword:
+              scope: GLOBAL
+              id: "registry-creds"
+              description: "Login for the image registry (the lab registry ignores it; a real one would not)"
+              username: "ci-bot"
+              password: "${REGISTRY_PASSWORD:-not-a-real-password}"
+
+jobs:
+  # One hand-made job: the "seed". It runs the Job DSL files in jenkins/jobs/ and CREATES all other jobs.
+  - script: |
+      freeStyleJob('00-seed') {
+        description('Reads jenkins/jobs/*.groovy from Git and creates / updates every other job. Run me after editing a job definition.')
+        scm {
+          git {
+            remote { url('${REPO_URL:-file:///repo}') }
+            branch('${REPO_BRANCH:-*/main}')
+          }
+        }
+        steps {
+          dsl {
+            external('cicd-observability/compose-edition/ship-it/jenkins/jobs/*.groovy')
+            removeAction('DELETE')
+            removeViewAction('DELETE')
+          }
+        }
+      }

@@ -9,7 +9,7 @@
 Output columns and wording can differ a little between kubectl versions and clusters (kind, minikube, Docker Desktop, playgrounds). For example, older kubectl versions have no `STATUS` column for Jobs. The ideas never change.
 
 ## 📖 The story
-It's the night before the Christ University hackathon final. Lakshmi's team leaderboard still shows last week's practice scores, so Ravi wrote a small script to wipe them and start the final from zero. He runs it as a Kubernetes Job, goes for chai, and comes back to a board that has not changed. The Job is not running. It is not finished either. Kubernetes tried it three times and then stopped, politely and without any fuss.
+It's the night before the the college hackathon final. Lakshmi's team leaderboard still shows last week's practice scores, so Ravi wrote a small script to wipe them and start the final from zero. He runs it as a Kubernetes Job, goes for chai, and comes back to a board that has not changed. The Job is not running. It is not finished either. Kubernetes tried it three times and then stopped, politely and without any fuss.
 
 ![Diagram: the setup for S2.4, who talks to whom and what your mission is](../../images/k28-context.svg)
 

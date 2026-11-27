@@ -153,7 +153,7 @@ Namespaces and resource quotas, Helm releases, labels and annotations, and the h
 
 ## 🏁 The finale and the projects (second slot)
 - **Finale: [S6.x5 · The Friday 5 PM outage (the finale)](6-namespaces-quotas-helm-and-troubleshooting/exercises/5-friday-5pm-outage/README.md)**: *Friday, 5 PM. Three things broke. Nobody knows that yet.* Three faults at once, about 30 minutes. Run it after the six sections, when the class has met each kind of fault alone.
-- **Two projects** (lab exercises 5 and 6): [Project 1, Canteen Rush](../projects/project-1-canteen-rush/README.md) (deploy, scale, update) and [Project 2, Canteen Rush packaged](../projects/project-2-canteen-helm/README.md) (config, secrets, Jobs, CronJobs, Helm). Students then build their own.
+- **Two projects** : [Canteen Rush](../projects/canteen-rush/README.md) (deploy, scale, update) and [Canteen Rush packaged](../projects/canteen-helm/README.md) (config, secrets, Jobs, CronJobs, Helm). Students then build their own.
 
 **Every scenario has a `./check.sh`** in its folder. Run it whenever you like: it only looks, never changes anything, and tells you in one line whether you are done.
 

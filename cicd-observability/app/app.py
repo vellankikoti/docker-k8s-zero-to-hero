@@ -1,5 +1,5 @@
 """
-☕ "Chai Stall": the small service used in every Unit 4 lab.
+☕ "Chai Stall": the small service used in every lab in this track.
 
 Standard library only (no pip install), so it builds in seconds and runs anywhere.
 It is deliberately a *good citizen* of a production platform:

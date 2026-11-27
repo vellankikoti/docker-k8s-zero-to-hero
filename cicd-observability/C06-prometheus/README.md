@@ -33,7 +33,7 @@ A **time series** is "a number that changes over time, with a name and labels", 
 
 ### Step 1: Start the observability platform (3 min)
 ```bash
-cd cicd-observability/compose-edition/project-2-see-everything
+cd cicd-observability/compose-edition/see-everything
 docker compose up -d --build
 docker compose ps
 ```
@@ -82,7 +82,7 @@ curl -s localhost:8091/metrics | grep '^orders_total'
 Run the second command twice with an order in between: the `samosa` counter goes up by one. **That is instrumentation.** The app does it in about 40 lines ([`app.py`](../app/app.py): `record()` and `render_metrics()`); real services use a client library (`prometheus_client` for Python, `micrometer` for Java, `client_golang` for Go) that does the same thing.
 
 ### Step 3: How Prometheus finds its targets (5 min)
-Open http://localhost:9090 → **Status → Targets**. Five groups, all **UP**. Now the config that produced them, [`prometheus/prometheus.yml`](../compose-edition/project-2-see-everything/prometheus/prometheus.yml):
+Open http://localhost:9090 → **Status → Targets**. Five groups, all **UP**. Now the config that produced them, [`prometheus/prometheus.yml`](../compose-edition/see-everything/prometheus/prometheus.yml):
 ```yaml
 global:
   scrape_interval: 5s            # lab speed; production 15-60 s
@@ -93,7 +93,7 @@ scrape_configs:
       - targets: ["chai-1:8080"]
         labels: { instance_name: chai-1 }
 ```
-A **job** is a group of targets with the same purpose; an **instance** is one target (`host:port`). Prometheus adds `job` and `instance` labels to everything it scrapes. `static_configs` is the simplest discovery; in real systems targets come from **service discovery** (Kubernetes, Consul, AWS, files) so new instances are found automatically. The job `chai-stall-prod` in this file uses *file-based discovery*, which you will use in [Project 2](../compose-edition/project-2-see-everything/README.md) Phase 7.
+A **job** is a group of targets with the same purpose; an **instance** is one target (`host:port`). Prometheus adds `job` and `instance` labels to everything it scrapes. `static_configs` is the simplest discovery; in real systems targets come from **service discovery** (Kubernetes, Consul, AWS, files) so new instances are found automatically. The job `chai-stall-prod` in this file uses *file-based discovery*, which you will use in [See Everything](../compose-edition/see-everything/README.md) Phase 7.
 
 Run your first query: in the **Graph** tab, type `up` and press **Execute**:
 ```
@@ -131,7 +131,7 @@ Click the **Graph** sub-tab for 4, 6, 7, 9: a line over time.
 - **Why `rate()` and not the raw counter?** Raw `http_requests_total` is a running total since the process started: 1,483, then restart, then 12. `rate()` handles the reset and gives *speed*, which is what you want to alert on or graph.
 - **The window `[1m]`** is how far back to look. Too short = jittery; too long = slow to react. Use at least 4× the scrape interval.
 - **Why `sum by (le)` inside `histogram_quantile`?** The function needs the buckets (labelled `le`) merged across all instances first; you cannot average percentiles, but you *can* add bucket counts.
-- **Empty is not zero.** Query 3 returns *no series* when there are no errors, and query 8 then returns nothing. A dashboard showing "no data" during a healthy hour is confusing, so well-built rules add `or vector(0)` (look at [`recording.yml`](../compose-edition/project-2-see-everything/prometheus/rules/recording.yml)).
+- **Empty is not zero.** Query 3 returns *no series* when there are no errors, and query 8 then returns nothing. A dashboard showing "no data" during a healthy hour is confusing, so well-built rules add `or vector(0)` (look at [`recording.yml`](../compose-edition/see-everything/prometheus/rules/recording.yml)).
 - **Two ways to see the same number:** `curl -sG localhost:9090/api/v1/query --data-urlencode 'query=sum(rate(http_requests_total[1m]))'` returns JSON: this API is what Grafana and scripts use.
 
 Make the numbers move. Add traffic to one instance and watch query 6 respond:
@@ -145,7 +145,7 @@ docker compose start loadgen
 ```
 
 ### Step 5: Recording rules (5 min)
-A query you run on every dashboard refresh and in every alert is worth computing **once**. Open **Status → Rule health** (or **Alerts** and **Status → Rules**) in the UI, and read [`prometheus/rules/recording.yml`](../compose-edition/project-2-see-everything/prometheus/rules/recording.yml):
+A query you run on every dashboard refresh and in every alert is worth computing **once**. Open **Status → Rule health** (or **Alerts** and **Status → Rules**) in the UI, and read [`prometheus/rules/recording.yml`](../compose-edition/see-everything/prometheus/rules/recording.yml):
 ```yaml
 - record: sli:order_errors:ratio_rate5m
   expr: |
@@ -156,7 +156,7 @@ Query the **recorded** series directly: `sli:order_errors:ratio_rate5m`. It is a
 ```bash
 docker run --rm -v "$PWD":/w -w /w --entrypoint promtool prom/prometheus:v3.5.0 test rules tests/rules_test.yml
 ```
-Expected: `SUCCESS`. Open [`tests/rules_test.yml`](../compose-edition/project-2-see-everything/tests/rules_test.yml): it feeds fake time series (`values: '0+30x40'` means "start at 0, add 30 each step, 40 steps") and asserts which alerts fire. **Alerts are code, so they get tests**; the GitHub Actions workflow in [C01](../C01-git-based-ci/README.md) runs exactly this command on every pull request.
+Expected: `SUCCESS`. Open [`tests/rules_test.yml`](../compose-edition/see-everything/tests/rules_test.yml): it feeds fake time series (`values: '0+30x40'` means "start at 0, add 30 each step, 40 steps") and asserts which alerts fire. **Alerts are code, so they get tests**; the GitHub Actions workflow in [C01](../C01-git-based-ci/README.md) runs exactly this command on every pull request.
 
 ### Step 6: Instrumenting your own service: the rules of thumb
 - **Count requests, errors, and time them** (the RED method) at the edge of your service; add **business counters** (`orders_total`).

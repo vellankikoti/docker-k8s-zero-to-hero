@@ -1,6 +1,6 @@
 # Lab C07: Alerting with Alertmanager, and Grafana Dashboards
 
-> ⏱ 60 min · 🟡 Intermediate · Needs: the Project 2 stack running ([C06](../C06-prometheus/README.md), Step 1). Keep Mailpit open at **http://localhost:8025**: it is your inbox.
+> ⏱ 60 min · 🟡 Intermediate · Needs: the See Everything stack running ([C06](../C06-prometheus/README.md), Step 1). Keep Mailpit open at **http://localhost:8025**: it is your inbox.
 
 ## 🎯 What you'll learn
 - The anatomy of an **alert rule**, and the life cycle **inactive → pending → firing → resolved**
@@ -30,7 +30,7 @@ flowchart LR
 ## 🧪 Hands-on
 
 ### Step 1: Read an alert rule (5 min)
-Open [`prometheus/rules/alerts.yml`](../compose-edition/project-2-see-everything/prometheus/rules/alerts.yml):
+Open [`prometheus/rules/alerts.yml`](../compose-edition/see-everything/prometheus/rules/alerts.yml):
 ```yaml
 - alert: ChaiStallInstanceDown
   expr: up{job="chai-stall"} == 0                # the condition (any PromQL that returns series = "true")
@@ -52,7 +52,7 @@ Open [`prometheus/rules/alerts.yml`](../compose-edition/project-2-see-everything
 ### Step 2: Make an alert fire, and receive it (10 min)
 Open three browser tabs: **Prometheus Alerts** (http://localhost:9090/alerts), **Alertmanager** (http://localhost:9093) and **Inbox** (http://localhost:8025). Then:
 ```bash
-cd cicd-observability/compose-edition/project-2-see-everything
+cd cicd-observability/compose-edition/see-everything
 docker compose stop chai-2          # kill one of the two instances
 ```
 Watch, and write down the time of each change:
@@ -69,7 +69,7 @@ About 30 seconds later a second email arrives: **`[RESOLVED] ChaiStallInstanceDo
 Check the dashboard for the same event: Grafana → **Chai Stall: Service Overview** (next steps): *Instances up* dropped to 1 and recovered.
 
 ### Step 3: Alertmanager: grouping, routing, inhibition (10 min)
-Open [`alertmanager/alertmanager.yml`](../compose-edition/project-2-see-everything/alertmanager/alertmanager.yml):
+Open [`alertmanager/alertmanager.yml`](../compose-edition/see-everything/alertmanager/alertmanager.yml):
 
 | Setting | Meaning | Why |
 |---|---|---|
@@ -107,7 +107,7 @@ for p in 8091 8092; do curl -s -X POST "localhost:$p/chaos/reset"; done
 > The latency alert is *slower* than the instance-down alert because it measures a **5-minute window**. Alerts built on rates always lag by about the window length. Short windows react faster but flap; long ones are steady but late. The SLO burn-rate alerts in [C09](../C09-slo-incident-response/README.md) use **two windows at once** to get both.
 
 ### Step 4: Test the alert rules without breaking anything (5 min)
-You do not have to break production to find out whether a rule works. [`tests/rules_test.yml`](../compose-edition/project-2-see-everything/tests/rules_test.yml) feeds fake data to the rules:
+You do not have to break production to find out whether a rule works. [`tests/rules_test.yml`](../compose-edition/see-everything/tests/rules_test.yml) feeds fake data to the rules:
 ```bash
 docker run --rm -v "$PWD":/w -w /w --entrypoint promtool prom/prometheus:v3.5.0 check rules prometheus/rules/recording.yml prometheus/rules/alerts.yml
 docker run --rm -v "$PWD":/w -w /w --entrypoint promtool prom/prometheus:v3.5.0 test rules tests/rules_test.yml
@@ -117,7 +117,7 @@ Both print `SUCCESS`. Now break a rule on purpose and see the test catch it: in 
 ### Step 5: Grafana: look first, build second (15 min)
 Open **http://localhost:3000**, log in with `admin` / `z2h-grafana`, and open **Dashboards → Chai Stall: Service Overview**. (If the load generator has been off, `docker compose start loadgen` and give it a minute.)
 
-![The dashboard during an incident: error ratio 24%, p95 480 ms, SLO budget gone](../compose-edition/project-2-see-everything/images/dashboard-incident.png)
+![The dashboard during an incident: error ratio 24%, p95 480 ms, SLO budget gone](../compose-edition/see-everything/images/dashboard-incident.png)
 *(The picture is from an incident; yours is green until you break something.)*
 
 Read it top to bottom. It is laid out as the **four golden signals**:
@@ -162,7 +162,7 @@ To keep a dashboard you built in the UI: **Dashboard settings → JSON Model →
 ## 🏭 In production: what makes an alert good
 - **Alert on symptoms users feel** (errors, latency, "orders failing"), **not on causes** ("CPU at 80%"). A CPU spike that hurts nobody should not wake anybody. Use cause metrics to *diagnose*, symptoms to *page*.
 - **Every page must be actionable and urgent.** If the right response is "ignore it until morning", it should be a ticket, not a page. **Alert fatigue** is a safety problem: people ignore the 50th false alarm, including the real one.
-- **Every alert links to a runbook** ([ours](../compose-edition/project-2-see-everything/docs/runbook.md)) and says *what it means, how to check, how to fix*.
+- **Every alert links to a runbook** ([ours](../compose-edition/see-everything/docs/runbook.md)) and says *what it means, how to check, how to fix*.
 - Page on **SLO burn rate** (C09) instead of raw thresholds wherever you can.
 - Route by **severity and team**; have a **dead-man's switch** (an always-firing alert that pages you when it *stops*, proving the alerting pipeline itself is alive).
 - **Review alerts** quarterly: delete the ones nobody acted on.

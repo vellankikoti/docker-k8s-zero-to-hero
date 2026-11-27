@@ -1,5 +1,0 @@
-# Copy to prod.yml to watch the production containers Project 1 deploys (needs docker-compose.shipit.yml, see README Phase 7).
-# Both colours must exist, or the missing one shows as DOWN (and, correctly, raises ChaiStallInstanceDown):
-# deploy twice with `deploy.sh bluegreen` first.
-- targets: ["chai-blue:8080", "chai-green:8080"]
-  labels: { env: prod }

@@ -1,0 +1,32 @@
+// A DYNAMIC pipeline: the stages are not written here, they are BUILT at run time from pipeline-config.json.
+// Add a check by adding a line of JSON. No Groovy to edit, so a team can own its checks without knowing Jenkins.
+// The same trick builds stages from a list of services, regions, or Python versions.
+pipeline {
+  agent any
+  options { timestamps(); ansiColor('xterm') }
+  stages {
+    stage('Checkout') { steps { checkout scm } }
+
+    stage('Read config') {
+      steps {
+        script {
+          def cfg = readJSON file: 'cicd-observability/compose-edition/ship-it/pipeline-config.json'
+          // Build a map of  name -> closure,  which is what `parallel` wants.
+          env.CHECK_COUNT = "${cfg.checks.size()}"
+          checks = [:]
+          cfg.checks.each { c ->
+            checks[c.name] = { stage(c.name) { sh c.cmd } }
+          }
+        }
+      }
+    }
+
+    stage('Run every check in parallel') {
+      steps { script { parallel checks } }
+    }
+
+    stage('Report') {
+      steps { echo "All ${env.CHECK_COUNT} configured checks passed." }
+    }
+  }
+}

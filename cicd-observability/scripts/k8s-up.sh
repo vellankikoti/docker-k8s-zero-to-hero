@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# k8s-up.sh: install the Unit 4 CI/CD platform on the cluster your kubectl points at. Safe to run again.
+# k8s-up.sh: install the CI/CD platform on the cluster your kubectl points at. Safe to run again.
 #
 #   ./cicd-observability/scripts/k8s-up.sh               everything
 #   ./cicd-observability/scripts/k8s-up.sh --no-gateway  skip Envoy Gateway (you cannot do blue/green or canary without it)

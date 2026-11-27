@@ -20,7 +20,7 @@ Hands-on labs for complete beginners: students, teachers, career-switchers, and 
 - **Never touched a terminal?** Start at [00-setup](00-setup/README.md), then **Track 0 · Git** ([G00](git/00-foundations/README.md)), then [D00 Docker Foundations](docker/00-foundations/README.md). Each track opens with the why and how, using stories and diagrams, before any command. Every command after that is given and explained.
 - **Used Docker a bit?** Jump to [D05 production Dockerfiles](docker/05-production-dockerfiles/README.md) or [Kubernetes K01](kubernetes/01-cluster-tour/README.md).
 - **Know the basics, want the debugging muscle?** Go straight to the [Kubernetes scenarios](kubernetes/scenarios/README.md): 30 break-and-fix scenarios in six sections, plus 30 exercises. Each starts from a diagram, makes you predict, then lets you investigate with `kubectl`; a `./check.sh` tells you when you are done.
-- **Here for CI/CD, monitoring and observability (Unit 4)?** Go to [Track 3: CI/CD & Observability](cicd-observability/README.md): ten labs and two projects (Jenkins + GitHub Actions/GitLab CI, then Prometheus + Alertmanager + Grafana), all on plain Docker Compose.
+- **Here for CI/CD, monitoring and observability?** Go to [Track 3: CI/CD & Observability](cicd-observability/README.md): ten labs and two projects (Jenkins + GitHub Actions/GitLab CI, then Prometheus + Alertmanager + Grafana), all on plain Docker Compose.
 - **Teaching this?** Read [🎤 SHOWTIME.md](SHOWTIME.md), a keynote-style run-of-show with timings, lines, and "wow" moments.
 
 ## 🐱🐶 The star of the show: *The Showdown*
@@ -93,11 +93,11 @@ It's ~250 lines of standard-library Python plus one HTML page: no frameworks, no
 | [K17](kubernetes/17-scheduling/README.md) | affinity, taints, PDBs, drain | node maintenance with zero downtime |
 | [K18 🏆](kubernetes/18-capstone/README.md) | **capstone: production-grade deploy** | 🔥 the Gauntlet: chaos vs your platform |
 | [K19 🔔](kubernetes/19-observability/README.md) | **see everything**: Helm, Prometheus, Grafana, alerts | 🔔 an alert wakes you, a graph explains it |
-| [🏁 Projects](kubernetes/projects/README.md) | **two end-to-end projects for your CV**: deploy, scale and update an app (lab exercise 5); config, secrets, Jobs, CronJobs and a Helm chart (lab exercise 6) | 🚀 build ours, then build your own |
+| [🏁 Projects](kubernetes/projects/README.md) | **two end-to-end projects for your CV**: deploy, scale and update an app; config, secrets, Jobs, CronJobs and a Helm chart | 🚀 build ours, then build your own |
 | [K20 🏁](kubernetes/20-projects/README.md) | **two 30-minute projects**: Jenkins ships to your cluster, monitoring emails you when it breaks | 📬 build it live, break it, get the email |
 | [🔥 Kubernetes scenarios](kubernetes/scenarios/README.md) | **30 core scenarios in six syllabus sections, 4 minutes each**, plus 30 exercises (five per section, a 30-minute finale among them) | 🧯 every one has a diagram, a `check.sh`, and a test |
 
-### 🚦 Track 3: CI/CD, Automation, Monitoring & Observability ([overview](cicd-observability/README.md)): Unit 4
+### 🚦 Track 3: CI/CD, Automation, Monitoring & Observability ([overview](cicd-observability/README.md))
 | Lab | You will… | Wow moment |
 |---|---|---|
 | [C00](cicd-observability/C00-foundations/README.md) ⭐ | **foundations**: CI vs CD, pipeline design, deployment strategies, metrics/logs/traces, SLI/SLO/SLA, incident response ([quiz](cicd-observability/C00-foundations/quiz.md)) | 🧮 "99.9%" is 43 minutes |
@@ -110,8 +110,8 @@ It's ~250 lines of standard-library Python plus one HTML page: no frameworks, no
 | [C07](cicd-observability/C07-alerting-grafana/README.md) | **Alertmanager** and **Grafana** dashboards as code | 📬 the alert email lands while you break it |
 | [C08](cicd-observability/C08-logs-and-traces/README.md) | **centralized logging** (Loki) and **traces** (Jaeger) | 🔗 click a trace_id, land on the trace |
 | [C09](cicd-observability/C09-slo-incident-response/README.md) | **SLIs, SLOs, SLAs** and **incident response** | 🔥 a game day with three incidents |
-| [🏁 Project 1](cicd-observability/compose-edition/project-1-ship-it/README.md) | **lab exercise 7**: a CI/CD factory with Jenkins and GitHub Actions / GitLab CI | 🚀 a commit reaches production on its own |
-| [🏁 Project 2](cicd-observability/compose-edition/project-2-see-everything/README.md) | **lab exercise 8**: Prometheus, Alertmanager and Grafana (+ logs and traces) | 🔔 break it, get the email, find the cause |
+| [🏁 Ship It](cicd-observability/compose-edition/ship-it/README.md) | a CI/CD factory with Jenkins and GitHub Actions / GitLab CI | 🚀 a commit reaches production on its own |
+| [🏁 See Everything](cicd-observability/compose-edition/see-everything/README.md) | Prometheus, Alertmanager and Grafana (+ logs and traces) | 🔔 break it, get the email, find the cause |
 
 ## 🚀 Quick start
 ```bash
@@ -127,7 +127,7 @@ open http://localhost:8080            # 🐱 vs 🐶  (Linux: xdg-open; or just 
 ## 🧪 Tested, not just written
 Every Kubernetes break-and-fix scenario has an automated test that runs against a real [kind](https://kind.sigs.k8s.io/) cluster (Kubernetes v1.37); the read-and-answer question exercises have none. One command (`./tests/scenarios/k8s.sh`) runs each scenario twice: break it, check the symptom, fix it, check it is fixed, clean up, and make sure nothing is left behind. The harness lives in [`tests/scenarios/`](tests/scenarios/); it needs a throwaway cluster and refuses to run against any other. The lab manifests (K02 to K18) have a lighter check: `./tests/labs/validate-labs.sh` asks the cluster's API server to validate every file, without starting a single Pod.
 
-The Unit 4 track has its own check: `./cicd-observability/scripts/selftest.sh` runs the app's tests, validates every YAML/JSON file, the Compose files and the GitHub Actions workflow, **unit-tests the Prometheus alert rules** with `promtool`, and checks every link.
+This track has its own check: `./cicd-observability/scripts/selftest.sh` runs the app's tests, validates every YAML/JSON file, the Compose files and the GitHub Actions workflow, **unit-tests the Prometheus alert rules** with `promtool`, and checks every link.
 
 ## 🔥 The Troubleshooting Arena
 ```bash
@@ -150,7 +150,7 @@ docker-k8s-zero-to-hero/
 ├── docker/                  D00–D11 + scenarios/ (15 scenarios)
 ├── kubernetes/              K00–K20 + stack/ (shared manifests) + scenarios/ (6 sections: 30 scenarios + 30 exercises)
 ├── cicd-observability/      C00–C09 + 2 projects: Jenkins, GitHub Actions, GitLab CI, Prometheus, Grafana, Loki, Jaeger
-├── .github/workflows/       unit4-ci.yml: the Chai Stall pipeline on GitHub Actions (Unit 4)
+├── .github/workflows/       chai-stall-ci.yml: the Chai Stall pipeline on GitHub Actions
 ├── cheatsheets/             git.md · docker.md · kubectl.md · cicd-observability.md
 ├── scripts/                 check-prereqs.sh · install-metrics-server.sh · install-monitoring.sh · install-jenkins.sh · load-image.sh · link-check.py
 ├── tests/                   scenario harness (git, docker, kubernetes) + lab manifest check
@@ -165,4 +165,4 @@ docker-k8s-zero-to-hero/
 [Git](cheatsheets/git.md) (checkout *and* switch) · [Docker](cheatsheets/docker.md) · [kubectl](cheatsheets/kubectl.md) · [CI/CD & observability](cheatsheets/cicd-observability.md)
 
 ---
-*Built to accompany the Christ University DevOps course (Units 1–4). Learn the **why**, then the command.*
+*Learn the **why**, then the command.*

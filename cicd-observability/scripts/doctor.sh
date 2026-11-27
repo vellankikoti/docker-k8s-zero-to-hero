@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# doctor.sh: "am I ready for Unit 4?" Run it from anywhere, before you start.
+# doctor.sh: "am I ready for this track?" Run it from anywhere, before you start.
 #   ./cicd-observability/scripts/doctor.sh          Docker Compose edition
 #   ./cicd-observability/scripts/doctor.sh --k8s    Kubernetes edition (checks kubectl, helm, your cluster)
 set -uo pipefail
@@ -30,7 +30,7 @@ if [ "$MODE" = k8s ]; then
       kind-*|docker-desktop|minikube|*killercoda*|*kubernetes-admin*) ok "the context looks like a course/lab cluster" ;;
       *) note "context '$(kubectl config current-context)' does not look like a throwaway lab cluster: make sure it is YOURS and safe to experiment on" ;;
     esac
-    kubectl top nodes >/dev/null 2>&1 && ok "metrics-server works (kubectl top)" || note "metrics-server is not installed: only needed for autoscaling and Project 2 (./scripts/install-metrics-server.sh)"
+    kubectl top nodes >/dev/null 2>&1 && ok "metrics-server works (kubectl top)" || note "metrics-server is not installed: only needed for autoscaling and See Everything (./scripts/install-metrics-server.sh)"
   else
     bad "cannot reach a cluster. Start one (00-setup) and check: kubectl config current-context"
   fi
@@ -50,7 +50,7 @@ command -v docker >/dev/null && ok "docker: $(docker --version | cut -d, -f1)" |
 docker info >/dev/null 2>&1 && ok "the Docker engine is running" || bad "the Docker engine is not running: start Docker Desktop (or: sudo systemctl start docker)"
 if docker compose version >/dev/null 2>&1; then
   cv=$(docker compose version --short | sed 's/^v//'); maj=${cv%%.*}; rest=${cv#*.}; min=${rest%%.*}
-  if [ "$maj" -gt 2 ] || { [ "$maj" -eq 2 ] && [ "$min" -ge 24 ]; }; then ok "docker compose: $cv"; else bad "docker compose $cv is too old: Project 1 needs 2.24 or newer. Update Docker Desktop (or the compose plugin)"; fi
+  if [ "$maj" -gt 2 ] || { [ "$maj" -eq 2 ] && [ "$min" -ge 24 ]; }; then ok "docker compose: $cv"; else bad "docker compose $cv is too old: Ship It needs 2.24 or newer. Update Docker Desktop (or the compose plugin)"; fi
 else bad "the 'docker compose' plugin is missing"; fi
 command -v git >/dev/null && ok "git: $(git --version | cut -d' ' -f3)" || bad "git is not installed"
 command -v python3 >/dev/null && ok "python3: $(python3 --version | cut -d' ' -f2) (only needed to run the app's tests outside Docker)" || note "python3 not found: fine, you can run everything in containers"
@@ -60,7 +60,7 @@ h "Your clone of the repository"
 if [ "$(git -C "$ROOT" rev-parse --is-shallow-repository 2>/dev/null)" = true ]; then
   bad "your clone is shallow (cloned with --depth). Jenkins cannot build from it. Fix: git fetch --unshallow"
 else ok "full clone (not shallow)"; fi
-[ -n "$(git -C "$ROOT" branch --show-current 2>/dev/null)" ] && ok "on branch: $(git -C "$ROOT" branch --show-current) (Jenkins builds the branch named in project-1-ship-it/.env, default main)" || note "detached HEAD"
+[ -n "$(git -C "$ROOT" branch --show-current 2>/dev/null)" ] && ok "on branch: $(git -C "$ROOT" branch --show-current) (Jenkins builds the branch named in ship-it/.env, default main)" || note "detached HEAD"
 
 h "Free ports (a '✖' means something else is already using it)"
 used() { (command -v ss >/dev/null && ss -ltn 2>/dev/null | grep -q ":$1 ") || (command -v lsof >/dev/null && lsof -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1); }
@@ -75,7 +75,7 @@ done
 h "Memory"
 if [ -r /proc/meminfo ]; then
   mb=$(awk '/MemTotal/{printf "%d", $2/1024}' /proc/meminfo)
-  [ "$mb" -ge 6000 ] && ok "${mb} MB of RAM" || note "${mb} MB of RAM: Project 1 needs about 2 GB and Project 2 about 2 GB. Run them one at a time."
+  [ "$mb" -ge 6000 ] && ok "${mb} MB of RAM" || note "${mb} MB of RAM: Ship It needs about 2 GB and See Everything about 2 GB. Run them one at a time."
 else
   d=$(docker info --format '{{.MemTotal}}' 2>/dev/null || echo 0); mb=$((d/1024/1024))
   [ "$mb" -ge 6000 ] && ok "Docker has ${mb} MB" || note "Docker has ${mb} MB: raise it in Docker Desktop -> Settings -> Resources, or run the projects one at a time"

@@ -7,7 +7,7 @@
 ⬇️ First run downloads about 19 MB (`python:3.12-alpine`, probably already on your laptop from other scenarios). Do it before the session anyway. The trainer image is built on your machine from a short `Dockerfile`; there is no big Jupyter download in this one.
 
 ## 📖 The story
-It's exam week at Christ University and your final-year project is a "model" that learns from a big dataset. You start the training in a container on the lab server (the kind of job you would normally run in a Jupyter notebook) and go for a filter coffee. When you come back, the output has stopped part-way through the epochs: no red error, no traceback, nothing. The container is just... gone. Your teammate says, *"Maybe Python crashed?"* Python did not crash. Someone else ended it.
+It's exam week at the college and your final-year project is a "model" that learns from a big dataset. You start the training in a container on the lab server (the kind of job you would normally run in a Jupyter notebook) and go for a filter coffee. When you come back, the output has stopped part-way through the epochs: no red error, no traceback, nothing. The container is just... gone. Your teammate says, *"Maybe Python crashed?"* Python did not crash. Someone else ended it.
 
 ## 🧠 The concept: why, what, how
 **First, Compose in three sentences.** So far you typed long `docker run` lines with flags. A **`compose.yaml`** is a file that writes those flags down, so you read and edit them instead of retyping. `docker compose -f work/compose.yaml up -d` reads the file and does the `docker build` and `docker run` for you.

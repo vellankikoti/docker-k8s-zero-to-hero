@@ -9,7 +9,7 @@
 Output columns and wording can differ a little between kubectl, Kubernetes versions and clusters (kind, minikube, Docker Desktop, playgrounds). The ideas never change.
 
 ## 📖 The story
-It's hackathon night at Christ University. Ravi writes a small "leaderboard bot" that asks the Kubernetes API, every 5 seconds, "which player Pods are alive?" and shows the count on the big screen. He deploys it, the Pod is `Running`, no restarts, everything green. The screen stays empty. Lakshmi checks the logs and sees the bot is being told, politely and again and again: *forbidden*. The bot did log in. It just isn't allowed to do anything.
+It's hackathon night at the college. Ravi writes a small "leaderboard bot" that asks the Kubernetes API, every 5 seconds, "which player Pods are alive?" and shows the count on the big screen. He deploys it, the Pod is `Running`, no restarts, everything green. The screen stays empty. Lakshmi checks the logs and sees the bot is being told, politely and again and again: *forbidden*. The bot did log in. It just isn't allowed to do anything.
 
 ![Diagram: the setup for S4.4, who talks to whom and what your mission is](../../images/k14-context.svg)
 

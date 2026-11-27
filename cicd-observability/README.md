@@ -1,4 +1,4 @@
-# 🚦 Track 3: CI/CD, Automation, Monitoring & Observability (Unit 4)
+# 🚦 Track 3: CI/CD, Automation, Monitoring & Observability
 
 **From "it works on my laptop" to "every commit is tested, scanned, shipped, watched, and someone is told when it breaks".**
 
@@ -15,13 +15,13 @@ You will build a small delivery factory (Git → Jenkins → registry → stagin
 |---|---|---|
 | Needs | the course cluster (kind / Docker Desktop / minikube), `kubectl`, `helm` | Docker + Compose only |
 | Where it runs | **inside your cluster**: Jenkins agents are Pods, deploys are Helm releases, canaries are Gateway weights | on Docker: a router container does the traffic splitting |
-| Start | [`doctor.sh --k8s`](scripts/doctor.sh) → [Project 1](projects/project-1-ship-it/README.md) | [Compose edition](compose-edition/README.md) |
-| Best for | learners who finished Units 2–3: it **connects Unit 4 to the 60 scenarios** | no cluster available, or a quick first look |
+| Start | [`doctor.sh --k8s`](scripts/doctor.sh) → [Ship It](projects/ship-it/README.md) | [Compose edition](compose-edition/README.md) |
+| Best for | learners who finished the Docker and Kubernetes tracks: it **connects this track to the 60 scenarios** | no cluster available, or a quick first look |
 
-> The ten labs below teach the concepts; their hands-on steps are being moved onto Kubernetes (next PRs). Project 1 above already runs fully on Kubernetes.
+> The ten labs below teach the concepts; their hands-on steps are being moved onto Kubernetes (next PRs). Ship It above already runs fully on Kubernetes.
 
 ## 🎯 Who this is for
-Unit 4 of the Christ University DevOps course, but anyone can follow it. If you can run `docker run` ([D01](../docker/01-first-steps/README.md)) and `git commit` ([G01](../git/01-first-repo/README.md)), you are ready. Never used Compose? Skim [D08](../docker/08-compose/README.md) first (20 minutes).
+Anyone can follow this track. If you can run `docker run` ([D01](../docker/01-first-steps/README.md)) and `git commit` ([G01](../git/01-first-repo/README.md)), you are ready. Never used Compose? Skim [D08](../docker/08-compose/README.md) first (20 minutes).
 
 ## 🗺️ The journey
 
@@ -37,33 +37,33 @@ Unit 4 of the Christ University DevOps course, but anyone can follow it. If you 
 | [C07](C07-alerting-grafana/README.md) | **alerting** and **Grafana**: rules, Alertmanager routing, dashboards as code | 📬 the alert email arrives while you are still breaking it | 60m |
 | [C08](C08-logs-and-traces/README.md) | **centralized logging** (Loki) and **traces** (Jaeger): the three pillars joined | 🔗 click a trace_id in a log line, land on the trace | 50m |
 | [C09](C09-slo-incident-response/README.md) | **SLIs, SLOs, SLAs** and **incident response**: error budgets, burn-rate alerts, runbooks, postmortems | 🔥 a game day: three incidents, one timeline | 75m |
-| [🏁 **Project 1: Ship It**](compose-edition/project-1-ship-it/README.md) | **Lab exercise 7**: a complete CI/CD factory: Jenkins + GitHub Actions / GitLab CI, automated build, test, scan, push and deploy | 🚀 your commit reaches production with no human typing a deploy command | 2–3h |
-| [🏁 **Project 2: See Everything**](compose-edition/project-2-see-everything/README.md) | **Lab exercise 8**: Prometheus, Alertmanager, Grafana (+ logs and traces) around a live app, with a game day | 🔔 break it, get the email, find the cause | 2–3h |
+| [🏁 **Ship It**](compose-edition/ship-it/README.md) | a complete CI/CD factory: Jenkins + GitHub Actions / GitLab CI, automated build, test, scan, push and deploy | 🚀 your commit reaches production with no human typing a deploy command | 2–3h |
+| [🏁 **See Everything**](compose-edition/see-everything/README.md) | Prometheus, Alertmanager, Grafana (+ logs and traces) around a live app, with a game day | 🔔 break it, get the email, find the cause | 2–3h |
 
-> **Suggested path:** C00 → C01 → C02–C05 (then **Project 1**) → C06–C09 (then **Project 2**). The labs teach one topic at a time on the same running stack; the projects make you assemble and operate it end to end. In a hurry? Do the two projects: each one's README links to the lab that explains every step.
+> **Suggested path:** C00 → C01 → C02–C05 (then **Ship It**) → C06–C09 (then **See Everything**). The labs teach one topic at a time on the same running stack; the projects make you assemble and operate it end to end. In a hurry? Do the two projects: each one's README links to the lab that explains every step.
 
 ## ✅ Syllabus coverage (nothing left out)
 
-| Unit 4 topic | Where you learn and practise it |
+| Topic | Where you learn and practise it |
 |---|---|
-| CI/CD pipeline design | [C00](C00-foundations/README.md) (stages, gates, feedback loops) · [C01](C01-git-based-ci/README.md) · [Jenkinsfile](compose-edition/project-1-ship-it/Jenkinsfile) |
+| CI/CD pipeline design | [C00](C00-foundations/README.md) (stages, gates, feedback loops) · [C01](C01-git-based-ci/README.md) · [Jenkinsfile](compose-edition/ship-it/Jenkinsfile) |
 | Jenkins architecture and pipelines | [C02](C02-jenkins-pipelines/README.md) (controller, executors, plugins, Configuration as Code) |
-| Pipeline as Code | [C02](C02-jenkins-pipelines/README.md) · [Jenkinsfile](compose-edition/project-1-ship-it/Jenkinsfile) · [Jenkinsfile.dynamic](compose-edition/project-1-ship-it/Jenkinsfile.dynamic) |
-| Automated build, test and deployment | [Project 1](compose-edition/project-1-ship-it/README.md), Phases 3 to 5 |
-| Git-based CI tools | [C01](C01-git-based-ci/README.md): GitHub Actions ([workflow](../.github/workflows/unit4-ci.yml)) and GitLab CI ([pipeline](ci-examples/gitlab-ci.yml)) |
-| Job DSL and dynamic pipelines | [C03](C03-job-dsl-dynamic/README.md) · [jobs/](compose-edition/project-1-ship-it/jenkins/jobs/) · [GitLab child pipelines](ci-examples/gitlab-dynamic.yml) |
+| Pipeline as Code | [C02](C02-jenkins-pipelines/README.md) · [Jenkinsfile](compose-edition/ship-it/Jenkinsfile) · [Jenkinsfile.dynamic](compose-edition/ship-it/Jenkinsfile.dynamic) |
+| Automated build, test and deployment | [Ship It](compose-edition/ship-it/README.md), Phases 3 to 5 |
+| Git-based CI tools | [C01](C01-git-based-ci/README.md): GitHub Actions ([workflow](../.github/workflows/chai-stall-ci.yml)) and GitLab CI ([pipeline](ci-examples/gitlab-ci.yml)) |
+| Job DSL and dynamic pipelines | [C03](C03-job-dsl-dynamic/README.md) · [jobs/](compose-edition/ship-it/jenkins/jobs/) · [GitLab child pipelines](ci-examples/gitlab-dynamic.yml) |
 | Artifact management | [C04](C04-artifacts-secrets-security/README.md): registry, tags vs digests, `archiveArtifacts`, fingerprints |
 | Secrets handling and pipeline security | [C04](C04-artifacts-secrets-security/README.md): credentials, masking, least privilege, scans, policy gates |
 | Container image builds in CI/CD | [C05](C05-images-and-deployment/README.md) · [Dockerfile](app/Dockerfile) |
-| Deployment strategies | [C05](C05-images-and-deployment/README.md): [deploy.sh](compose-edition/project-1-ship-it/deploy/deploy.sh) (recreate, rolling, blue/green, canary, rollback) |
+| Deployment strategies | [C05](C05-images-and-deployment/README.md): [deploy.sh](compose-edition/ship-it/deploy/deploy.sh) (recreate, rolling, blue/green, canary, rollback) |
 | Observability fundamentals: metrics, logs, traces | [C00](C00-foundations/README.md) · [C06](C06-prometheus/README.md) · [C08](C08-logs-and-traces/README.md) |
 | Prometheus monitoring and alerting | [C06](C06-prometheus/README.md) · [C07](C07-alerting-grafana/README.md) |
-| Grafana dashboards | [C07](C07-alerting-grafana/README.md) · [the dashboard as code](compose-edition/project-2-see-everything/grafana/dashboards/chai-stall.json) |
+| Grafana dashboards | [C07](C07-alerting-grafana/README.md) · [the dashboard as code](compose-edition/see-everything/grafana/dashboards/chai-stall.json) |
 | Centralized logging concepts | [C08](C08-logs-and-traces/README.md): Loki + Alloy |
-| SLIs, SLOs and SLAs | [C09](C09-slo-incident-response/README.md) · [recording rules](compose-edition/project-2-see-everything/prometheus/rules/recording.yml) |
-| Incident response practices | [C09](C09-slo-incident-response/README.md) · [runbook](compose-edition/project-2-see-everything/docs/runbook.md) · [postmortem template](compose-edition/project-2-see-everything/docs/postmortem-template.md) |
-| **Lab exercise 7**: CI/CD pipelines with Jenkins and GitHub Actions or GitLab CI | [Project 1](compose-edition/project-1-ship-it/README.md) |
-| **Lab exercise 8**: Prometheus, Alertmanager and Grafana for application observability | [Project 2](compose-edition/project-2-see-everything/README.md) |
+| SLIs, SLOs and SLAs | [C09](C09-slo-incident-response/README.md) · [recording rules](compose-edition/see-everything/prometheus/rules/recording.yml) |
+| Incident response practices | [C09](C09-slo-incident-response/README.md) · [runbook](compose-edition/see-everything/docs/runbook.md) · [postmortem template](compose-edition/see-everything/docs/postmortem-template.md) |
+| CI/CD pipelines with Jenkins and GitHub Actions or GitLab CI | [Ship It](compose-edition/ship-it/README.md) |
+| Prometheus, Alertmanager and Grafana for application observability | [See Everything](compose-edition/see-everything/README.md) |
 
 ## 🧰 Before you start (10 minutes)
 ```bash
@@ -114,8 +114,8 @@ cicd-observability/
 ├── ci-examples/                 GitLab CI pipelines (the GitHub Actions one lives in ../.github/workflows/)
 ├── scripts/doctor.sh            pre-flight check
 └── projects/
-    ├── project-1-ship-it/       Jenkins · registry · router · deploy.sh · Jenkinsfile · Job DSL · Configuration as Code
-    └── project-2-see-everything/  Prometheus · Alertmanager · Grafana · Loki · Alloy · Jaeger · Mailpit · runbook
+    ├── ship-it/       Jenkins · registry · router · deploy.sh · Jenkinsfile · Job DSL · Configuration as Code
+    └── see-everything/  Prometheus · Alertmanager · Grafana · Loki · Alloy · Jaeger · Mailpit · runbook
 ```
 
 ## 🧭 How every lab is built
@@ -125,10 +125,10 @@ Projects add one thing: after each phase, run `./scripts/verify.sh N` and get a 
 
 ## 🧹 Cleaning up (always safe, never touches your other labs)
 ```bash
-cd cicd-observability/compose-edition/project-1-ship-it
+cd cicd-observability/compose-edition/ship-it
 ./deploy/deploy.sh clean          # removes the app containers the pipeline deployed (they are not part of Compose)
 docker compose down -v            # removes Jenkins, the registry, the router and their data
-cd ../project-2-see-everything
+cd ../see-everything
 docker compose down -v            # (add -f docker-compose.shipit.yml if you used that add-on)
 docker image prune -f
 ```

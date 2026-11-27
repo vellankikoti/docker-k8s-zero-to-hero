@@ -1,4 +1,4 @@
-# Shared helpers for the Unit 4 Kubernetes scripts. Source it:  . "$(dirname "$0")/k8s-lib.sh"
+# Shared helpers for the Kubernetes scripts. Source it:  . "$(dirname "$0")/k8s-lib.sh"
 say()  { printf '\033[1;36m▶ %s\033[0m\n' "$*"; }
 ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m• %s\033[0m\n' "$*"; }

@@ -15,7 +15,7 @@
 #   Production http://localhost:8090   through the Gateway (needs Envoy Gateway)
 set -uo pipefail
 . "$(dirname "$0")/k8s-lib.sh"
-PIDFILE=${TMPDIR:-/tmp}/z2h-unit4-forward.pids
+PIDFILE=${TMPDIR:-/tmp}/z2h-forward.pids
 
 # --- where to listen -------------------------------------------------------------------------------------------------
 ARG=${2:-}
@@ -30,7 +30,7 @@ elif [ "$LAB" = 1 ]; then ADDR=0.0.0.0
 else ADDR=127.0.0.1; fi
 
 LOGDIR=${TMPDIR:-/tmp}
-logfile() { echo "$LOGDIR/z2h-unit4-forward-$1.log"; }
+logfile() { echo "$LOGDIR/z2h-forward-$1.log"; }
 
 # Why a forward might have died, in plain words (the raw kubectl message is shown too).
 hint() {

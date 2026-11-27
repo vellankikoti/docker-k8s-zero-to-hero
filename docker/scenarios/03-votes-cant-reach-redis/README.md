@@ -7,7 +7,7 @@
 ⬇️ First run downloads about 36 MB (Redis 17 MB + Python base 19 MB) and builds the API image in a few seconds. Do it on good Wi-Fi, before the session.
 
 ## 📖 The story
-It's the college fest at Christ University, and the Cats vs Dogs poll is on the big screen. On your laptop it worked all week: the app and Redis both ran on `localhost`. Tonight you put each one in its own container, every container says **Up**, and the crowd is tapping the buttons... but the counts never move. The booth is open, and every vote vanishes into thin air.
+It's the college fest at the college, and the Cats vs Dogs poll is on the big screen. On your laptop it worked all week: the app and Redis both ran on `localhost`. Tonight you put each one in its own container, every container says **Up**, and the crowd is tapping the buttons... but the counts never move. The booth is open, and every vote vanishes into thin air.
 
 ## 🧠 The concept: why, what, how
 Every container gets its **own private network**, like its own flat in an apartment block. Inside a flat, "here" means *this* flat. So `localhost` inside the API container means **the API container itself**, never your laptop and never the Redis container next door.

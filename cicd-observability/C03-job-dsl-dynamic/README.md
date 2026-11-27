@@ -1,6 +1,6 @@
 # Lab C03: Job DSL and Dynamic Pipelines
 
-> ⏱ 45 min · 🟡 Intermediate · Needs: [C02](../C02-jenkins-pipelines/README.md) done and the Project 1 stack running (`docker compose ps` shows `jenkins`, `registry`, `router`).
+> ⏱ 45 min · 🟡 Intermediate · Needs: [C02](../C02-jenkins-pipelines/README.md) done and the Ship It stack running (`docker compose ps` shows `jenkins`, `registry`, `router`).
 
 ## 🎯 What you'll learn
 - Why "jobs created by clicking" does not scale, and what a **seed job** is
@@ -39,14 +39,14 @@ flowchart TB
 ## 🧪 Hands-on
 
 ### Step 1: Read the three job files (8 min)
-They are in [`jenkins/jobs/`](../compose-edition/project-1-ship-it/jenkins/jobs/). The seed job runs them **in alphabetical order**: `base`, `deploy_jobs`, `pipelines`. (Names may contain letters, digits and underscores only: that is why `deploy_jobs.groovy` has an underscore, and why the folder is created in `base.groovy`, which sorts first.)
+They are in [`jenkins/jobs/`](../compose-edition/ship-it/jenkins/jobs/). The seed job runs them **in alphabetical order**: `base`, `deploy_jobs`, `pipelines`. (Names may contain letters, digits and underscores only: that is why `deploy_jobs.groovy` has an underscore, and why the folder is created in `base.groovy`, which sorts first.)
 
-**[`base.groovy`](../compose-edition/project-1-ship-it/jenkins/jobs/base.groovy)**: four lines, one folder:
+**[`base.groovy`](../compose-edition/ship-it/jenkins/jobs/base.groovy)**: four lines, one folder:
 ```groovy
 folder('chai-stall') { description('...') }
 ```
 
-**[`pipelines.groovy`](../compose-edition/project-1-ship-it/jenkins/jobs/pipelines.groovy)**: a **closure** (a reusable recipe) that creates a pipeline job whose steps come from a `Jenkinsfile` in Git, called twice:
+**[`pipelines.groovy`](../compose-edition/ship-it/jenkins/jobs/pipelines.groovy)**: a **closure** (a reusable recipe) that creates a pipeline job whose steps come from a `Jenkinsfile` in Git, called twice:
 ```groovy
 def pipelineFromGit = { String jobName, String file, String desc, boolean poll -> pipelineJob("chai-stall/${jobName}") { ... } }
 pipelineFromGit('ci-cd',         'Jenkinsfile',         '...', true)
@@ -54,7 +54,7 @@ pipelineFromGit('dynamic-checks','Jenkinsfile.dynamic', '...', false)
 ```
 Notice the repository and branch are read from the **environment** (`System.getenv('REPO_URL')`): the same file works for your laptop and for a GitHub URL.
 
-**[`deploy_jobs.groovy`](../compose-edition/project-1-ship-it/jenkins/jobs/deploy_jobs.groovy)**: a **loop**: four jobs from one list.
+**[`deploy_jobs.groovy`](../compose-edition/ship-it/jenkins/jobs/deploy_jobs.groovy)**: a **loop**: four jobs from one list.
 ```groovy
 ['status', 'rollback', 'promote', 'clean'].each { action ->
   job("chai-stall/ops-${action}") { steps { shell("${deployScript} ${action}") } }
@@ -71,8 +71,8 @@ Run **ops-status**, then open its **Console Output**. You will see the router st
 Add one more button, `state`, by editing **one word**. From the repository root:
 ```bash
 sed -i.bak "s/\['status', 'rollback', 'promote', 'clean'\]/['status', 'rollback', 'promote', 'clean', 'state']/" \
-  cicd-observability/compose-edition/project-1-ship-it/jenkins/jobs/deploy_jobs.groovy
-rm cicd-observability/compose-edition/project-1-ship-it/jenkins/jobs/deploy_jobs.groovy.bak
+  cicd-observability/compose-edition/ship-it/jenkins/jobs/deploy_jobs.groovy
+rm cicd-observability/compose-edition/ship-it/jenkins/jobs/deploy_jobs.groovy.bak
 git diff --stat
 ```
 Run the seed job now (**00-seed → Build Now**). Check the Operations view. **Nothing changed.** Why?
@@ -88,7 +88,7 @@ git commit -am "add the ops-state button"
 ```
 **00-seed → Build Now**. After ~20 seconds, **ops-state** appears in the Operations view. You just created a Jenkins job with a one-word code change and a commit.
 
-Now **delete** it the same way: remove `, 'state'` from the list, commit, run the seed. The job disappears. That is the `removeAction('DELETE')` line in [`jenkins.yaml`](../compose-edition/project-1-ship-it/jenkins/casc/jenkins.yaml): jobs the seed created but no longer describes are cleaned up, so Jenkins always matches Git. (Undo your experiment's commits with `git reset --hard HEAD~2` if you want your branch tidy: only do this if your last two commits are the two you just made.)
+Now **delete** it the same way: remove `, 'state'` from the list, commit, run the seed. The job disappears. That is the `removeAction('DELETE')` line in [`jenkins.yaml`](../compose-edition/ship-it/jenkins/casc/jenkins.yaml): jobs the seed created but no longer describes are cleaned up, so Jenkins always matches Git. (Undo your experiment's commits with `git reset --hard HEAD~2` if you want your branch tidy: only do this if your last two commits are the two you just made.)
 
 ### Step 4: A job that asks a question (5 min)
 Run **ops-canary-any-tag** (Build with Parameters). It needs a tag that exists. List what the registry holds, from the artifact store you built in C02:
@@ -100,7 +100,7 @@ Pick one, for example `1.0.1`, set `PERCENT=30`. The job calls `deploy.sh canary
 > The Job DSL has a snippet generator: **Manage Jenkins → ... → Job DSL API Reference** (`http://localhost:8080/plugin/job-dsl/api-viewer/index.html`) lists every method for every installed plugin. When you want to automate something you know how to click, look for it there.
 
 ### Step 5: A dynamic pipeline (12 min)
-Open [`Jenkinsfile.dynamic`](../compose-edition/project-1-ship-it/Jenkinsfile.dynamic) and [`pipeline-config.json`](../compose-edition/project-1-ship-it/pipeline-config.json). The Jenkinsfile contains **no checks at all**; the JSON does:
+Open [`Jenkinsfile.dynamic`](../compose-edition/ship-it/Jenkinsfile.dynamic) and [`pipeline-config.json`](../compose-edition/ship-it/pipeline-config.json). The Jenkinsfile contains **no checks at all**; the JSON does:
 ```json
 { "checks": [
     { "name": "unit tests",   "cmd": "cd cicd-observability/app && python3 -m unittest discover -s tests" },
@@ -121,7 +121,7 @@ Now add a fourth **by editing data only**:
 ```bash
 python3 - <<'EOF'
 import json
-p = 'cicd-observability/compose-edition/project-1-ship-it/pipeline-config.json'
+p = 'cicd-observability/compose-edition/ship-it/pipeline-config.json'
 d = json.load(open(p))
 d['checks'].append({"name": "dockerfile exists", "cmd": "test -f cicd-observability/app/Dockerfile"})
 json.dump(d, open(p, 'w'), indent=2)
@@ -149,7 +149,7 @@ Write a Job DSL loop that creates **three deploy jobs**, `deploy-staging`, `depl
 [staging: 'staging', canary: 'canary', bluegreen: 'bluegreen'].each { name, strategy ->
   job("chai-stall/deploy-${name}") {                       // <- job name changes
     parameters { stringParam('TAG', '', 'An image tag from the registry') }
-    steps { shell("/repo/cicd-observability/compose-edition/project-1-ship-it/deploy/deploy.sh ${strategy} localhost:5001/chai-stall:\$TAG") }   // <- command changes
+    steps { shell("/repo/cicd-observability/compose-edition/ship-it/deploy/deploy.sh ${strategy} localhost:5001/chai-stall:\$TAG") }   // <- command changes
   }
 }
 ```

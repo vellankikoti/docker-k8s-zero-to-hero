@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# k8s-selftest.sh: an end-to-end test of the Unit 4 Kubernetes platform + Project 1, on YOUR cluster. About 15 minutes.
+# k8s-selftest.sh: an end-to-end test of the Kubernetes platform + Ship It, on YOUR cluster. About 15 minutes.
 #
 #   ./cicd-observability/scripts/k8s-selftest.sh            installs the platform if needed, then runs everything
 #   ./cicd-observability/scripts/k8s-selftest.sh --keep     leave the test app repo and releases in place afterwards
@@ -86,5 +86,5 @@ check "all traffic is on one colour again (weights: $(weights))" single_colour
 
 [ "$KEEP" = 1 ] || { rm -rf "$(dirname "$WORK")"; }
 echo; printf '\033[1m%d passed, %d failed\033[0m\n' "$pass" "$fail"
-[ "$fail" -eq 0 ] && echo "The Kubernetes edition of Unit 4 works on this cluster." || echo "Send the ✖ lines above (and 'kubectl -n cicd get pods') to whoever maintains this track."
+[ "$fail" -eq 0 ] && echo "The Kubernetes edition of this track works on this cluster." || echo "Send the ✖ lines above (and 'kubectl -n cicd get pods') to whoever maintains this track."
 exit $([ "$fail" -eq 0 ] && echo 0 || echo 1)

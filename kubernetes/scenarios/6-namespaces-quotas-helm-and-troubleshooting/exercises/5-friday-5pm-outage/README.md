@@ -9,7 +9,7 @@
 Output columns and wording can differ a little between kubectl, container runtimes and clusters (kind, minikube, Docker Desktop, playgrounds). The ideas never change.
 
 ## 📖 The story
-It's the last Friday before the Christ University fest, and the Cats vs Dogs grand final goes live on the big screen at 7 PM. At 4:50 PM three teammates each merge one small "tidy-up" to the poll's Kubernetes files. Each change is a line or two. Each one looks obviously safe. Nobody runs them together. At 5:00 PM the team deploys the lot, closes their laptops and heads for the bus. At 5:02 her phone buzzes: the poll page doesn't load. Priya, on call this week, opens a terminal and calls the team back to the room.
+It's the last Friday before the the college fest, and the Cats vs Dogs grand final goes live on the big screen at 7 PM. At 4:50 PM three teammates each merge one small "tidy-up" to the poll's Kubernetes files. Each change is a line or two. Each one looks obviously safe. Nobody runs them together. At 5:00 PM the team deploys the lot, closes their laptops and heads for the bus. At 5:02 her phone buzzes: the poll page doesn't load. Priya, on call this week, opens a terminal and calls the team back to the room.
 
 Three things broke. Nobody knows that yet.
 

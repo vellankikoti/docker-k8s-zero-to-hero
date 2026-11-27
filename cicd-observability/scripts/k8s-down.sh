@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# k8s-down.sh: remove the Unit 4 CI/CD platform and everything the pipeline deployed. Asks first (-y to skip).
+# k8s-down.sh: remove the CI/CD platform and everything the pipeline deployed. Asks first (-y to skip).
 set -euo pipefail
 . "$(dirname "$0")/k8s-lib.sh"
 need_cluster; need_helm

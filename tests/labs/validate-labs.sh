@@ -76,7 +76,7 @@ check_refused() { # LABEL FILE
 }
 
 # 2. Every manifest, lab by lab (kustomize folders as one unit).
-for dir in kubernetes/[0-9][0-9]-*/ kubernetes/stack/ kubernetes/projects/project-1-canteen-rush/k8s/ kubernetes/projects/project-2-canteen-helm/k8s-raw/; do
+for dir in kubernetes/[0-9][0-9]-*/ kubernetes/stack/ kubernetes/projects/canteen-rush/k8s/ kubernetes/projects/canteen-helm/k8s-raw/; do
   dir="${dir%/}"
   [ -d "$dir" ] || continue
   printf '== %s\n' "${dir#kubernetes/}"
@@ -104,10 +104,10 @@ for dir in kubernetes/[0-9][0-9]-*/ kubernetes/stack/ kubernetes/projects/projec
   fi
 done
 
-# 3. The Helm chart of Project 2: lint it, render it with each values file, and let the server check the result.
-if command -v helm >/dev/null 2>&1 && [ -d kubernetes/projects/project-2-canteen-helm/chart/canteen ]; then
-  printf '== projects/project-2-canteen-helm/chart\n'
-  CHART=kubernetes/projects/project-2-canteen-helm/chart/canteen
+# 3. The Helm chart of Canteen Rush packaged: lint it, render it with each values file, and let the server check the result.
+if command -v helm >/dev/null 2>&1 && [ -d kubernetes/projects/canteen-helm/chart/canteen ]; then
+  printf '== projects/canteen-helm/chart\n'
+  CHART=kubernetes/projects/canteen-helm/chart/canteen
   if helm lint "$CHART" >/dev/null 2>&1; then printf '  ok: helm lint\n'; PASS=$((PASS + 1)); else printf '  FAIL: helm lint\n'; FAIL=$((FAIL + 1)); fi
   for vf in "" "-f $CHART/values-dev.yaml" "-f $CHART/values-prod.yaml"; do
     label="render ${vf:+with ${vf##*/}}"; label="${label:-render with defaults}"
