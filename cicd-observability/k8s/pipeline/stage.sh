@@ -104,13 +104,19 @@ deploy_staging() {  # container: tools
   rc=0
   helm upgrade --install "$STAGING_REL" chart/chai-stall -n "$STAGING_NS" -f chart/chai-stall/values-staging.yaml \
     --set image.repository="$PULL_REPO" --set image.tag="$TAG" --wait --timeout "$HELM_TIMEOUT" || rc=$?
-  if [ $rc -eq 0 ]; then helm test "$STAGING_REL" -n "$STAGING_NS" --logs || rc=$?; fi
+  if [ $rc -eq 0 ]; then
+    # The exit code of THIS command is the verdict of the smoke test. (Not "helm test --logs": that also fails when the
+    # logs cannot be fetched, and made a passing test look like a failed deploy.) The Pod's output is printed best effort.
+    helm test "$STAGING_REL" -n "$STAGING_NS" || rc=$?
+    kubectl -n "$STAGING_NS" logs "$STAGING_REL-smoke" 2>&1 || true
+  fi
   if [ $rc -ne 0 ]; then
     echo "✖ the staging release is not healthy. Evidence, collected BEFORE rolling back:"
     bash "$PIPE/diagnose.sh" "$STAGING_NS" "$STAGING_REL" || true
     revs=$(helm history "$STAGING_REL" -n "$STAGING_NS" -o json 2>/dev/null | grep -o '"revision"' | wc -l)
     if [ "$revs" -gt 1 ]; then echo "↩ rolling back to the previous revision"; helm rollback "$STAGING_REL" -n "$STAGING_NS" --wait --timeout 2m || true
-    else echo "↩ this was the first release: uninstalling it"; helm uninstall "$STAGING_REL" -n "$STAGING_NS" || true; fi
+    else echo "↩ this was the first release: uninstalling it"; helm uninstall "$STAGING_REL" -n "$STAGING_NS" || true
+         kubectl -n "$STAGING_NS" delete pod "$STAGING_REL-smoke" --ignore-not-found || true; fi
     return 1
   fi
   echo "✔ staging runs $TAG and passed its smoke test"

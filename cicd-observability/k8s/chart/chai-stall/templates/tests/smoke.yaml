@@ -11,7 +11,9 @@ metadata:
     app.kubernetes.io/instance-under-test: {{ .Release.Name }}
   annotations:
     "helm.sh/hook": test
-    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    # Keep the Pod after it finishes (the next test replaces it): its output stays readable with `kubectl logs`. Deleting it on
+    # success ("hook-succeeded") made `helm test --logs` fail with "pod not found" even though the test PASSED.
+    "helm.sh/hook-delete-policy": before-hook-creation
 spec:
   restartPolicy: Never
   securityContext:
