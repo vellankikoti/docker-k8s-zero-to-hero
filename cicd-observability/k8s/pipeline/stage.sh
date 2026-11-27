@@ -72,21 +72,37 @@ build() {  # container: kaniko (daemonless image build, no Docker socket)
 
 scan() {  # container: trivy
   need SCAN_MODE
-  # enforce = a CRITICAL finding fails the build, AND so does a scanner that cannot run (it fails CLOSED: a gate that
-  #           silently passes when it cannot check anything is worse than no gate).
-  # report  = findings are shown but never block, and neither does a scanner that cannot start (for example no route
-  #           to its vulnerability database).
+  # enforce = a CRITICAL finding fails the build, AND so does a scanner that cannot get its database (it fails CLOSED: a gate
+  #           that silently passes when it cannot check anything is worse than no gate).
+  # report  = findings are shown but never block, and neither does a scanner that cannot get its database.
   trivy --version | head -1
   ls -l "$WS/out/image.tar"
-  exit_code=1; [ "$SCAN_MODE" = report ] && exit_code=0
-  rc=0
-  trivy image --input "$WS/out/image.tar" --cache-dir /tmp/trivy-cache --severity CRITICAL --exit-code "$exit_code" --no-progress || rc=$?
-  if [ "$SCAN_MODE" = report ] && [ $rc -ne 0 ]; then
-    echo "⚠ the scanner itself failed (exit $rc) and SCAN_MODE=report never blocks. Read the message above:"
-    echo "  usually it cannot download its vulnerability database (no route to mirror.gcr.io / ghcr.io from this cluster)."
-    return 0
+  cache=/tmp/trivy-cache
+  # Step 1: fetch the vulnerability database ONCE, from the first mirror that answers. Trivy's own fallback does not help when
+  # a host is unreachable or rate limited (shared lab networks hit both), so each mirror is tried explicitly, twice.
+  have_db=0
+  for repo in ${TRIVY_DB_REPOS:-mirror.gcr.io/aquasec/trivy-db:2 public.ecr.aws/aquasecurity/trivy-db:2 ghcr.io/aquasecurity/trivy-db:2}; do
+    for attempt in 1 2; do
+      if trivy image --download-db-only --cache-dir "$cache" --db-repository "$repo" --no-progress >/dev/null 2>"$WS/trivy-db.err"; then
+        echo "✔ vulnerability database downloaded from $repo"; have_db=1; break 2
+      fi
+      sleep 3
+    done
+    echo "⚠ could not download the vulnerability database from $repo:"; grep -E 'FATAL|\* ' "$WS/trivy-db.err" | tail -2 | cut -c1-300
+  done
+  if [ $have_db -eq 0 ]; then
+    if [ "$SCAN_MODE" = report ]; then
+      echo "⚠ no vulnerability database is reachable from this cluster, so the image was NOT scanned (SCAN_MODE=report never blocks)."
+      return 0
+    fi
+    echo "✖ SCAN_MODE=enforce and no vulnerability database is reachable from this cluster (mirrors tried above)."
+    echo "  An enforcing gate that cannot check anything must fail. Re-run with SCAN_MODE=report, or give the cluster a route to a mirror."
+    return 1
   fi
-  return $rc
+  # Step 2: scan with that database (no more network needed).
+  exit_code=1; [ "$SCAN_MODE" = report ] && exit_code=0
+  trivy image --input "$WS/out/image.tar" --cache-dir "$cache" --skip-db-update --skip-java-db-update \
+    --severity CRITICAL --exit-code "$exit_code" --no-progress
 }
 
 record() {  # container: tools

@@ -22,7 +22,7 @@ pipeline {
     choice(name: 'STRATEGY', choices: ['bluegreen', 'canary', 'rolling', 'recreate'], description: 'How to release to production')
     string(name: 'CANARY_PERCENT', defaultValue: '20', description: 'Canary only: percent of traffic for the new version')
     booleanParam(name: 'INJECT_BUG', defaultValue: false, description: 'Pretend this release has a bug (30% of orders fail)')
-    choice(name: 'SCAN_MODE', choices: ['enforce', 'report', 'skip'], description: 'enforce = a CRITICAL vulnerability fails the build. report = show findings, never block. skip = do not scan')
+    choice(name: 'SCAN_MODE', choices: ['report', 'enforce', 'skip'], description: 'report = show findings, never block (default: works on any cluster). enforce = a CRITICAL vulnerability fails the build. skip = do not scan')
     booleanParam(name: 'REQUIRE_APPROVAL', defaultValue: true, description: 'Ask a human before touching production')
   }
 

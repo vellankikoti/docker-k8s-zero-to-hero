@@ -31,6 +31,7 @@ if command -v helm >/dev/null; then
 else echo "  • helm not installed: skipped the chart checks"; fi
 run "stage.sh is valid POSIX sh (dash)" bash -c "command -v dash >/dev/null || exit 0; dash -n $U/k8s/pipeline/stage.sh"
 run "Job DSL files exist" bash -c "ls $U/projects/project-1-ship-it/app-repo/jenkins/jobs/*.groovy >/dev/null"
+run "Pipeline stage exit codes (deploy + scan)" bash "$U/k8s/tests/stage-exit-codes.sh"
 if command -v kubectl >/dev/null && kubectl get --raw /readyz >/dev/null 2>&1; then
   run "platform manifests are accepted by your cluster's API server (dry run)" bash -c "for f in $U/k8s/platform/00-namespaces.yaml $U/k8s/platform/rbac.yaml; do kubectl apply --dry-run=server -f \$f >/dev/null || exit 1; done; for f in registry gitea; do kubectl apply --dry-run=server -n cicd -f $U/k8s/platform/\$f.yaml >/dev/null || exit 1; done"
 else echo "  • no cluster reachable: skipped the API-server checks (run k8s-selftest.sh on a real cluster for the full test)"; fi
