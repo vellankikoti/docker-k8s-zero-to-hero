@@ -51,6 +51,7 @@ root_pod_refused() { kubectl run rootpod --image=nginx -n stall-prod --dry-run=s
 say "1/6 Platform"
 "$(dirname "$0")/k8s-up.sh" >/dev/null || die "k8s-up.sh failed: run it by hand to see why"
 "$(dirname "$0")/forward.sh" start >/dev/null 2>&1
+check "the pipeline scripts are published to the cluster (ConfigMap z2h-pipeline)" bash -c "kubectl -n cicd get cm z2h-pipeline -o name"
 check "namespaces enforce Pod Security restricted" ns_enforces_restricted
 check "the pipeline's ServiceAccount may deploy to stall-prod" can create deployments -n stall-prod
 check "...but not to kube-system (least privilege)" cannot create deployments -n kube-system

@@ -9,7 +9,7 @@ pipeline {
         script {
           def args = params.ACTION
           if (params.ACTION == 'canary') { args = "canary ${params.TAG} ${params.PERCENT}" }
-          sh "deploy/k8s-deploy.sh ${args}"
+          sh "bash /opt/z2h/k8s-deploy.sh ${args}"
         }
       }
     }

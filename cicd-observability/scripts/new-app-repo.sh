@@ -26,9 +26,11 @@ cp -r "$K8S_DIR/chart/chai-stall" "$DIR/chart/chai-stall"
 cp -r "$COURSE_ROOT/cicd-observability/projects/project-1-ship-it/app-repo/." "$DIR/"
 cat > "$DIR/README.md" <<'MD'
 # chai-stall (your repository)
-Your own copy of the Chai Stall service and its pipeline. `git push` here and Jenkins builds, tests, ships.
-- `app/`: the service and its tests · `chart/`: the Helm chart · `Jenkinsfile`: the pipeline · `deploy/`: release strategies
-- `jenkins/jobs/`: the Jenkins jobs, as code · `ci/`: the build Pod, helper scripts
+Your own Chai Stall service and its pipeline. `git push` here and Jenkins builds, tests and ships it.
+- `app/`: the service and its tests · `chart/`: its Helm chart (probes, limits, security) · `ci/pod.yaml`: the build Pod
+- `Jenkinsfile`: the SHAPE of the pipeline (which stages, which container, when) · `jenkins/jobs/`: the Jenkins jobs, as code
+- How each stage WORKS is platform logic (`stage.sh`, `k8s-deploy.sh`) mounted at /opt/z2h in every build Pod: it is
+  updated for you by the course (git pull, then k8s-up.sh), so nothing here needs copying or refreshing.
 MD
 cd "$DIR"
 git init -q -b main

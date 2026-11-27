@@ -115,13 +115,15 @@ Open the doors into the cluster, then create **your own** copy of the app:
 | Staging | http://localhost:8082 | none |
 | Production | http://localhost:8090 | none |
 
-### 🔄 Your repo is a copy: how to get the newest pipeline fixes
-`new-app-repo.sh` made your repo from the course files **once**. When the course repo is fixed or improved (`git pull` in it), your copy does not change by itself. Bring it up to date with one command; it copies only the **pipeline files** (`Jenkinsfile`, `ci/`, `deploy/`, `jenkins/`, the Helm chart), **never `app/`** (your code and tests), commits, pushes, and re-runs the seed job:
-```bash
-git pull                                                  # in the course repo
-./cicd-observability/scripts/update-app-repo.sh           # updates ~/chai-stall
-```
-It refuses to run over uncommitted changes. If you edited the chart or a Jenkinsfile yourself (Phases 6 and 7), those edits are overwritten: the diff is shown, and `git revert HEAD` in your repo brings them back.
+### 🧭 Who owns what (so nothing ever needs copying)
+| | **The platform** (installed by `k8s-up.sh`) | **Your repo** (`~/chai-stall`) |
+|---|---|---|
+| What | the **logic of every pipeline stage** ([`k8s/pipeline/`](../../k8s/pipeline/): `stage.sh`, `k8s-deploy.sh`, `diagnose.sh`, …), the Jenkins and cluster setup | your **code** (`app/`), your **chart** (`chart/`), and the **shape** of your pipeline (`Jenkinsfile`: which stages, in which container, when) |
+| Where it lives | a ConfigMap `z2h-pipeline`, mounted at `/opt/z2h` in every build Pod | your Git repository |
+| Who changes it | the course, for everyone | you |
+| To get a fix | `git pull` in the course repo, then **`./cicd-observability/scripts/k8s-up.sh`** (the one command you already know) | nothing: it is yours |
+
+So a bug fix in how a stage works reaches everyone with one command and **no file is ever copied into your repo**. The same split exists in companies: a platform team owns the shared pipeline logic, product teams own their code and a small pipeline definition.
 
 ### 🌐 Using Killercoda or iximuz Labs (a browser lab)?
 In a browser lab the cluster and your terminal live in a remote VM, so `http://localhost:8081` in *your* browser is **not** that VM. Two things make it work:
@@ -145,7 +147,7 @@ In **iximuz Labs** use the lab's own port-exposing panel with the same port numb
 
 ```bash
 cd ~/chai-stall && git log --oneline && git remote -v        # an ordinary Git repository with one commit
-ls                                                           # app/  chart/  ci/  deploy/  jenkins/  Jenkinsfile …
+ls                                                           # app/  chart/  ci/  jenkins/  Jenkinsfile  Jenkinsfile.dynamic  pipeline-config.json
 ```
 In **Gitea** (http://localhost:3001/z2h/chai-stall) look at *Settings → Webhooks*: one webhook points at Jenkins. In **Jenkins** open the **chai-stall** folder: `ci-cd`, `dynamic-checks`, `secrets-demo` and the `ops-*` buttons. Nobody clicked "New Item": the seed job read [`jenkins/jobs/*.groovy`](app-repo/jenkins/jobs/pipelines.groovy) from your repo and created them (Lab C03).
 
@@ -160,14 +162,14 @@ In Jenkins open **chai-stall → ci-cd → Build Now**. (The first build only te
 ```bash
 kubectl -n cicd describe pod -l jenkins=slave | grep -E 'Image:|Service Account|Containers:' 
 ```
-The pipeline's stages, in [`Jenkinsfile`](app-repo/Jenkinsfile):
+The pipeline's stages, in [`Jenkinsfile`](app-repo/Jenkinsfile) (each stage's logic is in the platform's [`stage.sh`](../../k8s/pipeline/stage.sh): open it, it is short):
 
 `Checkout → Test → [Secret scan ‖ Chart: lint + ask the API server] → Build image (Kaniko) → Scan image (Trivy) → Record the artifact → Deploy to staging → Approval → Release to production`
 
 Things to notice:
 - **Chart: lint + ask the API server** renders the Helm chart and sends it to the real API server with `--dry-run=server`: *the cluster itself* validates it (including Pod Security) **before** anything is built.
 - **Kaniko** builds the image *without* a Docker daemon or the Docker socket, then pushes it to the registry. (The Compose edition mounted the Docker socket, which is root on the host; here, no.)
-- **Deploy to staging** is `helm upgrade --install --wait`, then `helm test`. If the release is not healthy within 3 minutes, the build log first prints **the evidence** (Helm's message, the Deployment and Pods, the events, why each Pod is unhappy, what the containers printed: [`ci/diagnose.sh`](app-repo/ci/diagnose.sh)) and **only then rolls back**. (A plain `--atomic` rolls back first and deletes the very Pods you would need to look at.)
+- **Deploy to staging** is `helm upgrade --install --wait`, then `helm test`. If the release is not healthy within 3 minutes, the build log first prints **the evidence** (Helm's message, the Deployment and Pods, the events, why each Pod is unhappy, what the containers printed: [`diagnose.sh`](../../k8s/pipeline/diagnose.sh)) and **only then rolls back**. (A plain `--atomic` rolls back first and deletes the very Pods you would need to look at.)
 - At **Approval** the pipeline stops and waits for you. Press **Ship it**.
 
 > ⚠️ **If "Scan image (Trivy)" fails**, open its log. If the message is about **downloading the vulnerability database**, the build Pod cannot reach the internet host the scanner needs (`mirror.gcr.io` / `ghcr.io`): common in locked-down labs. In `enforce` mode that is the gate failing *closed*, which is correct. Run **Build with Parameters** and choose:
@@ -254,7 +256,7 @@ kubectl -n stall-prod get httproute chai -o jsonpath='{range .spec.rules[0].back
 helm list -n stall-prod                                      # both releases exist; only one gets traffic
 ./cicd-observability/projects/project-1-ship-it/scripts/verify.sh 5
 ```
-Use the **ops-\* buttons** (Jenkins → chai-stall → **Operations**) for manual control: `ops-status`, `ops-rollback`, `ops-promote`, `ops-retire` (scale the idle colour to 0). They run [`deploy/k8s-deploy.sh`](app-repo/deploy/k8s-deploy.sh) as the pipeline's own ServiceAccount.
+Use the **ops-\* buttons** (Jenkins → chai-stall → **Operations**) for manual control: `ops-status`, `ops-rollback`, `ops-promote`, `ops-retire` (scale the idle colour to 0). They run [`k8s/pipeline/k8s-deploy.sh`](../../k8s/pipeline/k8s-deploy.sh) as the pipeline's own ServiceAccount.
 
 **Read the script once** (about 190 lines of `helm` and `kubectl`): *every* strategy is a handful of Kubernetes commands you already know. There is no magic in a deployment strategy: it is **which weights, when**.
 
@@ -269,7 +271,7 @@ A pipeline you have never seen *fail* is a pipeline you do not trust. Break it, 
 | D | an image that **runs as root** | `sed -i.bak '/^USER 10001/d' app/Dockerfile && rm app/Dockerfile.bak`, commit, push | *Deploy to staging*: the Pod stays `CreateContainerConfigError: container has runAsNonRoot and image will run as root`; the pipeline prints the evidence and rolls the release back | **S4.5** (the exact one) |
 | E | a **typo in the image name** | in `Jenkinsfile` change `PULL_REPO = 'localhost:30500/chai-stall'` to `'localhost:30500/chai-stal'` | *Deploy to staging*: `ImagePullBackOff`; the log prints the evidence (`Failed to pull image …`), then the release rolls back | **S1.2** |
 | F | a **buggy release** | Phase 5, bad canary | *Release to production*: automatic rollback | S5.4 |
-| G | **too many permissions asked** | run the **ops-state** job after changing `NS` to `kube-system` in `deploy/k8s-deploy.sh` | the API server: `forbidden` for ServiceAccount `jenkins-agent` | **S4.4** / K14 |
+| G | **too many permissions asked** | no commit needed: `kubectl -n kube-system get pods --as=system:serviceaccount:cicd:jenkins-agent` | the API server: `forbidden` for ServiceAccount `jenkins-agent` | **S4.4** / K14 |
 
 **For C, D, E, G do the forensics like an on-call engineer, with `kubectl`:**
 ```bash
@@ -283,7 +285,7 @@ Which gate caught each, and *when*? The earlier a gate catches something, the ch
 ## Phase 7: Extend the factory (20 min)
 Do **at least two**:
 1. **A new dynamic check.** Add `{"name": "no TODOs", "container": "tools", "cmd": "! grep -rn TODO app/app.py"}` to `pipeline-config.json`, push, run **dynamic-checks**: a new parallel stage appears without touching the Jenkinsfile. ([C03](../../C03-job-dsl-dynamic/README.md))
-2. **A new button.** Add `'retire'` is already there; add your own action name to the list in `jenkins/jobs/ops.groovy` *and* a matching `case` in `deploy/k8s-deploy.sh`, push, run **00-seed**: a new job appears.
+2. **A new button.** The `ops-*` buttons come from the list in `jenkins/jobs/ops.groovy`. Add `'analyse'` (an action `k8s-deploy.sh` already has), push, run **00-seed**: a new **ops-analyse** job appears. (Adding a brand-new *action* means changing platform logic: `k8s/pipeline/k8s-deploy.sh` in the course repo, then `k8s-up.sh`.)
 3. **Autoscaling (K13).** Set `autoscaling.enabled: true` in `chart/chai-stall/values-prod.yaml` (needs metrics-server: `./scripts/install-metrics-server.sh`), push, release, then `kubectl -n stall-prod get hpa -w`.
 4. **A drain that cannot hurt (K17).** With `podDisruptionBudget.enabled`, run `kubectl drain <worker> --ignore-daemonsets --delete-emptydir-data` while you `curl` production in a loop: zero failures, because the PDB keeps one Pod up. `kubectl uncordon <worker>` afterwards.
 5. **A NetworkPolicy (K15).** Production already enables the chart's policy. From a throwaway Pod in `default`, `kubectl run t --rm -it --image=curlimages/curl -n default -- curl -m 3 chai-blue.stall-prod`: it is refused. From `stall-staging` or `cicd`: allowed. Why?
@@ -362,7 +364,7 @@ rm -rf ~/chai-stall                  # your repo copy (optional)
 | `forward.sh start` shows `○ jenkins stopped` (or production) | it now prints kubectl's own reason and a hint under each stopped door. Usual causes: the Pod is not Ready yet (`kubectl -n cicd get pods`: `jenkins-0` must be `2/2 Running`), or that local port is taken. Fix it, then run `forward.sh start` again. Logs: `/tmp/z2h-unit4-forward-<name>.log` |
 | In a Killercoda / iximuz lab the URLs do not open | the lab's browser cannot see `127.0.0.1` inside the VM. `forward.sh start --lab` (automatic for user `laborant`) listens on `0.0.0.0`; then expose the port with the lab's port feature (see the box in Phase 2) |
 | Jenkins answers **403 No valid crumb** to *Build Now* behind a proxy / lab | an older install: run `./cicd-observability/scripts/k8s-up.sh` again (it sets `excludeClientIPFromCrumb`; Jenkins reloads its config by itself, or `kubectl -n cicd delete pod jenkins-0`) |
-| a fix was merged into the course repo but your pipeline still behaves the old way | your app repo is a copy: `git pull` in the course repo, then `./cicd-observability/scripts/update-app-repo.sh` |
+| a fix was merged into the course repo but your pipeline still behaves the old way | stage logic is platform-owned: `git pull` in the course repo, then `./cicd-observability/scripts/k8s-up.sh` (it republishes the ConfigMap `z2h-pipeline`; the next build uses it). Only a change to the *shape* of the pipeline (the `Jenkinsfile` itself) needs a new repo: `new-app-repo.sh ~/chai-stall2` |
 | `Deploy to staging` is red | the log now prints **the evidence before rolling back**: scroll to the `──── ` sections (Helm's message, Deployment and Pods, events, ReplicaSet conditions, container logs). `ReplicaSet conditions: FailedCreate … violates PodSecurity` = the namespace refused the Pod (S4.5); `Failed to pull image` = S1.2; `0/1 nodes are available` = S1.1 |
 | `forward.sh` says staging was skipped | normal before the first pipeline run: nothing is deployed in `stall-staging` yet |
 | `new-app-repo.sh`: cannot reach `localhost:3001` | `./cicd-observability/scripts/forward.sh start`; is port 3001 used by something else? |

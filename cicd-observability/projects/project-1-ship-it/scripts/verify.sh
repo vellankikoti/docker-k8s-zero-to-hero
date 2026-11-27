@@ -20,6 +20,9 @@ if phase 1; then echo "Phase 1: the platform runs in the cluster"
     [ "${r:-0}" -ge 1 ] && okc "$d is Ready" || bad "$d is not Ready" "kubectl -n cicd get pods ; kubectl -n cicd describe pod -l app=$d"
   done
   kubectl -n stall-prod get httproute chai >/dev/null 2>&1 && okc "production's Gateway route exists (blue/green and canary need it)" || bad "no HTTPRoute 'chai' in stall-prod" "./cicd-observability/scripts/k8s-up.sh   (without --no-gateway)"
+  kubectl -n cicd get cm z2h-pipeline -o jsonpath='{.data.stage\.sh}' 2>/dev/null | grep -q deploy_staging \
+    && okc "the platform's pipeline scripts are published (ConfigMap z2h-pipeline, mounted at /opt/z2h in every build Pod)" \
+    || bad "the pipeline scripts are not published" "./cicd-observability/scripts/k8s-up.sh"
   can=$(kubectl auth can-i create deployments -n stall-prod --as=system:serviceaccount:cicd:jenkins-agent 2>/dev/null)
   cant=$(kubectl auth can-i create deployments -n kube-system --as=system:serviceaccount:cicd:jenkins-agent 2>/dev/null)
   [ "$can" = yes ] && [ "$cant" = no ] && okc "least privilege: the pipeline may deploy to stall-prod (yes) but not to kube-system (no)" || bad "the pipeline's permissions are wrong (stall-prod: $can, kube-system: $cant)" "kubectl apply -f cicd-observability/k8s/platform/rbac.yaml"

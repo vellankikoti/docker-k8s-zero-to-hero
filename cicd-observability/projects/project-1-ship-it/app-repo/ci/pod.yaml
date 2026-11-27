@@ -13,18 +13,24 @@ spec:
       image: python:3.12-alpine
       command: ["cat"]
       tty: true
+      volumeMounts:
+        - { name: z2h-pipeline, mountPath: /opt/z2h, readOnly: true }
       resources:
         requests: { cpu: 50m, memory: 64Mi }
     - name: tools                          # kubectl + helm + curl + bash
       image: alpine/k8s:1.34.1
       command: ["cat"]
       tty: true
+      volumeMounts:
+        - { name: z2h-pipeline, mountPath: /opt/z2h, readOnly: true }
       resources:
         requests: { cpu: 50m, memory: 96Mi }
     - name: kaniko                         # builds the image WITHOUT a Docker daemon or the Docker socket
       image: gcr.io/kaniko-project/executor:v1.23.2-debug
       command: ["/busybox/cat"]
       tty: true
+      volumeMounts:
+        - { name: z2h-pipeline, mountPath: /opt/z2h, readOnly: true }
       securityContext:
         runAsUser: 0                       # Kaniko needs root inside its own Pod: the "cicd" namespace allows it (baseline)
         runAsGroup: 0
@@ -35,6 +41,15 @@ spec:
       image: aquasec/trivy:0.58.1
       command: ["cat"]
       tty: true
+      volumeMounts:
+        - { name: z2h-pipeline, mountPath: /opt/z2h, readOnly: true }
       resources:
         requests: { cpu: 50m, memory: 128Mi }
         limits: { memory: 1Gi }
+  volumes:
+    # The platform's pipeline scripts (stage.sh, k8s-deploy.sh, ...), delivered by k8s-up.sh. They belong to the PLATFORM,
+    # not to your repo, so a fix reaches everyone with: git pull && ./cicd-observability/scripts/k8s-up.sh
+    - name: z2h-pipeline
+      configMap:
+        name: z2h-pipeline
+        defaultMode: 0755

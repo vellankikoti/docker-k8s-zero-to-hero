@@ -14,7 +14,7 @@ echo "App"
 run "unit tests" bash -c "cd $U/app && python3 -m unittest discover -s tests"
 run "app compiles" python3 -m py_compile $U/app/app.py $U/compose-edition/project-2-see-everything/loadgen/loadgen.py $U/compose-edition/project-2-see-everything/scripts/add-panel.py
 echo "Shell scripts"
-for f in $U/scripts/*.sh $U/compose-edition/*/scripts/*.sh $U/compose-edition/project-1-ship-it/deploy/deploy.sh $U/projects/*/scripts/*.sh $U/projects/project-1-ship-it/app-repo/deploy/*.sh $U/projects/project-1-ship-it/app-repo/ci/*.sh; do [ -e "$f" ] && run "bash -n $f" bash -n "$f"; done
+for f in $U/scripts/*.sh $U/compose-edition/*/scripts/*.sh $U/compose-edition/project-1-ship-it/deploy/deploy.sh $U/projects/*/scripts/*.sh $U/k8s/pipeline/*.sh; do [ -e "$f" ] && run "bash -n $f" bash -n "$f"; done
 echo "YAML / JSON"
 run "yaml files parse" python3 - <<'PY'
 import glob, yaml
@@ -29,6 +29,7 @@ if command -v helm >/dev/null; then
   run "helm lint the chai-stall chart" helm lint $U/k8s/chart/chai-stall --set image.tag=selftest
   run "helm template renders every optional resource" bash -c "helm template t $U/k8s/chart/chai-stall --set image.tag=selftest -f $U/k8s/chart/chai-stall/values-prod.yaml --set serviceMonitor.enabled=true --set autoscaling.enabled=true | grep -c '^kind:' | grep -qE '^[7-9]|^[1-9][0-9]'"
 else echo "  • helm not installed: skipped the chart checks"; fi
+run "stage.sh is valid POSIX sh (dash)" bash -c "command -v dash >/dev/null || exit 0; dash -n $U/k8s/pipeline/stage.sh"
 run "Job DSL files exist" bash -c "ls $U/projects/project-1-ship-it/app-repo/jenkins/jobs/*.groovy >/dev/null"
 if command -v kubectl >/dev/null && kubectl get --raw /readyz >/dev/null 2>&1; then
   run "platform manifests are accepted by your cluster's API server (dry run)" bash -c "for f in $U/k8s/platform/00-namespaces.yaml $U/k8s/platform/rbac.yaml; do kubectl apply --dry-run=server -f \$f >/dev/null || exit 1; done; for f in registry gitea; do kubectl apply --dry-run=server -n cicd -f $U/k8s/platform/\$f.yaml >/dev/null || exit 1; done"
