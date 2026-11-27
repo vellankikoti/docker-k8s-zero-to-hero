@@ -9,7 +9,7 @@
 Output columns and wording can differ a little between kubectl, container runtimes and clusters (kind, minikube, Docker Desktop, playgrounds). The ideas never change.
 
 ## 📖 The story
-It's exam week at Christ University and Meera is deploying the class "Cats vs Dogs" poll. The app reads the port it should listen on from a setting called `PORT`. Late at night, she "makes the config friendlier" and writes `eighty` instead of `8080`. `kubectl` says `created`. A minute later the Pod says `Running`... then `Error`... then `CrashLoopBackOff`. The poll is down, and the Pod seems to restart all by itself.
+It's exam week at the college and Meera is deploying the class "Cats vs Dogs" poll. The app reads the port it should listen on from a setting called `PORT`. Late at night, she "makes the config friendlier" and writes `eighty` instead of `8080`. `kubectl` says `created`. A minute later the Pod says `Running`... then `Error`... then `CrashLoopBackOff`. The poll is down, and the Pod seems to restart all by itself.
 
 ![Diagram: the setup for S1.3, who talks to whom and what your mission is](../../images/k03-context.svg)
 

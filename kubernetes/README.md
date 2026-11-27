@@ -320,7 +320,7 @@ Remove everything when you are done:
 | K18 | [🏆 Capstone: The Showdown Goes to Production](18-capstone/README.md) | 2h | 🔴 |
 | K19 | [🔔 See Everything: Helm, Prometheus & Grafana](19-observability/README.md) (after K13; many scenarios link to it) | 60m | 🟡 |
 | K20 | [🏁 Build Real Things: two 30-minute projects with Jenkins and monitoring](20-projects/README.md) | 70m | 🟡→🔴 |
-| 🏁 | [**The two projects: Canteen Rush** (lab exercises 5 and 6): build them with us, then build your own](projects/README.md) | 2 × 2.5h | 🟡→🔴 |
+| 🏁 | [**The two projects: Canteen Rush** : build them with us, then build your own](projects/README.md) | 2 × 2.5h | 🟡→🔴 |
 | 🔥 | [Break-and-fix scenarios: 30 core in six sections (4 min each), plus 30 exercises, five per section](scenarios/README.md) (separate from the labs above) | 2h + exercises | 🟢→🔴 |
 
 ## How the labs and the scenarios fit together
@@ -338,4 +338,4 @@ Every lab opens its concept with a diagram and gives you a 🏆 challenge to sol
 
 **The story arc:** K04: votes jump between Pods → K05: shared Redis fixes it → K06: ship v2 🦄 mid-vote with 0 failures → K07: swap the whole poll via config → K12: canary 10% of traffic → K13: the Pod wall grows by itself → K18: survive the Gauntlet.
 
-➡️ Next track: [🚦 CI/CD, Automation, Monitoring & Observability](../cicd-observability/README.md) (Unit 4): the same ideas, built from first principles on plain Docker, with two projects.
+➡️ Next track: [🚦 CI/CD, Automation, Monitoring & Observability](../cicd-observability/README.md): the same ideas, built from first principles on plain Docker, with two projects.

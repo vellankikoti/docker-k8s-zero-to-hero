@@ -1,4 +1,4 @@
-# ☕ Chai Stall: small, non-root, with a health check. Used by every Unit 4 lab.
+# ☕ Chai Stall: small, non-root, with a health check. Used by every lab in this track.
 FROM python:3.12-alpine
 ARG APP_VERSION=1.0.0
 ENV APP_VERSION=${APP_VERSION} PYTHONUNBUFFERED=1

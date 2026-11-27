@@ -1,0 +1,41 @@
+global:
+  scrape_interval: 5s          # lab speed. Production: 15s to 60s.
+  evaluation_interval: 5s
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs: [{ targets: ["alertmanager:9093"] }]
+
+scrape_configs:
+  - job_name: prometheus                      # Prometheus watches itself
+    static_configs: [{ targets: ["localhost:9090"] }]
+
+  - job_name: alertmanager
+    static_configs: [{ targets: ["alertmanager:9093"] }]
+
+  - job_name: loki
+    static_configs: [{ targets: ["loki:3100"] }]
+
+  - job_name: chai-stall                      # our application: two instances
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["chai-1:8080"]
+        labels: { instance_name: chai-1 }
+      - targets: ["chai-2:8080"]
+        labels: { instance_name: chai-2 }
+
+  # Optional: the production containers that Ship It's pipeline deploys (see the project README, Phase 7).
+  # Prometheus re-reads the files in targets/ by itself: no restart needed.
+  - job_name: chai-stall-prod
+    file_sd_configs:
+      - files: [/etc/prometheus/targets/*.yml]
+    relabel_configs:
+      - target_label: job              # report them as the same job, so the dashboard and SLO rules include them
+        replacement: chai-stall
+      - source_labels: [__address__]
+        regex: "([^:]+):.*"
+        target_label: instance_name
+        replacement: "$1"

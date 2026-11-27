@@ -62,7 +62,7 @@ git switch -c my-first-ci
 ```
 
 ### Step 3: Read the workflow (10 min)
-Open [`.github/workflows/unit4-ci.yml`](../../.github/workflows/unit4-ci.yml) and match each part to the table:
+Open [`.github/workflows/chai-stall-ci.yml`](../../.github/workflows/chai-stall-ci.yml) and match each part to the table:
 
 | In the file | What it does | Why it matters |
 |---|---|---|
@@ -141,7 +141,7 @@ Add a job next to `test`:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: ./cicd-observability/compose-edition/project-1-ship-it/scripts/secret-scan.sh cicd-observability/app
+      - run: ./cicd-observability/compose-edition/ship-it/scripts/secret-scan.sh cicd-observability/app
 ```
 and add `secret-scan` to the `needs:` list of `build`. Test it: add `KEY = "AKIAABCDEFGHIJKLMNOP"` to `app.py`; the job fails and the build never starts. (Real teams use gitleaks or GitHub's built-in secret scanning, which also checks history.)
 </details>

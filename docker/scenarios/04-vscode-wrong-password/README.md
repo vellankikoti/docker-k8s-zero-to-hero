@@ -7,7 +7,7 @@
 ⬇️ First run downloads about 380 MB (`codercom/code-server:4.145.2`). Do it on good Wi-Fi, before the session.
 
 ## 📖 The story
-It's lab day at Christ University. Your team lead pings the group: *"VS Code is up on the shared machine. The password is in `app.env`: `change-me-123`."* You open the page, type it carefully, twice, and get **Incorrect password**. Your friend tries. Same. The settings file is right there. The password is right. VS Code says it's wrong. Who's lying?
+It's lab day at the college. Your team lead pings the group: *"VS Code is up on the shared machine. The password is in `app.env`: `change-me-123`."* You open the page, type it carefully, twice, and get **Incorrect password**. Your friend tries. Same. The settings file is right there. The password is right. VS Code says it's wrong. Who's lying?
 
 ## 🧠 The concept: why, what, how
 A container image is a *recipe that can't know your secrets*. The same image runs on your laptop, in the college lab and in production, so settings like passwords and database addresses are handed in from outside when the container starts, as **environment variables**.

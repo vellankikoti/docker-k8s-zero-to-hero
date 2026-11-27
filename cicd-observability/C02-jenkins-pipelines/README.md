@@ -45,7 +45,7 @@ In this lab the controller runs in one container and builds on its own built-in 
 
 ### Step 1: Start the factory (about 4 minutes the first time)
 ```bash
-cd cicd-observability/compose-edition/project-1-ship-it
+cd cicd-observability/compose-edition/ship-it
 git switch -c practice                    # a private practice branch: nothing you commit here can touch the shared repo
 cp .env.example .env
 sed -i.bak "s#^REPO_BRANCH=.*#REPO_BRANCH=*/$(git branch --show-current)#" .env && rm .env.bak
@@ -61,7 +61,7 @@ docker compose logs -f jenkins | grep -m1 "fully up and running"        # Ctrl+C
 ```
 Open **http://localhost:8080**, log in with `admin` / `z2h-jenkins`. There is **no setup wizard**: it was configured from a file. Which brings us to...
 
-> **Behind a company proxy?** If the image build fails with `PKIX path building failed`, put your proxy's root certificate in [`jenkins/extra-ca/`](../compose-edition/project-1-ship-it/jenkins/extra-ca/README.md) and build again.
+> **Behind a company proxy?** If the image build fails with `PKIX path building failed`, put your proxy's root certificate in [`jenkins/extra-ca/`](../compose-edition/ship-it/jenkins/extra-ca/README.md) and build again.
 
 ### Step 2: Look inside the controller (10 min)
 ```bash
@@ -75,7 +75,7 @@ In the UI:
 3. **Manage Jenkins → System**: scroll to **Configuration as Code**; the page you are on was produced by a file.
 
 ### Step 3: Configuration as Code: Jenkins from a file (10 min)
-Open [`jenkins/casc/jenkins.yaml`](../compose-edition/project-1-ship-it/jenkins/casc/jenkins.yaml). Read it top to bottom; it has five blocks:
+Open [`jenkins/casc/jenkins.yaml`](../compose-edition/ship-it/jenkins/casc/jenkins.yaml). Read it top to bottom; it has five blocks:
 
 | Block | What it configures | The lesson |
 |---|---|---|
@@ -87,7 +87,7 @@ Open [`jenkins/casc/jenkins.yaml`](../compose-edition/project-1-ship-it/jenkins/
 
 Prove it is real: change a setting **in the file** and watch Jenkins follow.
 ```bash
-sed -i.bak 's/Unit 4 lab Jenkins/Unit 4 lab Jenkins (edited by me)/' jenkins/casc/jenkins.yaml && rm jenkins/casc/jenkins.yaml.bak
+sed -i.bak 's/Chai Stall lab Jenkins/Chai Stall lab Jenkins (edited by me)/' jenkins/casc/jenkins.yaml && rm jenkins/casc/jenkins.yaml.bak
 docker compose up -d --build jenkins
 ```
 Refresh http://localhost:8080 after about a minute: the banner at the top of the dashboard changed. Revert it with `git checkout jenkins/casc/jenkins.yaml`.
@@ -98,7 +98,7 @@ Refresh http://localhost:8080 after about a minute: the banner at the top of the
 In the UI open the job **00-seed → Build Now**, then click the build number → **Console Output**. At the end you will see `GeneratedJob{name='chai-stall/ci-cd'}` and friends. Go back to the dashboard: a **chai-stall** folder now exists with the pipelines inside. (How, exactly, is [C03](../C03-job-dsl-dynamic/README.md).)
 
 ### Step 5: Read the Jenkinsfile (15 min)
-Open [`Jenkinsfile`](../compose-edition/project-1-ship-it/Jenkinsfile). The file *is* the pipeline: Jenkins loads it from Git on every build, so the pipeline changes with the code, in the same pull request.
+Open [`Jenkinsfile`](../compose-edition/ship-it/Jenkinsfile). The file *is* the pipeline: Jenkins loads it from Git on every build, so the pipeline changes with the code, in the same pull request.
 
 ```groovy
 pipeline {                      // 1  declarative pipeline: a strict, validated structure
@@ -147,7 +147,7 @@ Now run it again with **Build with Parameters**, `REQUIRE_APPROVAL` unticked: th
 ### Step 7: Triggers: how a commit starts a build (10 min)
 Jenkins can start a build two ways:
 - **Webhook (push):** Git calls Jenkins the moment you push. Instant, but needs Jenkins reachable from the internet (or a tunnel).
-- **Polling (pull):** Jenkins asks Git "anything new?" on a schedule. Slower, works anywhere. The job uses this: `triggers { scm('H/2 * * * *') }` in [`pipelines.groovy`](../compose-edition/project-1-ship-it/jenkins/jobs/pipelines.groovy) (`H` spreads the load: "about every 2 minutes").
+- **Polling (pull):** Jenkins asks Git "anything new?" on a schedule. Slower, works anywhere. The job uses this: `triggers { scm('H/2 * * * *') }` in [`pipelines.groovy`](../compose-edition/ship-it/jenkins/jobs/pipelines.groovy) (`H` spreads the load: "about every 2 minutes").
 
 Try it. Make a change, commit it **on the branch Jenkins watches** (`git branch --show-current` must match `REPO_BRANCH` in `.env`; if not, run `./scripts/use-branch.sh`), and do nothing else. (A commit needs `git config user.name` and `user.email` once; it needs no GitHub login and nothing is pushed.)
 ```bash
@@ -155,7 +155,7 @@ cd ../../..                                             # repo root
 sed -i.bak 's/"biscuit": 5/"biscuit": 6/' cicd-observability/app/app.py && rm cicd-observability/app/app.py.bak
 git commit -am "price of a biscuit goes up by one rupee"
 ```
-Within ~2 minutes a new build starts **on its own**, because a new commit appeared. It passes (no test checks the biscuit price yet; adding one is a task in [Project 1](../compose-edition/project-1-ship-it/README.md)) and, with the default parameters, waits at **Approval**. The polling log is under the job's **Git Polling Log**.
+Within ~2 minutes a new build starts **on its own**, because a new commit appeared. It passes (no test checks the biscuit price yet; adding one is a task in [Ship It](../compose-edition/ship-it/README.md)) and, with the default parameters, waits at **Approval**. The polling log is under the job's **Git Polling Log**.
 
 ### Step 8: Declarative vs scripted; multibranch; shared libraries (reading)
 **Scripted pipeline** (the older style) is plain Groovy; maximum freedom, no guard rails:
@@ -167,9 +167,9 @@ node {                                    // no "pipeline {}" wrapper
   }
 }
 ```
-Prefer **declarative** for readability and early syntax checking; use `script { }` blocks for the rare complex bit. [`Jenkinsfile.dynamic`](../compose-edition/project-1-ship-it/Jenkinsfile.dynamic) leans on `script` and is a good example of *when* (C03).
+Prefer **declarative** for readability and early syntax checking; use `script { }` blocks for the rare complex bit. [`Jenkinsfile.dynamic`](../compose-edition/ship-it/Jenkinsfile.dynamic) leans on `script` and is a good example of *when* (C03).
 
-**Multibranch pipeline:** instead of one job, Jenkins scans a repository and creates **one pipeline per branch and per pull request**, each from the Jenkinsfile on that branch. New branch → new pipeline, automatically; deleted branch → pipeline removed. This is how most teams run Jenkins. It needs a Git server Jenkins can list (GitHub, GitLab, Gitea), so we keep the lab simple with a plain pipeline job; the Job DSL for it is `multibranchPipelineJob` and looks very similar to [`pipelines.groovy`](../compose-edition/project-1-ship-it/jenkins/jobs/pipelines.groovy).
+**Multibranch pipeline:** instead of one job, Jenkins scans a repository and creates **one pipeline per branch and per pull request**, each from the Jenkinsfile on that branch. New branch → new pipeline, automatically; deleted branch → pipeline removed. This is how most teams run Jenkins. It needs a Git server Jenkins can list (GitHub, GitLab, Gitea), so we keep the lab simple with a plain pipeline job; the Job DSL for it is `multibranchPipelineJob` and looks very similar to [`pipelines.groovy`](../compose-edition/ship-it/jenkins/jobs/pipelines.groovy).
 
 **Shared libraries:** when ten repositories each copy-paste the same 80 lines of deploy stages, put them in one Git repository as a *library* and call them: `@Library('company-pipelines') _` then `deployService(name: 'chai-stall', strategy: 'canary')`. One fix, ten pipelines fixed.
 

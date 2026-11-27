@@ -1,4 +1,4 @@
-# CI/CD & Observability Cheat Sheet (Unit 4)
+# CI/CD & Observability Cheat Sheet
 
 ## Pipelines
 | Need | Jenkins (Jenkinsfile) | GitHub Actions | GitLab CI |
@@ -15,7 +15,7 @@
 
 ## Jenkins in this track
 ```bash
-cd cicd-observability/compose-edition/project-1-ship-it
+cd cicd-observability/compose-edition/ship-it
 cp .env.example .env && docker compose up -d --build     # Jenkins :8080 (admin / z2h-jenkins)
 ./scripts/verify.sh [N]                                   # did I do the phase?
 ./deploy/deploy.sh staging|rolling|bluegreen|canary IMAGE [PCT]

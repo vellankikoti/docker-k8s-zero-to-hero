@@ -7,8 +7,8 @@
 ![Diagram: the idea behind lab K20](images/lab-concept.svg)
 
 ## 🎯 What you will have at the end
-- **Project 1, "Ship it":** a Jenkins that runs *inside your cluster*, builds in throwaway Pods, and **deploys and releases an app into the same cluster**, with an email for every success and failure.
-- **Project 2, "Know before your users do":** a Grafana dashboard of the whole cluster, alerts that watch the app, and an **email that arrives while you are still breaking it**.
+- **"Ship it":** a Jenkins that runs *inside your cluster*, builds in throwaway Pods, and **deploys and releases an app into the same cluster**, with an email for every success and failure.
+- **"Know before your users do":** a Grafana dashboard of the whole cluster, alerts that watch the app, and an **email that arrives while you are still breaking it**.
 
 Everything runs on your laptop. No cloud account, no real email server (a local inbox catches every message).
 
@@ -27,7 +27,7 @@ kubectl port-forward -n mail svc/mailpit 8025:8025                              
 ```
 (Passwords like these are for a lab. Never use fixed passwords for real.) The app deployed here uses `vellankikoti/z2h-api:1.0` and `vellankikoti/z2h-frontend:1.0`, pulled from Docker Hub ([K01 Step 8](../01-cluster-tour/README.md)).
 
-## 🚀 Project 1: Ship it with Jenkins (30 min)
+## 🚀 Ship it with Jenkins (30 min)
 
 **Story.** A team wants "push a button, the app is deployed". Jenkins is the button. The twist: Jenkins runs in the same cluster it deploys to, so its build agents are Pods.
 
@@ -80,7 +80,7 @@ kubectl rollout history deployment/api -n showdown
 ### Step 8: Connect the dots (4 min)
 Say it out loud, in plain words: *"A pipeline is a script in Git. Jenkins runs it in a Pod. The Pod's ServiceAccount decides what it may change. The change is a Deployment rollout."* Every noun in that sentence is a lab you did.
 
-## 📊 Project 2: Know before your users do (30 min)
+## 📊 Know before your users do (30 min)
 
 **Story.** The release is out. Now someone has to notice when it breaks, before the users do.
 

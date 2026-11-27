@@ -1,4 +1,4 @@
-# Unit 4 · Lab C03: the same Chai Stall pipeline on GitLab CI.
+# Lab C03: the same Chai Stall pipeline on GitLab CI.
 # To use it: copy this file to the ROOT of a GitLab project as .gitlab-ci.yml (with the cicd-observability/ folder).
 # No GitLab account? The lab shows how to practise the syntax on your laptop.
 

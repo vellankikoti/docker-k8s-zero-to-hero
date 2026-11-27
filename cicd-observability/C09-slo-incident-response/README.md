@@ -1,6 +1,6 @@
 # Lab C09: SLIs, SLOs, SLAs and Incident Response
 
-> ⏱ 75 min · 🟡→🔴 · Needs: the Project 2 stack running with the dashboard and the inbox open ([C06](../C06-prometheus/README.md) to [C08](../C08-logs-and-traces/README.md)).
+> ⏱ 75 min · 🟡→🔴 · Needs: the See Everything stack running with the dashboard and the inbox open ([C06](../C06-prometheus/README.md) to [C08](../C08-logs-and-traces/README.md)).
 >
 > This lab ends with a **game day**: three incidents, a timeline, a postmortem.
 
@@ -47,7 +47,7 @@ sli:order_errors:ratio_rate5m                  # share of orders failing: 0 when
 1 - sli:order_errors:ratio_rate5m              # availability SLI: 1 (= 100%)
 sli:order_latency_good:ratio_rate5m            # share of orders answered within 250 ms: ~1
 ```
-These are **recording rules** ([`recording.yml`](../compose-edition/project-2-see-everything/prometheus/rules/recording.yml)). They pre-compute the ratio over several windows (1 m, 5 m, 30 m) so alerts and dashboards use one **consistent definition** of "failing". Open the file and read the comment on `or vector(0)`: without it, a perfectly healthy service would show *no data* instead of *zero errors*.
+These are **recording rules** ([`recording.yml`](../compose-edition/see-everything/prometheus/rules/recording.yml)). They pre-compute the ratio over several windows (1 m, 5 m, 30 m) so alerts and dashboards use one **consistent definition** of "failing". Open the file and read the comment on `or vector(0)`: without it, a perfectly healthy service would show *no data* instead of *zero errors*.
 
 ### Step 2: The error budget, with numbers (10 min)
 An SLO of 99% over 30 days means a budget of **1% of orders**. If the stall serves 100,000 orders a month, **1,000 may fail**. Spend them wisely: a bad release that fails 50% of orders burns 1,000 in:
@@ -70,7 +70,7 @@ In the lab the load is 8 orders/second, so the budget disappears faster; the *ra
 | 100 | 7 hours | outage | all hands |
 
 ### Step 3: Burn-rate alerts: read them (5 min)
-Open the second group in [`alerts.yml`](../compose-edition/project-2-see-everything/prometheus/rules/alerts.yml):
+Open the second group in [`alerts.yml`](../compose-edition/see-everything/prometheus/rules/alerts.yml):
 ```yaml
 - alert: OrderSLOFastBurn
   expr: |
@@ -96,13 +96,13 @@ Together: *"it has been bad for a while **and** it is still bad."* That kills bo
 **Compare with the naive alert** "error rate > 1% for 5 minutes": it pages for a 6-minute blip that cost 0.1% of the budget (noise) **and** stays silent for a steady 0.9% that exhausts the budget in the month (a real failure).
 
 ### Step 4: 🔥 The game day (35 min)
-You are **on call** for the stall. A teammate (or the next section of this README) will cause three incidents. **Keep a timeline** as you go: copy [`postmortem-template.md`](../compose-edition/project-2-see-everything/docs/postmortem-template.md) to a scratch file and fill the table in. Have ready: the dashboard, the inbox (http://localhost:8025), the [runbook](../compose-edition/project-2-see-everything/docs/runbook.md).
+You are **on call** for the stall. A teammate (or the next section of this README) will cause three incidents. **Keep a timeline** as you go: copy [`postmortem-template.md`](../compose-edition/see-everything/docs/postmortem-template.md) to a scratch file and fill the table in. Have ready: the dashboard, the inbox (http://localhost:8025), the [runbook](../compose-edition/see-everything/docs/runbook.md).
 
 > Playing alone? Do the incident, **then** read its debrief. The point is practice at *following the runbook under mild pressure*, not guessing the cause.
 
 Start clean:
 ```bash
-cd cicd-observability/compose-edition/project-2-see-everything
+cd cicd-observability/compose-edition/see-everything
 curl -s -X DELETE localhost:8025/api/v1/messages            # empty the inbox
 for p in 8091 8092; do curl -s -X POST "localhost:$p/chaos/reset" >/dev/null; done
 docker compose start chai-1 chai-2 loadgen
@@ -174,7 +174,7 @@ docker compose stop chai-2
 Look at your timeline. For each incident write: **time to detect**, **time to mitigate**, **budget burned**. Which one would have hurt customers most if nobody had been watching?
 
 ### Step 5: Write the postmortem (10 min)
-Pick **Incident 1** and complete [`postmortem-template.md`](../compose-edition/project-2-see-everything/docs/postmortem-template.md). Use real timestamps from the alert emails and Grafana. A worked example of the thinking:
+Pick **Incident 1** and complete [`postmortem-template.md`](../compose-edition/see-everything/docs/postmortem-template.md). Use real timestamps from the alert emails and Grafana. A worked example of the thinking:
 
 > **Summary.** At 14:02 a release set the order failure rate to 50% on both instances. Users saw errors on half of their orders for 9 minutes until the release was rolled back at 14:11.
 > **Impact.** ~1,400 failed orders; **97% of the lab's 30-minute error budget** burned.
@@ -238,4 +238,4 @@ for p in 8091 8092; do curl -s -X POST "localhost:$p/chaos/reset"; done
 docker compose start chai-1 chai-2 loadgen
 ```
 
-➡️ Now do the capstones: [🏁 Project 1: Ship It](../compose-edition/project-1-ship-it/README.md) and [🏁 Project 2: See Everything](../compose-edition/project-2-see-everything/README.md).
+➡️ Now do the capstones: [🏁 Ship It](../compose-edition/ship-it/README.md) and [🏁 See Everything](../compose-edition/see-everything/README.md).

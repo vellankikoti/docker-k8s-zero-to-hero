@@ -1,2 +1,2 @@
-# Packaged charts made by `helm package` in Project 2
+# Packaged charts made by `helm package` in canteen-helm
 *.tgz

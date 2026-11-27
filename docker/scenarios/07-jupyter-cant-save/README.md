@@ -9,7 +9,7 @@
 All commands below run from this scenario's folder (`docker/scenarios/07-jupyter-cant-save`). On Git Bash for Windows, `MSYS_NO_PATHCONV=1` is already set by the scripts; if you type `docker` commands with `/paths` yourself, run `export MSYS_NO_PATHCONV=1` first.
 
 ## 📖 The story
-It's assignment week at Christ University. Lakshmi keeps her notebooks in a Docker volume so nothing is lost when the container is replaced. A nightly backup job shares that volume and sets up a folder called `assignments` in it. Today she writes for two hours, presses Save, and Jupyter says **Permission denied**. The container is up. The disk is not full. Her teammate Ravi says, *"Restart it."* She restarts it. Same error.
+It's assignment week at the college. Lakshmi keeps her notebooks in a Docker volume so nothing is lost when the container is replaced. A nightly backup job shares that volume and sets up a folder called `assignments` in it. Today she writes for two hours, presses Save, and Jupyter says **Permission denied**. The container is up. The disk is not full. Her teammate Ravi says, *"Restart it."* She restarts it. Same error.
 
 ## 🧠 The concept: why, what, how
 Every process in a container runs as a **user**, and Linux knows users by a number, the **UID**. Every file and folder has an **owner** (also a number) and **permission bits** saying who may read and who may write.

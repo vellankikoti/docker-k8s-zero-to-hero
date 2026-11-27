@@ -46,7 +46,7 @@ networkPolicy:
   allowFromNamespaces: [stall-staging, stall-prod, envoy-gateway-system, monitoring, cicd]
 
 serviceMonitor:
-  enabled: false                  # Project 2 turns this on: Prometheus then scrapes /metrics by itself
+  enabled: false                  # See Everything turns this on: Prometheus then scrapes /metrics by itself
   interval: 5s
   labels: { release: kube-prometheus-stack }
 

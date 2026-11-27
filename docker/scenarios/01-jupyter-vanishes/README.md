@@ -6,7 +6,7 @@
 ⬇️ First run downloads about 343 MB (the Jupyter base image). Do it on good Wi-Fi, before the session. Our own image adds only a few KB on top.
 
 ## 📖 The story
-It's the night before the AI-lab submission at Christ University. Your teammate has packed the lab's Jupyter into a small image with a welcome notebook inside, builds it, hits run, and tells you: *"Docker is broken. Jupyter starts and instantly disappears."* The deadline is at 9 AM. The base image is the same one everybody uses. So what died?
+It's the night before the AI-lab submission at the college. Your teammate has packed the lab's Jupyter into a small image with a welcome notebook inside, builds it, hits run, and tells you: *"Docker is broken. Jupyter starts and instantly disappears."* The deadline is at 9 AM. The base image is the same one everybody uses. So what died?
 
 ## 🧠 The concept: why, what, how
 A container is not a little computer that stays on. It is **one process** wrapped in a box, and that process is called **PID 1**. When PID 1 ends, the container ends. Think of a breakfast cafe: the cafe is open exactly as long as the cook is working. If the cook walks out, the shutters come down.
