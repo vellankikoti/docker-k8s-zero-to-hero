@@ -50,7 +50,16 @@ if ! echo "$hooks" | grep -q notifyCommit; then
     "$API/repos/$GITEA_USER/chai-stall/hooks"
 fi
 git remote add origin "http://$GITEA_USER:$GITEA_PASSWORD@localhost:3001/$GITEA_USER/chai-stall.git"
-git push -q -u origin main 2>&1 | tail -1 || true
+# This script makes a FRESH repository, so it replaces whatever an earlier run left on the Git server (your lab Git
+# server only: never the course repo). Without --force a second run would be rejected ("fetch first"), and that
+# used to be hidden: Jenkins then kept building the OLD copy.
+if git ls-remote --exit-code origin main >/dev/null 2>&1; then
+  warn "the Git server already has a copy of chai-stall from an earlier run: replacing it with this fresh one"
+fi
+if ! out=$(git push -q -u --force origin main 2>&1); then
+  echo "$out" >&2
+  die "could not push to the Git server (http://localhost:3001). Is the port-forward alive? ./cicd-observability/scripts/forward.sh status"
+fi
 
 say "Asking Jenkins to read jenkins/jobs/*.groovy and create the jobs (the seed job)"
 for _ in $(seq 1 40); do jenkins_api GET "api/json" 2>/dev/null | grep -q '"00-seed"' && break; sleep 3; done
