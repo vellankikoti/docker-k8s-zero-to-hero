@@ -3,6 +3,8 @@
 > ⏱ about 2.5 hours (the ⭐ steps are a 60-minute live path) · 🔴 Advanced · Needs: any cluster from the Kubernetes labs (Kubernetes **1.30 or newer**), `kubectl`, `helm`, `python3`, `curl`, 3 GB free memory
 > **The goal:** take an app that *works* and make it **scale, survive, stay safe, stay backed up, stay affordable, and be measurable.** This is the project that joins everything: Terraform builds it, the pipeline ships it, Prometheus watches it, Kubernetes runs it.
 
+> ⚠️ **Memory:** see-everything (~2.5 GB) and production-ready (~3 GB) are **not meant to run at the same time on a small lab** (two nodes of ~2 GB each cannot hold both). Run one, `cleanup.sh` it, then the other. If the cluster's `kube-controller-manager` or `kube-scheduler` starts crash-looping, the cluster ran out of memory: every `up.sh` checks for that and tells you what to do.
+
 ## 🧠 The idea, in one Diwali
 Your chai stall works fine on a normal day. Then Diwali comes: **20× the customers**, a cousin accidentally throws away the order book, someone sets the price of chai to ₹1, and the accountant asks why you pay for the stall at 3 a.m. when nobody is there.
 

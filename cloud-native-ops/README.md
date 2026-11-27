@@ -51,7 +51,7 @@ cd docker-k8s-zero-to-hero
 kubectl get nodes                                                          # your cluster answers
 ```
 Terraform is installed for you (no sudo, checksum-verified) by the first `up.sh`. Docker is optional (it runs the policy checker `conftest`; without it the scripts tell you what to do).
-**Cluster size:** Infra Factory about 1.5 GB free memory; Production Ready about 3 GB (add 2.5 GB for See Everything); Kubernetes **1.30+** for the admission policies.
+**Cluster size:** Infra Factory about 1.5 GB free memory; Production Ready about 3 GB; See Everything (CI/CD track) about 2.5 GB. **Run one project at a time on a small lab** (two nodes of ~2 GB cannot hold two of them): `cleanup.sh` one before starting the next. Kubernetes **1.30+** for the admission policies.
 
 ## ✅ Every script checks itself, and cleans up after itself
 | Script | What it does |
