@@ -21,6 +21,7 @@ for a in "$@"; do
 done
 
 need_cluster; need_helm
+cluster_healthy
 say "Cluster: $(kubectl config current-context)"
 NO_SC=0
 kubectl get storageclass 2>/dev/null | grep -q '(default)' || NO_SC=1

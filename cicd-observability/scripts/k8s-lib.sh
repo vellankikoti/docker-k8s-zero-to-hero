@@ -14,6 +14,33 @@ need_cluster() {
   command -v kubectl >/dev/null 2>&1 || die "kubectl is not installed. See 00-setup/README.md"
   kubectl get --raw /readyz >/dev/null 2>&1 || die "Can't reach a cluster. Check: kubectl config current-context"
 }
+# cluster_healthy: is the cluster's OWN brain working? If kube-controller-manager or kube-scheduler is crash-looping, Pods are never
+# scheduled and ResourceQuotas are never computed, so every install "hangs" for a reason that has nothing to do with our scripts.
+# The usual cause on a small lab VM is memory: the heavy monitoring stack landed on the control-plane node and starved it.
+# (Managed clusters and k3s have no such Pods in kube-system: the loop finds nothing and passes.)
+cluster_healthy() {
+  local bad="" c ready mem
+  for c in kube-controller-manager kube-scheduler; do
+    ready=$(kubectl -n kube-system get pods -l "component=$c" -o jsonpath='{range .items[*]}{.status.containerStatuses[0].ready}{"\n"}{end}' 2>/dev/null)
+    [ -z "$ready" ] && continue
+    echo "$ready" | grep -q true || bad="$bad $c"
+  done
+  if [ -n "$bad" ]; then
+    printf '\033[1;31m✖ the cluster'"'"'s own control plane is unhealthy:%s is not Ready.\033[0m\n' "$bad" >&2
+    cat >&2 <<MSG
+  Nothing can work properly until it recovers: Pods are not scheduled and quotas are not computed, so installs would hang.
+  Look:     kubectl -n kube-system get pods ; kubectl top nodes
+  Usual cause: the control-plane node ran out of memory (heavy Pods were placed on it). Free memory, then wait until those Pods are Running:
+     • remove the biggest tenant:   ./cicd-observability/projects/see-everything/scripts/cleanup.sh -y
+     • on a lab with a worker node, keep new workloads off the control plane:
+         kubectl taint nodes <control-plane-node-name> node-role.kubernetes.io/control-plane=:NoSchedule
+     • then:  kubectl -n kube-system get pods -w     (Ctrl+C when kube-controller-manager and kube-scheduler show 1/1 Running)
+MSG
+    exit 1
+  fi
+  mem=$(kubectl top nodes --no-headers 2>/dev/null | awk '{p=$5; gsub("%","",p); if (p+0 >= 90) printf "%s (%s memory) ", $1, $5}')
+  [ -z "$mem" ] || warn "these nodes are almost out of memory: $mem. If an install hangs, free memory first (see-everything/scripts/cleanup.sh)."
+}
 need_helm() {
   command -v helm >/dev/null 2>&1 || die "helm is not installed. macOS: brew install helm · Windows: winget install Helm.Helm · Linux: https://helm.sh/docs/intro/install/"
 }
