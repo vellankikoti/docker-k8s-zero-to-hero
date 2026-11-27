@@ -63,7 +63,12 @@ deploy_slot() {  # deploy_slot SLOT TAG [extra helm args...]
     --set "slot=$slot" --set "image.repository=$IMAGE_REPO" --set "image.tag=$tag" \
     --set-string "chaos.errorRate=$CHAOS_ERROR_RATE" --set-string "chaos.latencyMs=$CHAOS_LATENCY_MS" \
     "$@" $HELM_WAIT || rc=$?
-  if [ $rc -eq 0 ] && [ "$HELM_TEST" = 1 ]; then helm test "$rel" -n "$NS" --logs >/dev/null || rc=$?; fi
+  if [ $rc -eq 0 ] && [ "$HELM_TEST" = 1 ]; then
+    # The exit code is the smoke test's verdict; its output is shown best effort (never "helm test --logs": a log fetch
+    # failure must not turn a passing test into a failed release).
+    helm test "$rel" -n "$NS" >/dev/null || rc=$?
+    kubectl -n "$NS" logs "$rel-smoke" 2>&1 | tail -3 || true
+  fi
   if [ $rc -ne 0 ]; then
     # Evidence first: a rollback deletes the failed Pods and their events.
     printf '\033[1;31m✖ %s is not healthy. Evidence, collected BEFORE rolling back:\033[0m\n' "$rel" >&2

@@ -18,6 +18,12 @@ rules:
   - apiGroups: [""]
     resources: [services, configmaps, pods, pods/log, serviceaccounts, secrets]   # secrets: Helm stores each release in one
     verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [events]                       # read-only: the failure evidence (FailedCreate, FailedScheduling, BackOff...)
+    verbs: [get, list, watch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]               # read-only: does the Service have any ready backends?
+    verbs: [get, list, watch]
   - apiGroups: [apps]
     resources: [deployments, replicasets]
     verbs: [get, list, watch, create, update, patch, delete]
@@ -46,6 +52,12 @@ rules:
   - apiGroups: [""]
     resources: [services, configmaps, pods, pods/log, serviceaccounts, secrets]   # secrets: Helm stores each release in one
     verbs: [get, list, watch, create, update, patch, delete]
+  - apiGroups: [""]
+    resources: [events]                       # read-only: the failure evidence (FailedCreate, FailedScheduling, BackOff...)
+    verbs: [get, list, watch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]               # read-only: does the Service have any ready backends?
+    verbs: [get, list, watch]
   - apiGroups: [apps]
     resources: [deployments, replicasets]
     verbs: [get, list, watch, create, update, patch, delete]
