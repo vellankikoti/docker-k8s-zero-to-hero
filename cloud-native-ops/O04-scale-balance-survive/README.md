@@ -1,6 +1,6 @@
 # O04 · Scale, balance, survive
 
-> ⏱ 60 min · 🟡→🔴 · Needs: [Production Ready](../projects/production-ready/README.md) started (`scripts/up.sh`)
+> ⏱ 60 min · 🟡→🔴 · Needs: [Production Ready](../projects/production-ready/README.md) started (`./cloud-native-ops/projects/production-ready/scripts/up.sh`)
 > **Topics:** auto-scaling and load balancing · reliability engineering principles · deployment automation across environments.
 
 ## 1. The three promises of a reliable service
