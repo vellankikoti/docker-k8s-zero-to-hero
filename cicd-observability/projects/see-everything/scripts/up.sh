@@ -23,6 +23,10 @@ say "2/7 The Chai Stall image, built inside the cluster (skipped when it is alre
 "$COURSE_ROOT/cicd-observability/scripts/ensure-image.sh" "$IMAGE_TAG"
 
 say "3/7 Prometheus, Alertmanager and Grafana (Helm chart kube-prometheus-stack; 3 to 6 minutes the first time)"
+if small_lab; then
+  warn "SMALL LAB: using the small demo sizes for Prometheus and Grafana (2 h of data, smaller limits). A real Prometheus gets several GB. Force the normal sizes: SMALL_LAB=0"
+  export MONITORING_SMALL=1
+fi
 MONITORING_EXTRA_VALUES="$HERE/values-monitoring.yaml" "$COURSE_ROOT/scripts/install-monitoring.sh"
 
 say "4/7 Namespaces, logs (Loki + Alloy) and traces (Jaeger)"

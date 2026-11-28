@@ -16,6 +16,8 @@ VALUES="$HERE/../kubernetes/19-observability/monitoring-values.yml"
 # Optional: a second values file layered on top (the See Everything project adds Loki and Jaeger to Grafana this way).
 EXTRA=()
 [ -n "${MONITORING_EXTRA_VALUES:-}" ] && EXTRA=(-f "$MONITORING_EXTRA_VALUES")
+# Small lab? Smaller requests/limits and shorter retention (set MONITORING_SMALL=1, or let a project's up.sh decide).
+[ "${MONITORING_SMALL:-0}" = 1 ] && EXTRA+=(-f "$HERE/../kubernetes/19-observability/monitoring-values-small.yml")
 
 say()  { printf '\033[1;36m▶ %s\033[0m\n' "$*"; }
 ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }

@@ -71,13 +71,10 @@ for p in json.load(sys.stdin).get("items", []):
 # These are DEMO labs: a shortfall is a WARNING and the install goes on (the control plane is protected by keep_off_control_plane,
 # so a squeezed worker means slow or Pending Pods, never a frozen API server). Want the old hard stop?  STRICT_MEMORY_CHECK=1
 # Skipped when NAMESPACE already exists (a re-run) or SKIP_MEMORY_CHECK=1.
-need_memory() {
-  [ "${SKIP_MEMORY_CHECK:-0}" = 1 ] && return 0
-  if [ -n "${3:-}" ] && kubectl get ns "$3" >/dev/null 2>&1; then return 0; fi
-  local out rc=0
-  out=$( { kubectl get nodes -o json 2>/dev/null; echo '@@'; kubectl top nodes --no-headers 2>/dev/null || true; echo '@@'; kubectl get pods -A -o json 2>/dev/null; } | python3 -c '
+# mem_report → "FREE_MIB|node1 N MiB free of M; ..." for the nodes that may run our Pods (Ready, not NoSchedule). Never fails.
+mem_report() {
+  { kubectl get nodes -o json 2>/dev/null; echo '@@'; kubectl top nodes --no-headers 2>/dev/null || true; echo '@@'; kubectl get pods -A -o json 2>/dev/null; } | python3 -c '
 import json, re, sys
-need = int(sys.argv[1])
 nodes_j, top_t, pods_j = sys.stdin.read().split("@@\n")
 if not nodes_j.strip(): sys.exit(0)
 def mib(q):
@@ -107,8 +104,22 @@ for n in nodes:
     f = alloc - (used[name] if name in used else req.get(name, 0))
     free += max(f, 0); rows.append("%s %d MiB free of %d" % (name, max(f, 0), alloc))
 print("%d|%s" % (free, "; ".join(rows)))
-sys.exit(0 if free >= need else 1)
-' "$1") || rc=$?
+' 2>/dev/null || true
+}
+# small_lab → success if this cluster is SMALL (under ~2.6 GB free for us), so projects pick their smaller demo sizes.
+# Force either way: SMALL_LAB=1 or SMALL_LAB=0.
+small_lab() {
+  case "${SMALL_LAB:-auto}" in 1) return 0 ;; 0) return 1 ;; esac
+  local free; free=$(mem_report | cut -d'|' -f1)
+  [ -n "$free" ] && [ "$free" -lt 2600 ] 2>/dev/null
+}
+
+need_memory() {
+  [ "${SKIP_MEMORY_CHECK:-0}" = 1 ] && return 0
+  if [ -n "${3:-}" ] && kubectl get ns "$3" >/dev/null 2>&1; then return 0; fi
+  local out rc=0
+  out=$(mem_report)
+  [ -z "$out" ] || [ "${out%%|*}" -ge "$1" ] 2>/dev/null || rc=1
   [ "$rc" -ne 0 ] || return 0
   if [ "${STRICT_MEMORY_CHECK:-0}" = 1 ]; then
     printf '\033[1;31m✖ this cluster is too small for %s right now.\033[0m\n' "${2:-this project}" >&2
