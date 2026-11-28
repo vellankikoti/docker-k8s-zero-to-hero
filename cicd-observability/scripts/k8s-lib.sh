@@ -6,6 +6,10 @@ die()  { printf '\033[1;31m✖ %s\033[0m\n' "$*" >&2; exit 1; }
 
 K8S_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../k8s" && pwd)"
 COURSE_ROOT="$(cd "$K8S_DIR/../.." && pwd)"
+# The tag of the Chai Stall image that ensure-image.sh builds for the labs (Terraform's variable image_tag must match: selftest checks).
+# It is NOT 1.0.x on purpose: the Ship It pipeline publishes 1.0.<build number>, and two different images must never share a tag
+# (nodes keep an image they already have under that tag and never look again).
+export CHAI_IMAGE_TAG=${CHAI_IMAGE_TAG:-1.5.0}
 JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD:-z2h-jenkins}
 GITEA_USER=z2h
 GITEA_PASSWORD=z2h-gitea-pass

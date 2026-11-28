@@ -125,7 +125,7 @@ Open Jenkins http://localhost:8081 (admin / `z2h-jenkins`) → **infra-terraform
 | a real change | `TARGET_ENV=dev` `ACTION=plan-and-apply` | plan → policy → **⏸ Approval** → apply → verify |
 | the inspector says no | `IMAGE_TAG=latest` | **Policy check fails**; nothing applied, no approval asked |
 | catch a hand-edit | patch the quota by hand, then `ACTION=drift-check` | the build **fails** and prints the diff |
-| a new version | `IMAGE_TAG=1.0.1` (first: `./cicd-observability/scripts/ensure-image.sh 1.0.1`) | a rolling update through Terraform |
+| a new version | `IMAGE_TAG=1.5.1` (first: `./cicd-observability/scripts/ensure-image.sh 1.5.1`) | a rolling update through Terraform |
 
 Read the pipeline: [`infra-repo/Jenkinsfile`](infra-repo/Jenkinsfile). It runs the **same** `scripts/tf.sh` you ran by hand, in a Pod whose identity is `terraform-runner`: [`platform/00-tfstate-and-runner.yaml`](platform/00-tfstate-and-runner.yaml) shows what it may and may not do (it can build namespaces; it **cannot** touch nodes or read Secrets elsewhere: `verify.sh` proves both). Change something in `~/infra`, `git commit`, `git push`, and run the job again: **change management with a trail**.
 

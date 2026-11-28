@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# ensure-image.sh [TAG]: make sure the Chai Stall image TAG (default 1.0.0) is in the cluster's registry. Safe to run again.
+# ensure-image.sh [TAG]: make sure the Chai Stall image TAG (default $CHAI_IMAGE_TAG, see k8s-lib.sh) is in the cluster's registry. Safe to run again.
 #
 # Why it exists: every project that deploys the Chai Stall needs the image somewhere the nodes can pull it from. This builds it
 # INSIDE the cluster with Kaniko (no Docker, no registry login, no internet except the Python base image) and pushes it to the
 # in-cluster registry that `k8s-up.sh` (or `k8s-up.sh --lite`) installed. If the image is already there, it does nothing.
 #
-#   ./cicd-observability/scripts/ensure-image.sh          builds chai-stall:1.0.0
+#   ./cicd-observability/scripts/ensure-image.sh          builds chai-stall:1.5.0
 #   ./cicd-observability/scripts/ensure-image.sh 1.0.1    builds that tag
 set -euo pipefail
 . "$(dirname "$0")/k8s-lib.sh"
-TAG=${1:-1.0.0}
+TAG=${1:-$CHAI_IMAGE_TAG}
 need_cluster
 kubectl -n cicd get deploy registry >/dev/null 2>&1 || die "there is no image registry in this cluster yet. Run first:  ./cicd-observability/scripts/k8s-up.sh --lite"
 
@@ -35,6 +35,16 @@ spec:
   template:
     spec:
       restartPolicy: Never
+      # A ConfigMap volume shows each file as a SYMLINK into a hidden folder. Kaniko's COPY would copy the symlink, not the file,
+      # and the image would hold a dangling "app.py" (the container then dies with "can't open file '/srv/app.py'"). So first
+      # copy the files for real (cp -L follows the links) into a plain folder, and build from that.
+      initContainers:
+        - name: materialize
+          image: busybox:1.36
+          command: ["sh", "-c", "cp -L /cm/* /src/ && ls -l /src"]
+          volumeMounts:
+            - { name: cm, mountPath: /cm, readOnly: true }
+            - { name: src, mountPath: /src }
       containers:
         - name: kaniko
           image: gcr.io/kaniko-project/executor:v1.23.2
@@ -50,7 +60,8 @@ spec:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { memory: 1Gi }
       volumes:
-        - { name: src, configMap: { name: chai-src } }
+        - { name: cm, configMap: { name: chai-src } }
+        - { name: src, emptyDir: {} }
 YAML
 ) || die "could not create the build Job: $out"
 

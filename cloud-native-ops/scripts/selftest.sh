@@ -27,6 +27,7 @@ for f in files:
 print(len(files), "files")
 PY
 echo "Terraform"
+run "Terraform's default image_tag equals CHAI_IMAGE_TAG (one tag, everywhere)" bash -c "t=\$(sed -n 's/^export CHAI_IMAGE_TAG=\${CHAI_IMAGE_TAG:-\(.*\)}/\1/p' cicd-observability/scripts/k8s-lib.sh); grep -A3 'variable \"image_tag\"' $IR/terraform/variables.tf | grep -q \"default     = \\\"\$t\\\"\""
 if command -v terraform >/dev/null; then
   run "terraform fmt + validate" "$IR/scripts/tf.sh" dev check
 else echo "  • terraform not installed: skipped ($IR/scripts/install-terraform.sh)"; fi

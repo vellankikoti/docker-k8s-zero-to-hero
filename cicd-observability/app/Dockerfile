@@ -5,6 +5,7 @@ ENV APP_VERSION=${APP_VERSION} PYTHONUNBUFFERED=1
 RUN adduser -D -u 10001 app
 WORKDIR /srv
 COPY app.py .
+RUN test -s /srv/app.py        # fail the BUILD, loudly, if app.py is missing or a dangling symlink (a ConfigMap-shaped build context once produced that)
 USER 10001
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=3s --retries=3 \

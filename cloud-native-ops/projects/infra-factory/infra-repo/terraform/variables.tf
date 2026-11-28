@@ -22,7 +22,7 @@ variable "cost_center" {
 variable "image_tag" {
   description = "The Chai Stall image version to run, as built by the image pipeline. Never 'latest'."
   type        = string
-  default     = "1.0.0"
+  default     = "1.5.0"
 }
 
 variable "image_repository" {

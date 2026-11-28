@@ -25,7 +25,7 @@ else
 fi
 
 say "3/5 The Chai Stall image (built inside the cluster the first time)"
-"$COURSE_ROOT/cicd-observability/scripts/ensure-image.sh" 1.0.0
+"$COURSE_ROOT/cicd-observability/scripts/ensure-image.sh"
 
 say "3b/5 Is this cluster's quota controller awake? (Terraform's namespaces carry a ResourceQuota: if the controller never fills it in, the cluster refuses to create Pods there)"
 kubectl create ns z2h-quota-probe >/dev/null 2>&1 || true

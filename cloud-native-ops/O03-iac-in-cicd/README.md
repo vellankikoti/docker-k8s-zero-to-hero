@@ -30,7 +30,7 @@ An image has a life: **build → test → scan → tag → publish → deploy �
 | deploy | **this pipeline**: `IMAGE_TAG` is a parameter, Terraform releases that tag | `latest` is refused by the plan policy **and** the admission policy |
 | roll back | put the old tag back in Git/parameter and run again | a rollback is just another deploy: same checks, same trail |
 | retire | the registry deletes tags older than N builds | keep what production ran in the last 90 days |
-Try it: `./cicd-observability/scripts/ensure-image.sh 1.0.1`, then run the job with `IMAGE_TAG=1.0.1`, watch a rolling update, then run it with `IMAGE_TAG=1.0.0`: that *is* a rollback.
+Try it: `./cicd-observability/scripts/ensure-image.sh 1.5.1`, then run the job with `IMAGE_TAG=1.5.1`, watch a rolling update, then run it with `IMAGE_TAG=1.5.0`: that *is* a rollback.
 
 ## 4. Config and secrets across environments
 **Configuration** (not secret) belongs in Git, per environment: `envs/dev.tfvars`, Helm values. **Secrets** do not. The ladder, from worst to best:
