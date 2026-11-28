@@ -8,6 +8,7 @@
 set -uo pipefail
 . "$(dirname "$0")/lib.sh"
 need_cluster
+trap grafana_close EXIT
 WAIT=0; [ "${1:-}" = "--wait" ] && WAIT=${2:-300}
 DEADLINE=$(( $(date +%s) + WAIT ))
 fail=0
@@ -28,8 +29,8 @@ rules_loaded()  { api "$PROM_SVC/api/v1/rules" | grep -q 'OrderSLOFastBurn' && a
 sli_computed()  { [ -n "$(prom_value 'sli:order_errors:ratio_rate5m')" ]; }
 am_has_email()  { api "$AM_SVC/api/v2/status" | grep -q 'oncall@z2h.local'; }
 mailpit_up()    { api "$MAIL_SVC/api/v1/messages" | grep -q 'messages_count'; }
-dashboard_in()  { grafana_get "/api/search?query=Chai" | grep -q 'Service Overview'; }
-datasources_in(){ local d; d=$(grafana_get "/api/datasources"); echo "$d" | grep -q '"uid":"loki"' && echo "$d" | grep -q '"uid":"jaeger"' && echo "$d" | grep -q '"uid":"prometheus"'; }
+dashboard_in()  { grafana_ready && grafana_get "/api/search?query=Chai" | grep -q 'Service Overview'; }
+datasources_in(){ local d; grafana_ready || return 1; d=$(grafana_get "/api/datasources"); echo "$d" | grep -q '"uid":"loki"' && echo "$d" | grep -q '"uid":"jaeger"' && echo "$d" | grep -q '"uid":"prometheus"'; }
 loki_has_logs() { api "$LOKI_SVC/loki/api/v1/query_range?limit=1&query=$(urlenc '{service="chai-stall"}')&since=10m" | grep -q '"values":\[\['; }
 jaeger_has()    { api "$JAEGER_SVC/api/services" | grep -q 'chai-stall'; }
 dashboard_data(){ gt0 prom_value 'sum(rate(orders_total[1m]))'; }
