@@ -6,7 +6,8 @@
 #   on your laptop       127.0.0.1  (only you can reach them)
 #   in a browser lab     0.0.0.0    (Killercoda, iximuz and similar). Their "open a port / Traffic" feature reaches the VM
 #                                    from OUTSIDE it and cannot see a loopback-only listener. Detected automatically
-#                                    (user "laborant"); force it with --lab, or force local-only with --local.
+#                                    (user "laborant", OR a machine named "controlplane" as in Killercoda's Kubernetes
+#                                    playgrounds, where you are root); force it with --lab, or local-only with --local.
 #                                    Or set FORWARD_ADDRESS=<ip> yourself.
 #
 #   Jenkins    http://localhost:8081   admin / z2h-jenkins
@@ -36,7 +37,15 @@ LAB=0
 case "$MODE" in
   lab) LAB=1 ;;
   local) LAB=0 ;;
-  *) if [ "${USER:-$(id -un 2>/dev/null)}" = laborant ]; then LAB=1; fi ;;      # Killercoda / iximuz run you as "laborant"
+  *) # Killercoda / iximuz run you as "laborant", and Killercoda's Kubernetes playgrounds put you on a host called "controlplane" (as root).
+     # A laptop is neither, so its doors stay on 127.0.0.1: only you can reach them.
+     # Other browser-lab signals are checked too (env markers such as KILLERCODA*, hostnames that say "killercoda"/"iximuz").
+     # Unsure? We stay on 127.0.0.1 (safe for a laptop or a cloud VM) and print the one-line --lab fix below.
+     HN=$(hostname 2>/dev/null || true)
+     case "${USER:-$(id -un 2>/dev/null)}|$HN|$(env 2>/dev/null | grep -ic '^KILLERCODA\|^IXIMUZ' || true)" in
+       laborant\|*|*\|controlplane\|*|*\|*killercoda*\|*|*\|*iximuz*\|*) LAB=1 ;;
+       *\|[1-9]*) LAB=1 ;;
+     esac ;;
 esac
 if [ -n "${FORWARD_ADDRESS:-}" ]; then ADDR=$FORWARD_ADDRESS
 elif [ "$LAB" = 1 ]; then ADDR=0.0.0.0
@@ -99,6 +108,11 @@ case "${1:-status}" in
       start_one app          stall-demo    svc/chai-stall                           8083:80
     fi
     sleep 4; "$0" status
+    if [ "$ADDR" = 127.0.0.1 ]; then
+      echo
+      echo "  Doors are open on this machine only (127.0.0.1). In a browser lab (Killercoda, iximuz) the lab's port link shows"
+      echo "  '502 Bad Gateway' for them: run   $0 stop   then   $0 start $SET --lab"
+    fi
     if [ "$ADDR" = 0.0.0.0 ]; then
       echo
       echo "  Browser lab detected: the doors listen on every interface so your lab can expose them."
