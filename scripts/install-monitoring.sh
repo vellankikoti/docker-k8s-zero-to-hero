@@ -34,14 +34,16 @@ fi
 kubectl apply -f "$HERE/../kubernetes/20-projects/mailpit.yaml" >/dev/null
 
 say "Adding the prometheus-community chart repository"
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts >/dev/null 2>&1 || true
-helm repo update prometheus-community >/dev/null
+_i=0; until curl -fsS -m 30 -o /dev/null https://prometheus-community.github.io/helm-charts/index.yaml 2>/tmp/z2h-chart.err; do
+  _i=$((_i+1)); [ "$_i" -lt 3 ] || die "cannot reach https://prometheus-community.github.io (the Prometheus chart). This lab blocks it or has no internet: $(tail -1 /tmp/z2h-chart.err). Try again in a minute, or use another lab/cluster."
+  sleep 3
+done
 
 # Helm (client-go) prints harmless "watch ended ... http2: client connection lost" lines while it waits. They scare people and
 # mean nothing, so keep helm's messages in a file and show them only if the install really fails.
 HELM_LOG=$(mktemp); trap 'rm -f "$HELM_LOG"' EXIT
 say "Installing kube-prometheus-stack ${CHART_VERSION} into namespace ${NS} (the first time takes a few minutes)"
-helm upgrade --install "$RELEASE" prometheus-community/kube-prometheus-stack \
+helm upgrade --install "$RELEASE" kube-prometheus-stack --repo https://prometheus-community.github.io/helm-charts \
   --version "$CHART_VERSION" --namespace "$NS" --create-namespace \
   -f "$VALUES" ${EXTRA[@]+"${EXTRA[@]}"} --wait --timeout 10m >/dev/null 2>"$HELM_LOG" &
 HELM_PID=$!
