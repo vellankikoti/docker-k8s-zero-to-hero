@@ -8,7 +8,7 @@ set -euo pipefail
 PIPELINE=0; [ "${1:-}" = "--pipeline" ] && PIPELINE=1
 need_cluster
 cluster_healthy
-need_memory 1200 "Infra Factory" tfstate
+need_memory 800 "Infra Factory" tfstate
 
 say "1/5 Terraform on this machine"
 if ! command -v terraform >/dev/null 2>&1; then

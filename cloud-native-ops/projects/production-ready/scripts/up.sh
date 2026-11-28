@@ -12,7 +12,7 @@ set -euo pipefail
 . "$(dirname "$0")/lib.sh"
 need_cluster; need_helm
 cluster_healthy
-need_memory 2500 "Production Ready" chai-ledger
+need_memory 1500 "Production Ready" chai-ledger
 
 say "1/7 Infra Factory basics"
 "$INFRA/scripts/up.sh"
