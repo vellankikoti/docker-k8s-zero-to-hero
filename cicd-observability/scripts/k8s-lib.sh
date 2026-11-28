@@ -131,6 +131,26 @@ need_memory() {
   return 0
 }
 
+# wait_ns_settled NS...: a namespace that is still Terminating (a cleanup that has not finished) cannot receive anything new:
+# "unable to create new content in namespace X because it is being terminated". Wait for it, say what is going on, then stop clearly.
+wait_ns_settled() {
+  local n t=0 left
+  while :; do
+    left=""
+    for n in "$@"; do
+      [ "$(kubectl get ns "$n" -o jsonpath='{.status.phase}' 2>/dev/null || true)" = Terminating ] && left="$left $n"
+    done
+    [ -z "$left" ] && return 0
+    [ "$t" -lt "${NS_WAIT:-300}" ] || break
+    [ "$t" -gt 0 ] || warn "a previous removal is still finishing:$left. Waiting for it (up to ${NS_WAIT:-300} s) instead of failing."
+    sleep 5; t=$((t+5)); [ $((t%30)) -ne 0 ] || printf '   ⏳ still deleting:%s (%s s so far)\n' "$left" "$t" >&2
+  done
+  for n in $left; do
+    warn "$n is stuck deleting: $(kubectl get ns "$n" -o jsonpath='{range .status.conditions[*]}{.message}{"; "}{end}' 2>/dev/null | cut -c1-300)"
+  done
+  die "namespace(s)$left are still being deleted after ${NS_WAIT:-300} s. Look: kubectl get pods,pvc -n <namespace>  (a Pod or volume stuck Terminating blocks it). Then run this again."
+}
+
 # cluster_healthy: is the cluster's OWN brain working? If kube-controller-manager or kube-scheduler is crash-looping, Pods are never
 # scheduled and ResourceQuotas are never computed, so every install "hangs" for a reason that has nothing to do with our scripts.
 # The usual cause on a small lab VM is memory: the heavy monitoring stack landed on the control-plane node and starved it.
