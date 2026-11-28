@@ -70,13 +70,15 @@ hint() {
   esac
 }
 
+STARTED=0
 start_one() {  # start_one NAME NAMESPACE TARGET LOCAL:REMOTE
   local name=$1 ns=$2 target=$3 ports=$4
   if ! kubectl -n "$ns" get "$target" >/dev/null 2>&1; then
     if [ "$name" = staging ]; then warn "staging: nothing deployed there yet. It appears after the first pipeline run; run 'forward.sh start' again then."
-    else warn "$name: $target not found in $ns (skipped). Has k8s-up.sh finished?"; fi
+    else warn "$name: $target is not installed in $ns (skipped)"; fi
     return
   fi
+  STARTED=$((STARTED+1))
   : > "$(logfile "$name")"
   nohup kubectl -n "$ns" port-forward "$target" "$ports" --address "$ADDR" >"$(logfile "$name")" 2>&1 &
   echo "$! $name ${ports%%:*}" >> "$PIDFILE"
@@ -106,6 +108,19 @@ case "${1:-status}" in
       start_one alertmanager monitoring    svc/kube-prometheus-stack-alertmanager   9093:9093
       start_one jaeger       observability svc/jaeger                               16686:16686
       start_one app          stall-demo    svc/chai-stall                           8083:80
+    fi
+    if [ "$STARTED" = 0 ]; then
+      echo
+      printf '\033[1;31m✖ Nothing to open: the project for "%s" is not installed on this cluster (or its install has not finished).\033[0m\n' "$SET" >&2
+      echo "  A browser would show '502 Bad Gateway' because nothing is listening. Install it first, wait for its ✔ lines, then run this again:" >&2
+      case "$SET" in
+        observability) echo "     ./cicd-observability/projects/see-everything/scripts/up.sh" >&2 ;;
+        ship-it)       echo "     ./cicd-observability/scripts/k8s-up.sh" >&2 ;;
+        *)             echo "     ./cicd-observability/projects/see-everything/scripts/up.sh      (for the observability doors)" >&2
+                       echo "     ./cicd-observability/scripts/k8s-up.sh                          (for the Jenkins / Git doors)" >&2 ;;
+      esac
+      echo "  Not sure what is installed?  kubectl get pods -A | grep -E 'monitoring|observability|cicd'" >&2
+      exit 1
     fi
     sleep 4; "$0" status
     if [ "$ADDR" = 127.0.0.1 ]; then

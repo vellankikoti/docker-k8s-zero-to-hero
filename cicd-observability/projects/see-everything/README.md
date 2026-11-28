@@ -45,7 +45,7 @@ It installs a light registry + inbox, builds the Chai Stall image **inside your 
 ```
 If a line shows ✖, it prints the exact `kubectl` command to look with. Run `./cicd-observability/projects/see-everything/scripts/verify.sh --wait 300` to retry. Not sure what a step does? Every script is short and commented: read it.
 
-Then open the doors (they stay open in the background):
+**Only after `up.sh` has finished and printed the ✔ line above**, open the doors (they stay open in the background). If you run this too early it tells you so and stops; nothing is broken, just run `up.sh` first:
 ```bash
 ./cicd-observability/scripts/forward.sh start observability
 ```
