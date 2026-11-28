@@ -74,9 +74,12 @@ echo "$out" | grep -qE "successfully created|already exists" || warn "unexpected
 
 HELM_LOG=$(mktemp); trap 'rm -f "$HELM_LOG"' EXIT      # helm's harmless "watch ended" lines stay out of your terminal unless the install fails
 say "Installing Jenkins ${CHART_VERSION} (3 to 5 minutes the first time: it downloads plugins)"
-helm repo add jenkins https://charts.jenkins.io >/dev/null 2>&1 || true
-helm repo update jenkins >/dev/null
-helm upgrade --install jenkins jenkins/jenkins --version "$CHART_VERSION" -n cicd \
+# Fetch the chart straight from its URL (--repo): no saved repo list to be missing or stale.
+_i=0; until curl -fsS -m 30 -o /dev/null https://charts.jenkins.io/index.yaml 2>"$HELM_LOG"; do
+  _i=$((_i+1)); [ "$_i" -lt 3 ] || die "cannot reach https://charts.jenkins.io (the Jenkins chart). This lab blocks it or has no internet: $(tail -1 "$HELM_LOG"). Try again in a minute, or use another lab/cluster."
+  sleep 3
+done
+helm upgrade --install jenkins jenkins --repo https://charts.jenkins.io --version "$CHART_VERSION" -n cicd \
   -f "$K8S_DIR/platform/jenkins-values.yaml" --wait --timeout 10m >/dev/null 2>"$HELM_LOG" &
 HELM_PID=$!
 progress_while "$HELM_PID" cicd "Jenkins"

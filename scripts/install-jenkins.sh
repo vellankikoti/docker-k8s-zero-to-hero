@@ -24,11 +24,13 @@ kubectl apply -f "$LAB/mailpit.yaml" >/dev/null
 kubectl apply -f "$LAB/rbac.yaml" >/dev/null
 
 say "Adding the Jenkins chart repository"
-helm repo add jenkins https://charts.jenkins.io >/dev/null 2>&1 || true
-helm repo update jenkins >/dev/null
+_i=0; until curl -fsS -m 30 -o /dev/null https://charts.jenkins.io/index.yaml 2>/tmp/z2h-chart.err; do
+  _i=$((_i+1)); [ "$_i" -lt 3 ] || die "cannot reach https://charts.jenkins.io (the Jenkins chart). This lab blocks it or has no internet: $(tail -1 /tmp/z2h-chart.err). Try again in a minute, or use another lab/cluster."
+  sleep 3
+done
 
 say "Installing Jenkins ${CHART_VERSION} into namespace jenkins (3 to 5 minutes the first time)"
-helm upgrade --install jenkins jenkins/jenkins --version "$CHART_VERSION" --namespace jenkins \
+helm upgrade --install jenkins jenkins --repo https://charts.jenkins.io --version "$CHART_VERSION" --namespace jenkins \
   -f "$LAB/jenkins-values.yml" --wait --timeout 10m >/dev/null \
   || die "The install did not finish. Look: kubectl get pods -n jenkins   and   kubectl logs -n jenkins statefulset/jenkins -c jenkins"
 
