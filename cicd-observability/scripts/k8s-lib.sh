@@ -22,23 +22,96 @@ need_cluster() {
   command -v kubectl >/dev/null 2>&1 || die "kubectl is not installed. See 00-setup/README.md"
   kubectl get --raw /readyz >/dev/null 2>&1 || die "Can't reach a cluster. Check: kubectl config current-context"
 }
-# keep_off_control_plane: on a multi-node cluster, ask the scheduler to PREFER worker nodes for our (heavy) Pods.
-# Why: kubeadm labs (Killercoda, iximuz) leave the control-plane node untainted, and a 2 GB control plane that also hosts
-# Prometheus runs out of memory: kube-controller-manager and kube-scheduler then crash-loop and the API server stops answering.
-# A PreferNoSchedule taint is SOFT: nothing is evicted, nothing is blocked (if workers are full, the Pod still fits here),
-# DaemonSets are unaffected, single-node clusters are left alone. Undo: kubectl taint nodes NODE node-role.kubernetes.io/control-plane:PreferNoSchedule-
+# keep_off_control_plane: kubeadm's own rule is "workloads never run on the control plane" (a NoSchedule taint). Many labs
+# (Killercoda, iximuz) remove it, and then a 2 GB control-plane node that also hosts Prometheus runs out of memory:
+# kube-controller-manager and kube-scheduler crash-loop and the API server stops answering. So, on a cluster that HAS a worker node:
+#   1. put the standard NoSchedule taint back on the control-plane node (system Pods and DaemonSets tolerate it);
+#   2. move OUR Pods (monitoring, observability, cicd, mail, stall-*, iac-*, chai-*, tfstate) that already sit there to a worker.
+# If the workers are full, our Pods stay Pending: visible and harmless, instead of a frozen cluster.
+# Single-node clusters are left alone. Undo: kubectl taint nodes NODE node-role.kubernetes.io/control-plane:NoSchedule-
 keep_off_control_plane() {
-  local cps workers n
+  local cps workers n taints
   cps=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o name 2>/dev/null | sed 's|^node/||' || true)
   [ -n "$cps" ] || return 0
   workers=$(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' --no-headers 2>/dev/null | grep -c ' Ready' || true)
   [ "${workers:-0}" -ge 1 ] || return 0
   for n in $cps; do
-    kubectl get node "$n" -o jsonpath='{.spec.taints[*].key}' 2>/dev/null | grep -q 'node-role.kubernetes.io/control-plane' && continue
-    if kubectl taint node "$n" node-role.kubernetes.io/control-plane=:PreferNoSchedule >/dev/null 2>&1; then
-      warn "control-plane node $n had no taint, so heavy Pods could land on it and starve the cluster. Set a SOFT preference for worker nodes (undo: kubectl taint nodes $n node-role.kubernetes.io/control-plane:PreferNoSchedule-)"
+    taints=$(kubectl get node "$n" -o jsonpath='{range .spec.taints[*]}{.key}={.effect}{"\n"}{end}' 2>/dev/null || true)
+    if ! echo "$taints" | grep -q '^node-role.kubernetes.io/control-plane=NoSchedule$'; then
+      kubectl taint node "$n" node-role.kubernetes.io/control-plane:PreferNoSchedule- >/dev/null 2>&1 || true   # drop an older soft taint
+      if kubectl taint node "$n" node-role.kubernetes.io/control-plane=:NoSchedule --overwrite >/dev/null 2>&1; then
+        warn "control-plane node $n had no taint, so heavy Pods could land on it and starve the cluster. Restored the standard one (undo: kubectl taint nodes $n node-role.kubernetes.io/control-plane:NoSchedule-)"
+      fi
     fi
+    # Move our Pods that already sit on the control plane (controller-owned, no volumes pinned to this node) to a worker.
+    kubectl get pods -A -o json --field-selector "spec.nodeName=$n" 2>/dev/null | python3 -c '
+import json, re, sys
+ours = re.compile(r"^(monitoring|observability|cicd|mail|tfstate|stall-.*|iac-.*|chai-.*)$")
+for p in json.load(sys.stdin).get("items", []):
+    m, sp = p["metadata"], p["spec"]
+    owners = [o["kind"] for o in m.get("ownerReferences", [])]
+    if not ours.match(m["namespace"]) or not owners or "DaemonSet" in owners or "Node" in owners: continue
+    if any("persistentVolumeClaim" in v for v in sp.get("volumes", [])): continue
+    print(m["namespace"], m["name"])
+' 2>/dev/null | while read -r ns pod; do
+      kubectl -n "$ns" delete pod "$pod" --wait=false >/dev/null 2>&1 && warn "moving $ns/$pod off the control plane node"
+    done || true
   done
+}
+
+# need_memory MIB WHAT [NAMESPACE]: (skipped if NAMESPACE already exists = a re-run, whose memory is already in use)
+#    stop early, with numbers, if the nodes that may run our Pods do not have enough free memory.
+# (A frozen cluster is a far worse failure than a clear message.) Override at your own risk: SKIP_MEMORY_CHECK=1
+need_memory() {
+  [ "${SKIP_MEMORY_CHECK:-0}" = 1 ] && return 0
+  if [ -n "${3:-}" ] && kubectl get ns "$3" >/dev/null 2>&1; then return 0; fi
+  local out rc=0
+  out=$( { kubectl get nodes -o json 2>/dev/null; echo '@@'; kubectl top nodes --no-headers 2>/dev/null || true; echo '@@'; kubectl get pods -A -o json 2>/dev/null; } | python3 -c '
+import json, re, sys
+need = int(sys.argv[1])
+nodes_j, top_t, pods_j = sys.stdin.read().split("@@\n")
+if not nodes_j.strip(): sys.exit(0)
+def mib(q):
+    m = re.match(r"^([0-9.]+)([A-Za-z]*)$", str(q))
+    if not m: return 0.0
+    v, u = float(m.group(1)), m.group(2)
+    return v * {"": 1/1048576, "Ki": 1/1024, "Mi": 1, "Gi": 1024, "Ti": 1048576, "k": 1000/1048576, "M": 1000000/1048576, "G": 1e9/1048576}.get(u, 0)
+nodes = json.loads(nodes_j)["items"]
+used = {}
+for l in top_t.splitlines():
+    f = l.split()
+    if len(f) >= 5: used[f[0]] = mib(f[3])
+req = {}
+try:
+    for p in json.loads(pods_j)["items"]:
+        n = p["spec"].get("nodeName")
+        if not n or p["status"].get("phase") in ("Succeeded", "Failed"): continue
+        req[n] = req.get(n, 0) + sum(mib(c.get("resources", {}).get("requests", {}).get("memory", "0")) for c in p["spec"]["containers"])
+except Exception: pass
+free, rows = 0.0, []
+for n in nodes:
+    name = n["metadata"]["name"]
+    ready = any(c["type"] == "Ready" and c["status"] == "True" for c in n["status"].get("conditions", []))
+    blocked = any(t.get("effect") == "NoSchedule" for t in n["spec"].get("taints", [])) or n["spec"].get("unschedulable")
+    if not ready or blocked: continue
+    alloc = mib(n["status"]["allocatable"]["memory"])
+    f = alloc - (used[name] if name in used else req.get(name, 0))
+    free += max(f, 0); rows.append("%s %d MiB free of %d" % (name, max(f, 0), alloc))
+print("%d|%s" % (free, "; ".join(rows)))
+sys.exit(0 if free >= need else 1)
+' "$1") || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    printf '\033[1;31m✖ this cluster is too small for %s right now.\033[0m\n' "${2:-this project}" >&2
+    echo "  Needs about $1 MiB free on the nodes that may run it; the cluster has: ${out#*|}  (${out%%|*} MiB in total)" >&2
+    cat >&2 <<MSG
+  What to do (pick one):
+     • remove what you already installed:  ./cicd-observability/projects/see-everything/scripts/cleanup.sh -y
+                                            ./cloud-native-ops/projects/production-ready/scripts/cleanup.sh -y
+     • use a bigger cluster (kind / Docker Desktop with 6 GB, or a lab with more memory per node)
+     • know what you are doing? SKIP_MEMORY_CHECK=1 <the same command>   (the control plane may freeze: do not on a shared lab)
+MSG
+    exit 1
+  fi
 }
 
 # cluster_healthy: is the cluster's OWN brain working? If kube-controller-manager or kube-scheduler is crash-looping, Pods are never
