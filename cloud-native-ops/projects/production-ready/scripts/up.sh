@@ -41,7 +41,9 @@ for e in dev prod; do
     printf '\033[1;31m✖ the evidence, before you do anything else:\033[0m\n'
     kubectl -n "iac-$e" get pods -o wide 2>&1 | head -10
     kubectl -n "iac-$e" get events --sort-by=.lastTimestamp 2>&1 | tail -8
-    kubectl -n "iac-$e" describe pod -l app.kubernetes.io/name=chai-stall 2>&1 | grep -E "Image:|Reason|Message|Failed|Back-off|Events:" | head -10
+    kubectl -n "iac-$e" describe pod -l app.kubernetes.io/name=chai-stall 2>&1 | grep -E "Image:|Reason|Message|Exit Code|OOMKilled|Failed|Back-off|Events:" | head -14
+    printf '\033[1;31m✖ what the container itself printed before it died (the real reason for a CrashLoopBackOff):\033[0m\n'
+    kubectl -n "iac-$e" logs -l app.kubernetes.io/name=chai-stall --previous --tail=25 2>&1 | head -40
     die "terraform apply failed for $e (above). ImagePullBackOff = the image is missing: ./cicd-observability/scripts/ensure-image.sh. Pending = the cluster is full: kubectl describe node"
   fi
   ok "$e is built"
