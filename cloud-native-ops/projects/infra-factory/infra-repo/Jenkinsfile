@@ -81,7 +81,6 @@ pipeline {
           sh '''
             NS=iac-$TARGET_ENV
             kubectl -n "$NS" rollout status deploy/chai-stall --timeout=5m
-            kubectl get --raw "/api/v1/namespaces/$NS/services/chai-stall:80/proxy/api/info"; echo
             kubectl -n "$NS" get deploy,hpa,pdb,resourcequota
           '''
         }

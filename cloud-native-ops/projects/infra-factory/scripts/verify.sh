@@ -35,7 +35,9 @@ for e in "${WANT[@]:-}"; do
   chk "the Helm release chai-stall is deployed" "HELM_DRIVER=configmap helm ls -n $n   (the release records are ConfigMaps)" bash -c "helm status chai-stall -n $n | grep -q 'STATUS: deployed'"
   want=$(kubectl -n "$n" get deploy chai-stall -o jsonpath='{.spec.replicas}' 2>/dev/null)
   chk "all $want Pod(s) are Ready" "kubectl -n $n describe pod | tail -20 ; image reachable? ./cicd-observability/scripts/ensure-image.sh" bash -c "[ -n '$want' ] && [ \"\$(kubectl -n $n get deploy chai-stall -o jsonpath='{.status.readyReplicas}')\" = '$want' ]"
-  chk "the app answers (through the API server's service proxy)" "kubectl -n $n logs deploy/chai-stall" bash -c "kubectl get --raw /api/v1/namespaces/$n/services/chai-stall:80/proxy/readyz | grep -qi ok"
+  # Asked from INSIDE the Pod (kubectl exec), so a NetworkPolicy between the API server and the Pod cannot give a false alarm.
+  # (Our default-deny policy blocks the API server's own proxy on some network plugins: that is the policy working, not the app failing.)
+  chk "the app answers /readyz" "kubectl -n $n logs deploy/chai-stall" bash -c "kubectl -n $n exec deploy/chai-stall -- python -c \"import urllib.request;print(urllib.request.urlopen('http://127.0.0.1:8080/readyz').read().decode())\" | grep -q ready"
   if [ "$e" = prod ]; then
     chk "production has an autoscaler and a PodDisruptionBudget" "kubectl -n $n get hpa,pdb" bash -c "kubectl -n $n get hpa chai-stall && kubectl -n $n get pdb chai-stall"
   fi
