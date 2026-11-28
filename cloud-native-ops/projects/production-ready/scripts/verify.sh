@@ -16,9 +16,9 @@ denied() { ! kubectl "$@" --dry-run=server >/dev/null 2>&1; }
 
 echo "Environments (built by Terraform)"
 envout=$("$INFRA/scripts/verify.sh" dev prod 2>&1 || true)
-echo "$envout" | sed -n '/^Environment:/,$p' | grep -vE '^$|Everything checks|check\(s\) failed'
-fail=$((fail + $(echo "$envout" | grep -c '✖' || true)))
-FAILED="$FAILED$(echo "$envout" | grep '✖' | sed 's/^ */\n   /')"
+echo "$envout" | sed '/check(s) failed/,$d' | grep -vE '^$|Everything checks'      # its own summary would repeat what follows
+fail=$((fail + $(echo "$envout" | sed '/check(s) failed/,$d' | grep -c '^  ✖' || true)))
+FAILED="$FAILED$(echo "$envout" | sed '/check(s) failed/,$d' | grep '^  ✖' | sed 's/^ */\n   /')"
 echo "Autoscaling and load balancing"
 chk "metrics-server answers" "./scripts/install-metrics-server.sh" kubectl get --raw /apis/metrics.k8s.io/v1beta1/nodes
 chk "the autoscaler sees real CPU numbers" "kubectl -n $PROD_NS describe hpa chai-stall | tail -8   (metrics-server needs a minute)" \
