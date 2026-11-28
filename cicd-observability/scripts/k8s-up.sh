@@ -22,7 +22,7 @@ done
 
 need_cluster; need_helm
 cluster_healthy
-[ "$LITE" = 1 ] || need_memory 2500 "the Ship It platform" stall-prod
+[ "$LITE" = 1 ] || need_memory 2000 "the Ship It platform" stall-prod
 say "Cluster: $(kubectl config current-context)"
 NO_SC=0
 kubectl get storageclass 2>/dev/null | grep -q '(default)' || NO_SC=1
