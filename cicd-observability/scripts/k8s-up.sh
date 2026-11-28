@@ -33,6 +33,7 @@ apply_quiet() {
   local out; out=$(kubectl apply "$@" 2>&1) || { echo "$out" >&2; die "kubectl apply failed: see above"; }
 }
 
+wait_ns_settled cicd stall-staging stall-prod       # a removal from a moment ago may still be finishing
 say "Namespaces (with Pod Security) and permissions"
 apply_quiet -f "$K8S_DIR/platform/00-namespaces.yaml" -f "$K8S_DIR/platform/rbac.yaml"
 
