@@ -5,6 +5,13 @@
 
 > ⚠️ **Memory:** see-everything (~2.5 GB) and production-ready (~3 GB) are **not meant to run at the same time on a small lab** (two nodes of ~2 GB each cannot hold both). Run one, `cleanup.sh` it, then the other. If the cluster's `kube-controller-manager` or `kube-scheduler` starts crash-looping, the cluster ran out of memory: every `up.sh` checks for that and tells you what to do.
 
+> 🧭 **Before you begin (30 seconds, same for every project)**
+> 1. Open a terminal **in the course folder** (the one that contains `cicd-observability/` and `cloud-native-ops/`). Check with `ls`. Every command below is written to run from there, so you never need `cd`.
+> 2. `kubectl get nodes` must show every node **Ready**. If it errors, fix your cluster first (kind, minikube, Docker Desktop, Killercoda or iximuz all work).
+> 3. Run **one project at a time**. Finished? Run its `cleanup.sh` before starting another.
+> 4. Every step ends with a ✔ or ✖ line. If you see a ✖, read the `→` hint under it. Still stuck? Copy that line and what is printed after it, and ask.
+> 5. In a browser lab (Killercoda, iximuz) pages like Grafana open through the lab's **port / Traffic** panel, not `localhost`; each step says which port.
+
 ## 🧠 The idea, in one chai stall
 A chai stall owner who can't see his stall is guessing. Give him five things:
 
@@ -42,10 +49,22 @@ Then open the doors (they stay open in the background):
 ```bash
 ./cicd-observability/scripts/forward.sh start observability
 ```
-On Killercoda / iximuz it listens on every interface; use the lab's port feature with 3000, 9090, 9093, 16686, 8025 and 8083.
+The last lines show a table: every door, its port, and ✔ when it answers. On your own computer open `http://localhost:PORT`.
+**In Killercoda / iximuz** the script detects the lab and listens on every interface; then open the lab's port panel (Killercoda: menu → **Traffic / Ports**), type the port and open the link:
+
+| Door | Port |
+|---|---|
+| Grafana (the notice board) | `3000` |
+| Prometheus | `9090` |
+| Alertmanager | `9093` |
+| Jaeger (traces) | `16686` |
+| Inbox (Mailpit) | `8025` |
+| The Chai Stall app | `8083` |
+
+A **502 Bad Gateway** from the lab link means the door is closed or listening on `127.0.0.1` only: run `./cicd-observability/scripts/forward.sh stop` then `./cicd-observability/scripts/forward.sh start observability --lab`.
 
 ## 🔭 Step 1: the notice board ⭐ (5 minutes)
-Open **Grafana** http://localhost:3000 (admin / `z2h-grafana`) → **Dashboards → Chai Stall: Service Overview**. Set refresh **5s**, range **15 minutes**.
+Open **Grafana** http://localhost:3000 (in a lab: port 3000; login admin / `z2h-grafana`) → **Dashboards → Chai Stall: Service Overview**. Set refresh **5s**, range **15 minutes**.
 Read it top to bottom: *Is it up?* → *Traffic, errors, latency* → *The SLO* → *Logs*. Those are the **four golden signals** (traffic, errors, latency, saturation). One look should tell you "fine" or "not fine".
 
 ## 📒 Step 2: ask Prometheus yourself (10 minutes)
@@ -66,12 +85,29 @@ Open [`manifests/20-rules.yaml`](manifests/20-rules.yaml): one `PrometheusRule` 
 ```bash
 ./cicd-observability/projects/see-everything/tests/run.sh      # needs Docker; unit-tests every alert with fake data
 ```
-**Change one rule and watch it arrive.** Make `ChaiStallHighLatency` fire at 200 ms instead of 500 ms:
+**Change one rule and watch it arrive.** The alert `ChaiStallHighLatency` fires when orders are slower than **500 ms**. We will change that to **200 ms** by editing the file, not the cluster.
+
+1. **See what the cluster has now** (look for `> 0.5`):
 ```bash
-sed -i.bak 's/job:order_latency_p95:5m > 0.5/job:order_latency_p95:5m > 0.2/' cicd-observability/projects/see-everything/manifests/20-rules.yaml
-kubectl apply -f cicd-observability/projects/see-everything/manifests/20-rules.yaml
+kubectl -n observability get prometheusrule chai-stall -o yaml | grep "order_latency_p95:5m >"
 ```
-Prometheus → *Status → Rules* shows the new number within a minute. Undo: `mv ...20-rules.yaml.bak ...20-rules.yaml && kubectl apply -f ...`. (That is the whole GitOps idea: **the file is the truth**.)
+2. **Edit the file, then apply it:**
+```bash
+F=cicd-observability/projects/see-everything/manifests/20-rules.yaml
+sed -i.bak 's/job:order_latency_p95:5m > 0.5/job:order_latency_p95:5m > 0.2/' $F
+kubectl apply -f $F
+```
+3. **Check it arrived** (wait ~30 seconds, then run step 1 again; it must now say `> 0.2`). Prometheus picks the file up on its own, which you can see in the browser too:
+   - open Prometheus (http://localhost:9090, or your lab's port 9090 link),
+   - top menu **Alerts**, find `ChaiStallHighLatency`, click it to open: the *expression* now shows `> 0.2`.
+   (Older Prometheus versions: **Status → Rules** instead.)
+4. **Undo:**
+```bash
+mv $F.bak $F && kubectl apply -f $F
+```
+That is the whole GitOps idea: **the file is the truth**; change the file, apply, and the cluster follows. Nothing was restarted.
+
+> Seeing nothing in Prometheus? First check the door is open: `./cicd-observability/scripts/forward.sh status`. Then check the rule exists: `kubectl -n observability get prometheusrule`.
 
 ## 📓 Step 4: logs and traces ⭐ (10 minutes)
 1. Grafana → **Explore** → pick **Loki** → `{service="chai-stall"} | json`. Every line the Pods printed, kept for 48 h, even after a Pod dies.
