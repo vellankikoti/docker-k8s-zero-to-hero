@@ -76,7 +76,10 @@ say "Installing Jenkins ${CHART_VERSION} (3 to 5 minutes the first time: it down
 helm repo add jenkins https://charts.jenkins.io >/dev/null 2>&1 || true
 helm repo update jenkins >/dev/null
 helm upgrade --install jenkins jenkins/jenkins --version "$CHART_VERSION" -n cicd \
-  -f "$K8S_DIR/platform/jenkins-values.yaml" --wait --timeout 10m >/dev/null 2>"$HELM_LOG" \
+  -f "$K8S_DIR/platform/jenkins-values.yaml" --wait --timeout 10m >/dev/null 2>"$HELM_LOG" &
+HELM_PID=$!
+progress_while "$HELM_PID" cicd "Jenkins"
+wait "$HELM_PID" \
   || { grep -v 'reflector.go' "$HELM_LOG" | tail -15 >&2; die "Jenkins did not finish installing. Look: kubectl -n cicd get pods ; kubectl -n cicd logs jenkins-0 -c jenkins | tail -30"; }
 
 if [ "$WITH_GATEWAY" = 1 ]; then

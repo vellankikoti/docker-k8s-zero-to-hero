@@ -65,6 +65,7 @@ spec:
 YAML
 ) || die "could not create the build Job: $out"
 
+waited=0
 for _ in $(seq 1 120); do
   st=$(kubectl -n cicd get job build-chai-image -o jsonpath='{.status.succeeded}/{.status.failed}' 2>/dev/null || echo "/")
   case "$st" in
@@ -73,6 +74,7 @@ for _ in $(seq 1 120); do
          die "the image build failed (the log is above). A pull error for the Python base image means this cluster has no route to Docker Hub." ;;
   esac
   sleep 5
+  [ $(( ++waited % 6 )) -eq 0 ] && printf '   ⏳ building chai-stall:%s: %s so far (Kaniko pulls the Python base image first)\n' "$TAG" "$((waited * 5))s"
 done
 have || die "the build finished but chai-stall:$TAG is not in the registry. Look: kubectl -n cicd logs job/build-chai-image"
 ok "image chai-stall:$TAG is in the registry (nodes pull it as localhost:30500/chai-stall:$TAG)."
