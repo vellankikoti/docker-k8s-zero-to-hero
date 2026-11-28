@@ -11,6 +11,7 @@ CHART_VERSION="93.1.2"            # one place to change when you want a newer re
 RELEASE="kube-prometheus-stack"
 NS="monitoring"
 HERE="$(cd "$(dirname "$0")" && pwd)"
+. "$HERE/progress.sh"
 VALUES="$HERE/../kubernetes/19-observability/monitoring-values.yml"
 # Optional: a second values file layered on top (the See Everything project adds Loki and Jaeger to Grafana this way).
 EXTRA=()
@@ -42,7 +43,10 @@ HELM_LOG=$(mktemp); trap 'rm -f "$HELM_LOG"' EXIT
 say "Installing kube-prometheus-stack ${CHART_VERSION} into namespace ${NS} (the first time takes a few minutes)"
 helm upgrade --install "$RELEASE" prometheus-community/kube-prometheus-stack \
   --version "$CHART_VERSION" --namespace "$NS" --create-namespace \
-  -f "$VALUES" ${EXTRA[@]+"${EXTRA[@]}"} --wait --timeout 10m >/dev/null 2>"$HELM_LOG" \
+  -f "$VALUES" ${EXTRA[@]+"${EXTRA[@]}"} --wait --timeout 10m >/dev/null 2>"$HELM_LOG" &
+HELM_PID=$!
+progress_while "$HELM_PID" "$NS" "Prometheus stack"
+wait "$HELM_PID" \
   || { grep -v 'reflector.go' "$HELM_LOG" | tail -15 >&2; die "The install did not finish. Look: kubectl get pods -n ${NS}   and   helm status ${RELEASE} -n ${NS}"; }
 
 PROM="/api/v1/namespaces/${NS}/services/${RELEASE}-prometheus:9090/proxy/api/v1/query?query=up"
