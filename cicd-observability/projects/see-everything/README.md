@@ -96,7 +96,7 @@ Run **one at a time**, with the dashboard and the inbox (http://localhost:8025) 
 ```bash
 GD=./cicd-observability/projects/see-everything/scripts/gameday.sh
 $GD start errors                  # 1. cause it
-$GD watch OrderSLOFastBurn        # 2. waits until the alert FIRES and its email lands (about 2 minutes)
+$GD watch OrderSLOFastBurn        # 2. waits until the alert FIRES and its email lands (about 4 minutes: it prints progress every 30 s)
 #    now investigate like on call: dashboard → logs → click a trace_id → helm history chai-stall -n stall-demo
 $GD recover                       # 3. one helm upgrade puts everything back; a [RESOLVED] email follows
 ```
