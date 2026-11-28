@@ -23,9 +23,25 @@ prom_value() { api "$PROM_SVC/api/v1/query?query=$(urlenc "$1")" | sed -n 's/.*"
 prom_alert() { api "$PROM_SVC/api/v1/alerts" | grep -o "\"alertname\":\"$1\"[^}]*}[^]]*\"state\":\"$2\"" >/dev/null; }
 mail_count() { api "$MAIL_SVC/api/v1/messages" | sed -n 's/.*"messages_count":\([0-9]*\).*/\1/p' | head -1; }
 mail_has() { api "$MAIL_SVC/api/v1/messages?limit=50" | grep -q "$1"; }
-grafana_get() {  # grafana_get /api/path  (runs inside the Grafana Pod, with the lab password)
-  local auth; auth=$(printf 'admin:%s' "$GRAFANA_PW" | base64 | tr -d '\n')
-  kubectl -n monitoring exec deploy/kube-prometheus-stack-grafana -c grafana -- wget -qO- --header="Authorization: Basic $auth" "http://localhost:3000$1" 2>/dev/null
+# Grafana needs a login, which the API server's service proxy cannot send, and the Grafana image has no wget/curl to run inside.
+# So: open ONE short-lived port-forward on a free local port (kubectl picks it) and call it with curl.
+GF_PF_PID=""; GF_PORT=""
+grafana_open() {
+  local log; log=$(mktemp)
+  kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana :80 --address 127.0.0.1 >"$log" 2>&1 &
+  GF_PF_PID=$!; GF_PORT=""
+  for _ in $(seq 1 15); do
+    GF_PORT=$(sed -n 's/^Forwarding from 127.0.0.1:\([0-9]*\) ->.*/\1/p' "$log" | head -1)
+    [ -n "$GF_PORT" ] && return 0
+    kill -0 "$GF_PF_PID" 2>/dev/null || break
+    sleep 1
+  done
+  GF_PORT=""; return 1
+}
+grafana_ready() { { [ -n "$GF_PORT" ] && kill -0 "$GF_PF_PID" 2>/dev/null; } || grafana_open; }   # call from the main shell, never inside $( )
+grafana_close() { [ -z "$GF_PF_PID" ] || kill "$GF_PF_PID" 2>/dev/null || true; }
+grafana_get() {  # grafana_get /api/path   (after grafana_ready)
+  curl -s -m 10 -u "admin:$GRAFANA_PW" "http://127.0.0.1:$GF_PORT$1"
 }
 
 # release_app [extra helm args]  → (re)install the demo Chai Stall exactly as values-app.yaml says. Used by up.sh and the game day.
