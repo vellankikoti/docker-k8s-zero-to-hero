@@ -63,6 +63,13 @@ flowchart LR
 ---
 
 ## Phase 0: Pre-flight (5 min)
+**First time on this machine?** Get the course (if the folder already exists, git says so and you can ignore that) and go into it. Do NOT use `--depth`: Jenkins needs the full history.
+```bash
+git clone https://github.com/vellankikoti/docker-k8s-zero-to-hero.git
+cd docker-k8s-zero-to-hero
+git pull
+```
+Then check your machine:
 ```bash
 ./cicd-observability/scripts/doctor.sh --k8s
 kubectl config current-context        # must be your THROWAWAY course cluster (kind-… / docker-desktop / minikube)

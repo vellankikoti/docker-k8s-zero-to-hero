@@ -66,6 +66,12 @@ Anyone can follow this track. If you can run `docker run` ([D01](../docker/01-fi
 | Prometheus, Alertmanager and Grafana for application observability | [See Everything](compose-edition/see-everything/README.md) |
 
 ## 🏁 Run the two projects (the commands, in order)
+**First time on this machine?** Get the course (if the folder already exists, git says so and you can ignore that) and go into it. Do NOT use `--depth`: Jenkins needs the full history.
+```bash
+git clone https://github.com/vellankikoti/docker-k8s-zero-to-hero.git
+cd docker-k8s-zero-to-hero
+git pull
+```
 **Rules that prevent most problems:** run **one project at a time** and run its `cleanup` before the next (a small lab cannot hold both) · start from a healthy cluster (`kubectl get nodes` Ready, `kubectl -n kube-system get pods` all Running; every `up.sh` checks this) · `git pull` first · if a line shows ✖, read its `→` hint, and if you are stuck, copy that line and everything after it.
 
 ### Ship It (CI/CD): about 3 GB free

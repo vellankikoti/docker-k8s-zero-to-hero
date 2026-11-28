@@ -36,8 +36,14 @@ Your chai stall works fine on a normal day. Then Diwali comes: **20× the custom
 ```
 
 ## 🧰 Step 0: build it all ⭐ (8 minutes, checks itself)
+**First time on this machine?** Get the course (if the folder already exists, git says so and you can ignore that) and go into it. Do NOT use `--depth`: Jenkins needs the full history.
 ```bash
+git clone https://github.com/vellankikoti/docker-k8s-zero-to-hero.git
+cd docker-k8s-zero-to-hero
 git pull
+```
+Then start it:
+```bash
 ./cloud-native-ops/projects/production-ready/scripts/up.sh
 ```
 It runs the Infra Factory basics, installs `metrics-server`, builds **dev** and **prod** with Terraform (after the policy check), applies the admission policies, creates the ledger with its backup, switches on the night shift, and **ends by checking itself**. You want:

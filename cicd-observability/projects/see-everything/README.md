@@ -34,8 +34,14 @@ You already met these as *kubectl* tricks in the 60 scenarios (`get pods`, `logs
 Everything runs from files in this folder: the rules, the dashboard and the datasources are **code**, applied with `kubectl`, reviewed in git.
 
 ## 🧰 Step 0: start it ⭐ (8 minutes, then it checks itself)
+**First time on this machine?** Get the course (if the folder already exists, git says so and you can ignore that) and go into it. Do NOT use `--depth`: Jenkins needs the full history.
 ```bash
+git clone https://github.com/vellankikoti/docker-k8s-zero-to-hero.git
+cd docker-k8s-zero-to-hero
 git pull
+```
+Then start it:
+```bash
 ./cicd-observability/projects/see-everything/scripts/up.sh
 ```
 It installs a light registry + inbox, builds the Chai Stall image **inside your cluster**, installs Prometheus, Alertmanager and Grafana (the same chart as lab K19), adds Loki, Alloy and Jaeger, publishes the rules and the dashboard, releases the app with Helm, starts a tiny customer, and **ends by running `verify.sh`**. You want to see this at the end:

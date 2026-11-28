@@ -36,8 +36,14 @@ You run one chai stall. It works. Now you want **three**: a practice stall (dev)
 ```
 
 ## 🧰 Step 0: get ready ⭐ (3 minutes)
+**First time on this machine?** Get the course (if the folder already exists, git says so and you can ignore that) and go into it. Do NOT use `--depth`: Jenkins needs the full history.
 ```bash
+git clone https://github.com/vellankikoti/docker-k8s-zero-to-hero.git
+cd docker-k8s-zero-to-hero
 git pull
+```
+Then start it:
+```bash
 ./cloud-native-ops/projects/infra-factory/scripts/up.sh
 ```
 It installs the `terraform` command if you do not have it (no sudo, SHA-256 checked), a light platform (image registry), builds the Chai Stall image **inside your cluster**, and creates the **state store** and the **runner's permissions**. It ends by checking itself. You want all ✔.
