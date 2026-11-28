@@ -67,9 +67,10 @@ for p in json.load(sys.stdin).get("items", []):
   done
 }
 
-# need_memory MIB WHAT [NAMESPACE]: (skipped if NAMESPACE already exists = a re-run, whose memory is already in use)
-#    stop early, with numbers, if the nodes that may run our Pods do not have enough free memory.
-# (A frozen cluster is a far worse failure than a clear message.) Override at your own risk: SKIP_MEMORY_CHECK=1
+# need_memory MIB WHAT [NAMESPACE]: compare the free memory on the nodes that may run our Pods with what the project normally wants.
+# These are DEMO labs: a shortfall is a WARNING and the install goes on (the control plane is protected by keep_off_control_plane,
+# so a squeezed worker means slow or Pending Pods, never a frozen API server). Want the old hard stop?  STRICT_MEMORY_CHECK=1
+# Skipped when NAMESPACE already exists (a re-run) or SKIP_MEMORY_CHECK=1.
 need_memory() {
   [ "${SKIP_MEMORY_CHECK:-0}" = 1 ] && return 0
   if [ -n "${3:-}" ] && kubectl get ns "$3" >/dev/null 2>&1; then return 0; fi
@@ -108,18 +109,15 @@ for n in nodes:
 print("%d|%s" % (free, "; ".join(rows)))
 sys.exit(0 if free >= need else 1)
 ' "$1") || rc=$?
-  if [ "$rc" -ne 0 ]; then
+  [ "$rc" -ne 0 ] || return 0
+  if [ "${STRICT_MEMORY_CHECK:-0}" = 1 ]; then
     printf '\033[1;31m✖ this cluster is too small for %s right now.\033[0m\n' "${2:-this project}" >&2
-    echo "  Needs about $1 MiB free on the nodes that may run it; the cluster has: ${out#*|}  (${out%%|*} MiB in total)" >&2
-    cat >&2 <<MSG
-  What to do (pick one):
-     • remove what you already installed:  ./cicd-observability/projects/see-everything/scripts/cleanup.sh -y
-                                            ./cloud-native-ops/projects/production-ready/scripts/cleanup.sh -y
-     • use a bigger cluster (kind / Docker Desktop with 6 GB, or a lab with more memory per node)
-     • know what you are doing? SKIP_MEMORY_CHECK=1 <the same command>   (the control plane may freeze: do not on a shared lab)
-MSG
+    echo "  Needs about $1 MiB free; the cluster has: ${out#*|}  (${out%%|*} MiB in total). Remove other projects (their cleanup.sh) or use a bigger cluster." >&2
     exit 1
   fi
+  warn "DEMO MODE: ${2:-this project} normally wants about $1 MiB free; this cluster has ${out%%|*} MiB (${out#*|}). Going on anyway: a lab is not production."
+  warn "If a Pod stays Pending or restarts, memory is the reason: free some (cleanup.sh of another project) or use a bigger cluster. Strict mode: STRICT_MEMORY_CHECK=1"
+  return 0
 }
 
 # cluster_healthy: is the cluster's OWN brain working? If kube-controller-manager or kube-scheduler is crash-looping, Pods are never
