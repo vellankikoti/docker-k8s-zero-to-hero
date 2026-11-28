@@ -47,13 +47,9 @@ controller:
             smtpPort: "1025"
             useSsl: false
             charset: "UTF-8"
-      proxy: |
-        jenkins:
-          crumbIssuer:
-            standard:
-              # Browser labs (Killercoda, iximuz) and reverse proxies change the client IP between two requests, and by
-              # default Jenkins ties its CSRF token to that IP: every "Build Now" would fail with 403 "No valid crumb".
-              excludeClientIPFromCrumb: true
+      # (No crumbIssuer setting here on purpose: current Jenkins no longer ties its CSRF token to the client IP, so the
+      # old "excludeClientIPFromCrumb" workaround for browser labs and proxies is not needed, and Jenkins 2.580+ REFUSES TO
+      # START if the setting is present: "Invalid configuration elements for type DefaultCrumbIssuer".)
       security: |
         security:
           globalJobDslSecurityConfiguration:

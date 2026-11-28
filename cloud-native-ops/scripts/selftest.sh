@@ -18,6 +18,9 @@ for f in $IR/scripts/tf.sh $IR/scripts/mk-kubeconfig.sh $IR/scripts/install-terr
 done
 echo "Python tools"
 run "cost and DORA unit tests" bash -c "cd $C/projects/production-ready && python3 -m unittest discover -s tests"
+echo "Jenkins config"
+# Jenkins 2.580+ refuses to START when JCasC contains this removed setting ("Invalid configuration elements for DefaultCrumbIssuer").
+run "Jenkins values do not use the removed excludeClientIPFromCrumb setting" bash -c '! grep -v "^ *#" cicd-observability/k8s/platform/jenkins-values.yaml | grep -q "excludeClientIPFromCrumb"'
 echo "YAML"
 run "yaml files parse" python3 - <<'PY'
 import glob, yaml
