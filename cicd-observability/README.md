@@ -20,6 +20,8 @@ You will build a small delivery factory (Git → Jenkins → registry → stagin
 
 > The ten labs below teach the concepts; the projects below run fully on Kubernetes. The lab steps still use the Compose edition and are being moved over.
 
+> **Just want the commands, in order?** [PROJECTS.md](../PROJECTS.md) has one page for all four projects.
+
 ## 🎯 Who this is for
 Anyone can follow this track. If you can run `docker run` ([D01](../docker/01-first-steps/README.md)) and `git commit` ([G01](../git/01-first-repo/README.md)), you are ready. Never used Compose? Skim [D08](../docker/08-compose/README.md) first (20 minutes).
 

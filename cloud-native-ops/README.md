@@ -13,6 +13,8 @@ You will build whole environments with **Terraform**, ship them with a **pipelin
   🕵️ four real company disasters, and the one lock that would have saved each
 ```
 
+> **Just want the commands, in order?** [PROJECTS.md](../PROJECTS.md) has one page for all four projects.
+
 ## 🎯 Who this is for
 You can run `kubectl apply` ([K04](../kubernetes/04-deployments/README.md)) and have seen a pipeline ([Ship It](../cicd-observability/projects/ship-it/README.md)). Never used Terraform? Perfect: [O01](O01-terraform-first-steps/README.md) starts from zero in 40 minutes.
 
