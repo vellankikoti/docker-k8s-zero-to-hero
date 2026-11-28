@@ -28,14 +28,22 @@ need_cluster() {
 #   1. put the standard NoSchedule taint back on the control-plane node (system Pods and DaemonSets tolerate it);
 #   2. move OUR Pods (monitoring, observability, cicd, mail, stall-*, iac-*, chai-*, tfstate) that already sit there to a worker.
 # If the workers are full, our Pods stay Pending: visible and harmless, instead of a frozen cluster.
-# Single-node clusters are left alone. Undo: kubectl taint nodes NODE node-role.kubernetes.io/control-plane:NoSchedule-
+# Only small (< 4 GiB) control planes on multi-node clusters are touched; single-node and big clusters are left alone. Opt out: KEEP_CONTROL_PLANE_AS_IS=1. Undo: kubectl taint nodes NODE node-role.kubernetes.io/control-plane:NoSchedule-
 keep_off_control_plane() {
-  local cps workers n taints
+  local cps workers n taints mem
   cps=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o name 2>/dev/null | sed 's|^node/||' || true)
   [ -n "$cps" ] || return 0
   workers=$(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' --no-headers 2>/dev/null | grep -c ' Ready' || true)
   [ "${workers:-0}" -ge 1 ] || return 0
+  [ "${KEEP_CONTROL_PLANE_AS_IS:-0}" = 1 ] && return 0          # opt out: leave my cluster exactly as it is
   for n in $cps; do
+    # Only a SMALL control plane needs protecting (under 4 GiB). Big ones are the owner's choice: never touch them.
+    mem=$(kubectl get node "$n" -o jsonpath='{.status.allocatable.memory}' 2>/dev/null || true)
+    case "$mem" in
+      *Ki) [ "${mem%Ki}" -ge 4194304 ] 2>/dev/null && continue ;;
+      *Mi) [ "${mem%Mi}" -ge 4096 ] 2>/dev/null && continue ;;
+      *Gi) [ "${mem%Gi}" -ge 4 ] 2>/dev/null && continue ;;
+    esac
     taints=$(kubectl get node "$n" -o jsonpath='{range .spec.taints[*]}{.key}={.effect}{"\n"}{end}' 2>/dev/null || true)
     if ! echo "$taints" | grep -q '^node-role.kubernetes.io/control-plane=NoSchedule$'; then
       kubectl taint node "$n" node-role.kubernetes.io/control-plane:PreferNoSchedule- >/dev/null 2>&1 || true   # drop an older soft taint
