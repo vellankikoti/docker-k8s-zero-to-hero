@@ -1,0 +1,26 @@
+# Small-lab profile for kube-prometheus-stack (about 2 GB nodes): used when MONITORING_SMALL=1 (set automatically by the
+# See Everything up.sh on a small lab). DEMO SIZES: real Prometheus servers get several GB and keep weeks of data, not hours.
+# Layered on top of monitoring-values.yml.
+prometheus:
+  prometheusSpec:
+    retention: 2h
+    resources:
+      requests: { cpu: 100m, memory: 200Mi }
+      limits: { memory: 700Mi }
+grafana:
+  resources:
+    requests: { cpu: 50m, memory: 96Mi }
+    limits: { memory: 384Mi }
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: { cpu: 10m, memory: 32Mi }
+      limits: { memory: 128Mi }
+prometheusOperator:
+  resources:
+    requests: { cpu: 20m, memory: 48Mi }
+    limits: { memory: 192Mi }
+kube-state-metrics:
+  resources:
+    requests: { cpu: 10m, memory: 32Mi }
+    limits: { memory: 128Mi }

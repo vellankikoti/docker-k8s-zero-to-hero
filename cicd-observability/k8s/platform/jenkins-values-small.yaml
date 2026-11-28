@@ -1,0 +1,9 @@
+# Small-lab profile for Jenkins (about 2 GB nodes): used automatically by scripts/k8s-up.sh when the nodes that may run
+# our Pods have little free memory. DEMO SIZES: a real Jenkins controller gets 2 GB+ of heap and its own node.
+# Layered on top of jenkins-values.yaml (this file only changes the sizes).
+controller:
+  resources:
+    requests: { cpu: 100m, memory: 384Mi }
+    limits: { memory: 1024Mi }
+  # Cap the Java heap well under the container limit, so the JVM cannot grow into an out-of-memory kill.
+  javaOpts: "-Xms128m -Xmx512m -XX:MaxMetaspaceSize=192m"

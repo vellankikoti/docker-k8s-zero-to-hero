@@ -79,8 +79,13 @@ _i=0; until curl -fsS -m 30 -o /dev/null https://charts.jenkins.io/index.yaml 2>
   _i=$((_i+1)); [ "$_i" -lt 3 ] || die "cannot reach https://charts.jenkins.io (the Jenkins chart). This lab blocks it or has no internet: $(tail -1 "$HELM_LOG"). Try again in a minute, or use another lab/cluster."
   sleep 3
 done
+JENKINS_SIZES=()
+if small_lab; then
+  warn "SMALL LAB: using the small demo sizes for Jenkins (Java heap capped at 512 MB). Real Jenkins controllers get 2 GB+ and their own node. Force the normal sizes: SMALL_LAB=0"
+  JENKINS_SIZES=(-f "$K8S_DIR/platform/jenkins-values-small.yaml")
+fi
 helm upgrade --install jenkins jenkins --repo https://charts.jenkins.io --version "$CHART_VERSION" -n cicd \
-  -f "$K8S_DIR/platform/jenkins-values.yaml" --wait --timeout 10m >/dev/null 2>"$HELM_LOG" &
+  -f "$K8S_DIR/platform/jenkins-values.yaml" ${JENKINS_SIZES[@]+"${JENKINS_SIZES[@]}"} --wait --timeout 10m >/dev/null 2>"$HELM_LOG" &
 HELM_PID=$!
 progress_while "$HELM_PID" cicd "Jenkins"
 wait "$HELM_PID" \

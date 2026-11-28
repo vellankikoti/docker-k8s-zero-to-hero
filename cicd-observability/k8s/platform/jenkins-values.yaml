@@ -18,6 +18,12 @@ controller:
     - build-timeout
   # One executor on the controller ONLY so the lab's seed job can run. Production: 0, and the seed runs on an agent.
   numExecutors: 1
+  # Be patient while Jenkins starts. The chart's default is 12 tries x 10 s = 120 s; on a busy or small node the plugin download
+  # plus first start takes longer, Kubernetes then kills the container and it restarts in a loop (never becomes Ready).
+  # 60 x 10 s = 10 minutes costs nothing on a fast cluster (the probe passes the moment Jenkins answers).
+  probes:
+    startupProbe:
+      failureThreshold: 60
   serviceType: ClusterIP
   resources:
     requests: { cpu: 100m, memory: 512Mi }

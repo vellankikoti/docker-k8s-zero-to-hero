@@ -11,7 +11,7 @@
 > 3. Run **one project at a time**. Finished? Run its `cleanup.sh` before starting another.
 > 4. Every step ends with a ✔ or ✖ line. If you see a ✖, read the `→` hint under it. Still stuck? Copy that line and what is printed after it, and ask.
 > 5. In a browser lab (Killercoda, iximuz) pages like Grafana open through the lab's **port / Traffic** panel, not `localhost`; each step says which port.
-> 6. 📝 **This is a demo, not production.** On a small lab the scripts print a *DEMO MODE* warning about memory and carry on, with small resource requests chosen for learning. A real cluster would give each of these tools more room (for example Jenkins about 2 GB, Prometheus several GB) and would run them on separate nodes. If a Pod stays Pending or keeps restarting, memory is the reason: free some or use a bigger cluster.
+> 6. 📝 **This is a demo, not production.** On a small lab (under about 2.6 GB free) the scripts print a *DEMO MODE* / *SMALL LAB* notice and switch to **smaller demo sizes** by themselves (for example Jenkins with a 512 MB Java heap, Prometheus keeping 2 hours of data); force the normal sizes with `SMALL_LAB=0`. A real cluster would give each of these tools more room (for example Jenkins about 2 GB, Prometheus several GB) and would run them on separate nodes. If a Pod stays Pending or keeps restarting, memory is the reason: free some or use a bigger cluster.
 
 ## 🧠 The idea, in one Diwali
 Your chai stall works fine on a normal day. Then Diwali comes: **20× the customers**, a cousin accidentally throws away the order book, someone sets the price of chai to ₹1, and the accountant asks why you pay for the stall at 3 a.m. when nobody is there.
