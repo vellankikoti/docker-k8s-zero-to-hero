@@ -57,7 +57,7 @@ if [ "$PIPELINE" = 1 ]; then
 else
   say "5/5 Checking"
 fi
-"$HERE/scripts/verify.sh" || die "something is not ready: read the ✖ lines above"
+"$HERE/scripts/verify.sh" --platform || die "something is not ready: read the ✖ lines above"
 
 cat <<MSG
 
