@@ -20,6 +20,7 @@ say()  { printf '\033[1;36m▶ %s\033[0m\n' "$*"; }
 ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
 die()  { printf '\033[1;31m✖ %s\033[0m\n' "$*" >&2; exit 1; }
 case "$ENV" in dev|staging|prod) ;; *) sed -n '2,15p' "$0"; die "ENV must be dev, staging or prod";; esac
+case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) PATH="$HOME/.local/bin:$PATH" ;; esac; export PATH   # where install-terraform.sh puts it
 command -v terraform >/dev/null 2>&1 || die "terraform is not installed. One command:  $HERE/scripts/install-terraform.sh"
 
 KC=${KUBECONFIG_PATH:-${KUBECONFIG:-$HOME/.kube/config}}

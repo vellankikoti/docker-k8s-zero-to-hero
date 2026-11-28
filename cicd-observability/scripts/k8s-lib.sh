@@ -1,4 +1,7 @@
 # Shared helpers for the Kubernetes scripts. Source it:  . "$(dirname "$0")/k8s-lib.sh"
+# Tools we install for you without sudo (terraform) live in ~/.local/bin. A new shell may not have that folder on its PATH yet:
+# every script adds it for itself, so "installed but not found" can never happen.
+case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) PATH="$HOME/.local/bin:$PATH" ;; esac; export PATH
 say()  { printf '\033[1;36m▶ %s\033[0m\n' "$*"; }
 ok()   { printf '\033[1;32m✔ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m• %s\033[0m\n' "$*"; }
