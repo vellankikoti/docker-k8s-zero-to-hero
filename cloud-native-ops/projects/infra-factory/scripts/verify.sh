@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # verify.sh [ENV...] [--drift]: is the infrastructure factory set up, and does each environment match what the code says?
 #   verify.sh              check the platform (state store, runner permissions, terraform, image) and every environment that exists
+#   verify.sh --platform   only the platform (what up.sh sets up). Environments are checked after YOU build them
 #   verify.sh dev prod     check just these
 #   verify.sh dev --drift  also run a plan: any difference between code and cluster is reported
 # Changes nothing.
 set -uo pipefail
 . "$(dirname "$0")/lib.sh"
 need_cluster
-WANT=(); DRIFT=0
-for a in "$@"; do case "$a" in --drift) DRIFT=1 ;; dev|staging|prod) WANT+=("$a") ;; *) die "unknown argument: $a" ;; esac; done
+WANT=(); DRIFT=0; PLATFORM_ONLY=0
+for a in "$@"; do case "$a" in --drift) DRIFT=1 ;; --platform) PLATFORM_ONLY=1 ;; dev|staging|prod) WANT+=("$a") ;; *) die "unknown argument: $a" ;; esac; done
 fail=0
 chk() { local label=$1 hint=$2; shift 2; if "$@" >/dev/null 2>&1; then printf '  \033[1;32m✔\033[0m %s\n' "$label"; else printf '  \033[1;31m✖\033[0m %s\n      → %s\n' "$label" "$hint"; fail=$((fail+1)); fi; }
 can() { [ "$(kubectl auth can-i "$@" --as=system:serviceaccount:cicd:terraform-runner 2>/dev/null)" = yes ]; }
@@ -21,6 +22,7 @@ chk "...but may NOT touch nodes (least privilege)" "the ClusterRole terraform-ru
 chk "...and may NOT read Secrets in kube-system" "the ClusterRole terraform-runner is too wide" bash -c '! kubectl auth can-i get secrets -n kube-system --as=system:serviceaccount:cicd:terraform-runner | grep -q yes'
 chk "the Chai Stall image is in the registry" "./cicd-observability/scripts/ensure-image.sh" bash -c "kubectl -n cicd exec deploy/registry -- wget -qO- http://localhost:5000/v2/chai-stall/tags/list | grep -q 1.0.0"
 
+[ "$PLATFORM_ONLY" = 1 ] && ENVS=""
 [ ${#WANT[@]} -eq 0 ] && for e in $ENVS; do kubectl get ns "$(ns_of $e)" >/dev/null 2>&1 && WANT+=("$e"); done
 for e in "${WANT[@]:-}"; do
   [ -n "$e" ] || continue
