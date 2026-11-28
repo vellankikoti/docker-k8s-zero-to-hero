@@ -12,6 +12,7 @@
 > 3. Run **one project at a time**. Finished? Run its `cleanup.sh` before starting another.
 > 4. Every step ends with a ✔ or ✖ line. If you see a ✖, read the `→` hint under it. Still stuck? Copy that line and what is printed after it, and ask.
 > 5. In a browser lab (Killercoda, iximuz) pages like Grafana open through the lab's **port / Traffic** panel, not `localhost`; each step says which port.
+> 6. 📝 **This is a demo, not production.** On a small lab the scripts print a *DEMO MODE* warning about memory and carry on, with small resource requests chosen for learning. A real cluster would give each of these tools more room (for example Jenkins about 2 GB, Prometheus several GB) and would run them on separate nodes. If a Pod stays Pending or keeps restarting, memory is the reason: free some or use a bigger cluster.
 
 ## 🎯 The mission
 The Chai Stall is deployed by an engineer typing `kubectl apply`. It broke production twice last month. **Build the factory that ships it, inside your cluster**: a commit is tested, scanned, built into an image, published, deployed to staging, approved by a human, and released to production with a strategy that **rolls itself back**. Then prove that every gate stops a different kind of bad change.
