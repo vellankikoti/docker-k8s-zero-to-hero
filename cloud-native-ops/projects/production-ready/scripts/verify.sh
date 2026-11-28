@@ -6,10 +6,10 @@ set -uo pipefail
 need_cluster
 WAIT=0; FULL=0
 while [ $# -gt 0 ]; do case "$1" in --wait) WAIT=${2:-120}; shift 2 ;; --full) FULL=1; shift ;; *) die "unknown option: $1" ;; esac; done
-DEADLINE=$(( $(date +%s) + WAIT )); fail=0
+DEADLINE=$(( $(date +%s) + WAIT )); fail=0; FAILED=""
 chk() { local label=$1 hint=$2; shift 2
   while ! "$@" >/dev/null 2>&1; do
-    if [ "$(date +%s)" -ge "$DEADLINE" ]; then printf '  \033[1;31m✖\033[0m %s\n      → %s\n' "$label" "$hint"; fail=$((fail+1)); return; fi; sleep 5
+    if [ "$(date +%s)" -ge "$DEADLINE" ]; then printf '  \033[1;31m✖\033[0m %s\n      → %s\n' "$label" "$hint"; fail=$((fail+1)); FAILED="$FAILED\n   ✖ $label"; return; fi; sleep 5
   done; printf '  \033[1;32m✔\033[0m %s\n' "$label"; }
 can_not() { [ "$(kubectl auth can-i "$@" 2>/dev/null)" != yes ]; }
 denied() { ! kubectl "$@" --dry-run=server >/dev/null 2>&1; }
@@ -18,6 +18,7 @@ echo "Environments (built by Terraform)"
 envout=$("$INFRA/scripts/verify.sh" dev prod 2>&1 || true)
 echo "$envout" | sed -n '/^Environment:/,$p' | grep -vE '^$|Everything checks|check\(s\) failed'
 fail=$((fail + $(echo "$envout" | grep -c '✖' || true)))
+FAILED="$FAILED$(echo "$envout" | grep '✖' | sed 's/^ */\n   /')"
 echo "Autoscaling and load balancing"
 chk "metrics-server answers" "./scripts/install-metrics-server.sh" kubectl get --raw /apis/metrics.k8s.io/v1beta1/nodes
 chk "the autoscaler sees real CPU numbers" "kubectl -n $PROD_NS describe hpa chai-stall | tail -8   (metrics-server needs a minute)" \
@@ -42,8 +43,10 @@ chk "the cost report runs and names a cost centre" "$HERE/scripts/cost-report.py
 chk "the DORA report runs" "$HERE/scripts/dora.py --ns $PROD_NS" "$HERE/scripts/dora.py" --ns "$PROD_NS"
 if [ "$FULL" = 1 ]; then
   echo "Drills (they break things on purpose)"
-  "$HERE/scripts/gameday.sh" all || fail=$((fail+1))
+  "$HERE/scripts/gameday.sh" all || { fail=$((fail+1)); FAILED="$FAILED\n   ✖ a drill failed (its ✖ lines are above)"; }
 fi
 echo
 if [ "$fail" -eq 0 ]; then ok "Production-ready: scaled, balanced, protected, backed up, and measured."; exit 0; fi
-printf '\033[1;31m%d check(s) failed.\033[0m\n' "$fail"; exit 1
+printf '\033[1;31m%d check(s) failed:\033[0m' "$fail"; printf '%b\n' "$FAILED"
+echo "   Some checks need a minute after a change (the autoscaler's CPU numbers, new endpoints): run this again before digging."
+exit 1

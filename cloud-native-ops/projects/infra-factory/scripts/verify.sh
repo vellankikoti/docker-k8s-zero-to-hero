@@ -10,8 +10,8 @@ set -uo pipefail
 need_cluster
 WANT=(); DRIFT=0; PLATFORM_ONLY=0
 for a in "$@"; do case "$a" in --drift) DRIFT=1 ;; --platform) PLATFORM_ONLY=1 ;; dev|staging|prod) WANT+=("$a") ;; *) die "unknown argument: $a" ;; esac; done
-fail=0
-chk() { local label=$1 hint=$2; shift 2; if "$@" >/dev/null 2>&1; then printf '  \033[1;32m✔\033[0m %s\n' "$label"; else printf '  \033[1;31m✖\033[0m %s\n      → %s\n' "$label" "$hint"; fail=$((fail+1)); fi; }
+fail=0; FAILED=""
+chk() { local label=$1 hint=$2; shift 2; if "$@" >/dev/null 2>&1; then printf '  \033[1;32m✔\033[0m %s\n' "$label"; else printf '  \033[1;31m✖\033[0m %s\n      → %s\n' "$label" "$hint"; fail=$((fail+1)); FAILED="$FAILED\n   ✖ $label"; fi; }
 can() { [ "$(kubectl auth can-i "$@" --as=system:serviceaccount:cicd:terraform-runner 2>/dev/null)" = yes ]; }
 
 echo "Platform"
@@ -47,4 +47,4 @@ for e in "${WANT[@]:-}"; do
 done
 echo
 if [ "$fail" -eq 0 ]; then ok "Everything checks out."; exit 0; fi
-printf '\033[1;31m%d check(s) failed.\033[0m\n' "$fail"; exit 1
+printf '\033[1;31m%d check(s) failed:\033[0m' "$fail"; printf '%b\n' "$FAILED"; exit 1

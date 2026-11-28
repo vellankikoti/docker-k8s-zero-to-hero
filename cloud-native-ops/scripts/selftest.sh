@@ -40,11 +40,11 @@ if command -v docker >/dev/null && docker info >/dev/null 2>&1; then
 else echo "  • docker not available: skipped the policy unit tests"; fi
 echo "Manifests against the API server (dry run)"
 if command -v kubectl >/dev/null && kubectl get --raw /readyz >/dev/null 2>&1; then
-  for f in $C/projects/infra-factory/platform/00-tfstate-and-runner.yaml $C/projects/production-ready/manifests/00-policies.yaml; do
+  for f in $C/projects/production-ready/manifests/00-policies.yaml; do
     run "kubectl apply --dry-run=server $(basename "$f")" kubectl apply --dry-run=server -f "$f"
   done
-  # these two create their own namespace, which a server dry run cannot see yet: check their schema client-side
-  for f in $C/projects/production-ready/manifests/10-ledger.yaml $C/projects/production-ready/manifests/20-night-shift.yaml; do
+  # these create their own namespace (or live in one that may not exist yet), which a server dry run cannot see: check their schema client-side
+  for f in $C/projects/infra-factory/platform/00-tfstate-and-runner.yaml $C/projects/production-ready/manifests/10-ledger.yaml $C/projects/production-ready/manifests/20-night-shift.yaml; do
     run "kubectl apply --dry-run=client $(basename "$f")" kubectl apply --dry-run=client --validate=true -f "$f"
   done
 else echo "  • no cluster reachable: skipped (iac-test.sh runs the real Terraform against a cluster)"; fi
