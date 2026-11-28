@@ -39,7 +39,13 @@ case "$MODE" in
   local) LAB=0 ;;
   *) # Killercoda / iximuz run you as "laborant", and Killercoda's Kubernetes playgrounds put you on a host called "controlplane" (as root).
      # A laptop is neither, so its doors stay on 127.0.0.1: only you can reach them.
-     if [ "${USER:-$(id -un 2>/dev/null)}" = laborant ] || [ "$(hostname 2>/dev/null)" = controlplane ]; then LAB=1; fi ;;
+     # Other browser-lab signals are checked too (env markers such as KILLERCODA*, hostnames that say "killercoda"/"iximuz").
+     # Unsure? We stay on 127.0.0.1 (safe for a laptop or a cloud VM) and print the one-line --lab fix below.
+     HN=$(hostname 2>/dev/null || true)
+     case "${USER:-$(id -un 2>/dev/null)}|$HN|$(env 2>/dev/null | grep -ic '^KILLERCODA\|^IXIMUZ' || true)" in
+       laborant\|*|*\|controlplane\|*|*\|*killercoda*\|*|*\|*iximuz*\|*) LAB=1 ;;
+       *\|[1-9]*) LAB=1 ;;
+     esac ;;
 esac
 if [ -n "${FORWARD_ADDRESS:-}" ]; then ADDR=$FORWARD_ADDRESS
 elif [ "$LAB" = 1 ]; then ADDR=0.0.0.0
