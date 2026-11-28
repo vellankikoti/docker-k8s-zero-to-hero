@@ -1,6 +1,6 @@
 # O05 · Backup, security, cost and measurement
 
-> ⏱ 75 min · 🟡→🔴 · Needs: [Production Ready](../projects/production-ready/README.md) started (`scripts/up.sh`)
+> ⏱ 75 min · 🟡→🔴 · Needs: [Production Ready](../projects/production-ready/README.md) started (`./cloud-native-ops/projects/production-ready/scripts/up.sh`)
 > **Topics:** backup and recovery automation · operational security and policy enforcement · cost optimisation through automation · DevOps metrics (DORA) · real-world failure analysis.
 
 ## 1. Backups: two numbers and one test

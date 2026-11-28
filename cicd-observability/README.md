@@ -83,7 +83,14 @@ Then open Jenkins (http://localhost:8081, admin / `z2h-jenkins`) → **chai-stal
 ./cicd-observability/projects/see-everything/scripts/up.sh          # start (~8 min); it checks itself at the end
 ./cicd-observability/scripts/forward.sh start observability         # Grafana :3000, Prometheus :9090, inbox :8025
 ```
-**Break it:** `gameday.sh list` (in the project's `scripts/`), then `gameday.sh start errors` → `gameday.sh watch OrderSLOFastBurn` (about 4 minutes) → `gameday.sh recover`.
+**Break it:**
+```bash
+GD=./cicd-observability/projects/see-everything/scripts/gameday.sh
+$GD list
+$GD start errors
+$GD watch OrderSLOFastBurn      # about 4 minutes
+$GD recover
+```
 **Check:** `./cicd-observability/projects/see-everything/scripts/verify.sh` · **Clean up:** `./cicd-observability/projects/see-everything/scripts/cleanup.sh -y`
 
 **Confirmed on a real cluster so far:** Ship It through the staging deploy (the approval, production release, blue/green and canary stages are not yet confirmed); See Everything: install, every check, and the `errors` incident with its alert email (the other four incidents are not yet confirmed).

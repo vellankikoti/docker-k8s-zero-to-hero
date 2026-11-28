@@ -63,7 +63,11 @@ cd cloud-native-ops/projects/infra-factory/infra-repo
 ./cloud-native-ops/projects/production-ready/scripts/up.sh          # start (~8 min): dev + prod with Terraform, policies, backup
 ./cloud-native-ops/projects/production-ready/scripts/verify.sh --full 2>&1 | tee /tmp/verify-full.txt     # check + all drills (~5 min)
 ```
-**Break it:** `gameday.sh list` (in the project's `scripts/`): `rush`, `kill`, `policy`, `restore`, `skew`.
+**Break it:**
+```bash
+GD=./cloud-native-ops/projects/production-ready/scripts/gameday.sh
+$GD list          # then: $GD rush | kill | policy | restore | skew
+```
 **Clean up:** `./cloud-native-ops/projects/production-ready/scripts/cleanup.sh -y`
 
 **Confirmed on a real cluster so far:** Terraform (plan, apply, state, policy, drift, destroy) and Production Ready (install, every check, rush, Pod kill). Not yet confirmed: the Infra Factory Jenkins pipeline (`up.sh --pipeline`).
