@@ -62,9 +62,9 @@ fi
 cat <<MSG
 
   Build your first environment, by hand (Lab O01):
-      cd cloud-native-ops/projects/infra-factory/infra-repo
-      ./scripts/tf.sh dev plan          # read it: Terraform tells you everything it WILL do
-      ./scripts/tf.sh dev apply         # do exactly that
+      TF=./cloud-native-ops/projects/infra-factory/infra-repo/scripts/tf.sh
+      \$TF dev plan          # read it: Terraform tells you everything it WILL do
+      \$TF dev apply         # do exactly that
       $HERE/scripts/verify.sh dev       # prove it
   Remove everything again:  $HERE/scripts/cleanup.sh
 MSG

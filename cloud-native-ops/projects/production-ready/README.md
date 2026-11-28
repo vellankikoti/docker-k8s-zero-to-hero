@@ -5,6 +5,13 @@
 
 > ⚠️ **Memory:** see-everything (~2.5 GB) and production-ready (~3 GB) are **not meant to run at the same time on a small lab** (two nodes of ~2 GB each cannot hold both). Run one, `cleanup.sh` it, then the other. If the cluster's `kube-controller-manager` or `kube-scheduler` starts crash-looping, the cluster ran out of memory: every `up.sh` checks for that and tells you what to do.
 
+> 🧭 **Before you begin (30 seconds, same for every project)**
+> 1. Open a terminal **in the course folder** (the one that contains `cicd-observability/` and `cloud-native-ops/`). Check with `ls`. Every command below is written to run from there, so you never need `cd`.
+> 2. `kubectl get nodes` must show every node **Ready**. If it errors, fix your cluster first (kind, minikube, Docker Desktop, Killercoda or iximuz all work).
+> 3. Run **one project at a time**. Finished? Run its `cleanup.sh` before starting another.
+> 4. Every step ends with a ✔ or ✖ line. If you see a ✖, read the `→` hint under it. Still stuck? Copy that line and what is printed after it, and ask.
+> 5. In a browser lab (Killercoda, iximuz) pages like Grafana open through the lab's **port / Traffic** panel, not `localhost`; each step says which port.
+
 ## 🧠 The idea, in one Diwali
 Your chai stall works fine on a normal day. Then Diwali comes: **20× the customers**, a cousin accidentally throws away the order book, someone sets the price of chai to ₹1, and the accountant asks why you pay for the stall at 3 a.m. when nobody is there.
 
@@ -100,9 +107,8 @@ The night shift is a **CronJob in Indian time** (`timeZone: Asia/Kolkata`): 22:0
 ## 📊 Step 6: are we getting better? DORA ⭐ (10 minutes)
 Ship a few changes first, so there is history. For example, from the Infra Factory:
 ```bash
-cd cloud-native-ops/projects/infra-factory/infra-repo
-TF_VAR_image_tag=1.5.0 ./scripts/tf.sh prod plan && ./scripts/tf.sh prod apply     # a deployment is one Helm revision
-cd - >/dev/null
+TF=./cloud-native-ops/projects/infra-factory/infra-repo/scripts/tf.sh
+TF_VAR_image_tag=1.5.0 $TF prod plan && $TF prod apply     # a deployment is one Helm revision
 ./cloud-native-ops/projects/production-ready/scripts/dora.py --ns iac-prod --days 30
 ```
 ```

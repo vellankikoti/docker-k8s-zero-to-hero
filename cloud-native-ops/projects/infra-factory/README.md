@@ -3,6 +3,13 @@
 > ⏱ about 2.5 hours (the ⭐ steps are a 50-minute live path) · 🟡→🔴 · Needs: any cluster from the Kubernetes labs, `kubectl`, `helm`, `python3`, `curl`, and (for Step 6) 3 GB free memory
 > **The goal:** create `dev`, `staging` and `prod` **from code**, see exactly what will change *before* it changes, let a robot refuse dangerous plans, catch someone who edits the cluster by hand, and run all of it from a **pipeline with an approval button**.
 
+> 🧭 **Before you begin (30 seconds, same for every project)**
+> 1. Open a terminal **in the course folder** (the one that contains `cicd-observability/` and `cloud-native-ops/`). Check with `ls`. Every command below is written to run from there, so you never need `cd`.
+> 2. `kubectl get nodes` must show every node **Ready**. If it errors, fix your cluster first (kind, minikube, Docker Desktop, Killercoda or iximuz all work).
+> 3. Run **one project at a time**. Finished? Run its `cleanup.sh` before starting another.
+> 4. Every step ends with a ✔ or ✖ line. If you see a ✖, read the `→` hint under it. Still stuck? Copy that line and what is printed after it, and ask.
+> 5. In a browser lab (Killercoda, iximuz) pages like Grafana open through the lab's **port / Traffic** panel, not `localhost`; each step says which port.
+
 ## 🧠 The idea, in one chai franchise
 You run one chai stall. It works. Now you want **three**: a practice stall (dev), a trial stall (staging), the real one (prod).
 
@@ -35,15 +42,20 @@ git pull
 ```
 It installs the `terraform` command if you do not have it (no sudo, SHA-256 checked), a light platform (image registry), builds the Chai Stall image **inside your cluster**, and creates the **state store** and the **runner's permissions**. It ends by checking itself. You want all ✔.
 
+Now give two long commands short names, so the steps stay short. **Paste these two lines in every new terminal** (they are forgotten when you close it):
+```bash
+TF=./cloud-native-ops/projects/infra-factory/infra-repo/scripts/tf.sh
+VERIFY=./cloud-native-ops/projects/infra-factory/scripts/verify.sh
+```
+
 ## 🏗️ Step 1: your first environment, by hand ⭐ (10 minutes)
 ```bash
-cd cloud-native-ops/projects/infra-factory/infra-repo
-./scripts/tf.sh dev plan          # 1. the drawing
+$TF dev plan          # 1. the drawing
 ```
 Read it. Every `+` is something new. Count the lines at the bottom: *"Plan: 8 to add, 0 to change, 0 to destroy."* Which 8? *(a namespace, a quota, container defaults, two network rules, a role, a binding, the app.)*
 ```bash
-./scripts/tf.sh dev apply         # 2. build exactly that drawing
-../scripts/verify.sh dev          # 3. PROVE it: every line should be ✔
+$TF dev apply         # 2. build exactly that drawing
+$VERIFY dev           # 3. PROVE it: every line should be ✔
 ```
 Look at what you built, with the tools you already know:
 ```bash
@@ -65,48 +77,51 @@ helm ls -n iac-dev                            # empty? the release records are C
 **Look inside the notebook (state) and its lock:**
 ```bash
 kubectl -n tfstate get secret,lease           # tfstate-default-iac-dev  (the state)   lock-tfstate-default-iac-dev  (the lock)
-./scripts/tf.sh dev status                    # every resource Terraform remembers
+$TF dev status                    # every resource Terraform remembers
 ```
 Why a **module**? `environment` is written once and used for dev, staging and prod. Why a **Secret in the cluster** for state? A laptop file is lost with the laptop and cannot be locked; here it is shared, backed up with the cluster, and locked.
 
 ## ✏️ Step 3: change something safely, then catch a hand-edit ⭐ (10 minutes)
-**A planned change.** Give dev more room: edit [`envs/dev.tfvars`](infra-repo/terraform/envs/dev.tfvars) and change `pods = 6` to `pods = 8`.
+**A planned change.** Give dev more room: open [`envs/dev.tfvars`](infra-repo/terraform/envs/dev.tfvars) (`cloud-native-ops/projects/infra-factory/infra-repo/terraform/envs/dev.tfvars`) in any editor and change `pods = 6` to `pods = 8`. Or in one command:
 ```bash
-./scripts/tf.sh dev plan          # "Plan: 0 to add, 1 to change": only the quota. Nothing else is touched.
-./scripts/tf.sh dev apply
+sed -i.bak 's/pods *= *6/pods = 8/' cloud-native-ops/projects/infra-factory/infra-repo/terraform/envs/dev.tfvars
+```
+```bash
+$TF dev plan          # "Plan: 0 to add, 1 to change": only the quota. Nothing else is touched.
+$TF dev apply
 ```
 **A hand-edit (ClickOps).** Someone "just fixes it quickly":
 ```bash
 kubectl -n iac-dev patch resourcequota environment-budget --type=merge -p '{"spec":{"hard":{"pods":"60"}}}'
-./scripts/tf.sh dev drift         # exit code 2 and a diff:   "pods" = "60" -> "8"
-./scripts/tf.sh dev plan && ./scripts/tf.sh dev apply        # the blueprint wins; the hand-edit is undone
-./scripts/tf.sh dev drift         # ✔ no drift
+$TF dev drift         # exit code 2 and a diff:   "pods" = "60" -> "8"
+$TF dev plan && $TF dev apply        # the blueprint wins; the hand-edit is undone
+$TF dev drift         # ✔ no drift
 ```
 In real teams a scheduled job runs the drift check every night and tells a human. In Step 6 the pipeline has a `drift-check` action that does exactly this.
 
 ## 🛂 Step 4: the building inspector ⭐ (10 minutes)
 The rules are in [`policy/plan.rego`](infra-repo/policy/plan.rego): no namespace without an **owner** and **cost-center**, no image tagged `latest`, prod needs **≥ 2 replicas and a PodDisruptionBudget**, the autoscaler **ceiling is 10**. They read the plan as JSON:
 ```bash
-./scripts/tf.sh dev plan
-docker run --rm -v "$PWD":/p -w /p openpolicyagent/conftest:v0.62.0 test --policy policy .plans/dev.json
+$TF dev plan
+$TF dev policy                  # the inspector reads the saved plan (uses Docker or conftest for you)
 ```
 You should see `8 tests, 7 passed, 1 warning, 0 failures`. Now try to break the rules **in a throwaway experiment file** (nothing committed):
 ```bash
 printf 'replicas = 1\nautoscaling = { enabled = true, min = 2, max = 20, cpu = 70 }\n' > /tmp/bad.tfvars
-EXTRA_VAR_FILE=/tmp/bad.tfvars ./scripts/tf.sh prod plan
-docker run --rm -v "$PWD":/p -w /p openpolicyagent/conftest:v0.62.0 test --policy policy .plans/prod.json
+EXTRA_VAR_FILE=/tmp/bad.tfvars $TF prod plan
+$TF prod policy
 ```
 ```
 FAIL - ... production must run at least 2 replicas
 FAIL - ... autoscaling maxReplicas 20 is above the allowed 10
 ```
-**Nothing was built.** The inspector stopped it at the drawing. Also run the policy's own unit tests: `docker run --rm -v "$PWD":/p -w /p openpolicyagent/conftest:v0.62.0 verify --policy policy`.
+**Nothing was built.** The inspector stopped it at the drawing. Also run the policy's own unit tests: `$TF dev policy-test`.
 Then add **your own rule**: for example *"a namespace named `iac-prod` must have a ResourceQuota with at least 4 pods"*. Write it, add a test, run both.
 
 ## 🚀 Step 5: dev → staging → prod ⭐ (10 minutes)
 ```bash
-for e in staging prod; do ./scripts/tf.sh $e plan && ./scripts/tf.sh $e apply; done
-../scripts/verify.sh                 # checks every environment that exists
+for e in staging prod; do $TF $e plan && $TF $e apply; done
+$VERIFY                 # checks every environment that exists
 kubectl get ns -l app.kubernetes.io/managed-by=terraform --show-labels | cut -c1-120
 ```
 Compare `kubectl -n iac-dev get deploy` with `kubectl -n iac-prod get deploy,hpa,pdb`. Same chart, different tfvars: prod has 2+ Pods, an **autoscaler** and a **PodDisruptionBudget**. That is the whole promise of IaC: *the environments differ only where you wrote down that they differ*.

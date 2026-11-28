@@ -6,6 +6,13 @@
 >
 > **After every phase run `./cicd-observability/projects/ship-it/scripts/verify.sh N`**: it asks the cluster and prints ✔ or ✖ with a hint.
 
+> 🧭 **Before you begin (30 seconds, same for every project)**
+> 1. Open a terminal **in the course folder** (the one that contains `cicd-observability/` and `cloud-native-ops/`). Check with `ls`. Every command below is written to run from there, so you never need `cd`.
+> 2. `kubectl get nodes` must show every node **Ready**. If it errors, fix your cluster first (kind, minikube, Docker Desktop, Killercoda or iximuz all work).
+> 3. Run **one project at a time**. Finished? Run its `cleanup.sh` before starting another.
+> 4. Every step ends with a ✔ or ✖ line. If you see a ✖, read the `→` hint under it. Still stuck? Copy that line and what is printed after it, and ask.
+> 5. In a browser lab (Killercoda, iximuz) pages like Grafana open through the lab's **port / Traffic** panel, not `localhost`; each step says which port.
+
 ## 🎯 The mission
 The Chai Stall is deployed by an engineer typing `kubectl apply`. It broke production twice last month. **Build the factory that ships it, inside your cluster**: a commit is tested, scanned, built into an image, published, deployed to staging, approved by a human, and released to production with a strategy that **rolls itself back**. Then prove that every gate stops a different kind of bad change.
 
@@ -128,7 +135,7 @@ So a bug fix in how a stage works reaches everyone with one command and **no fil
 ### 🌐 Using Killercoda or iximuz Labs (a browser lab)?
 In a browser lab the cluster and your terminal live in a remote VM, so `http://localhost:8081` in *your* browser is **not** that VM. Two things make it work:
 
-1. **`forward.sh start` detects the lab** (you are the user `laborant`) and listens on **all interfaces** instead of only `127.0.0.1`, because the lab's "open a port" feature reaches the VM from outside and cannot see a loopback-only listener. (Force it with `forward.sh start --lab`; force local-only with `--local`.)
+1. **`forward.sh start` detects the lab** (user `laborant`, a machine called `controlplane`, or Killercoda/iximuz markers) and listens on **all interfaces** instead of only `127.0.0.1`, because the lab's "open a port" feature reaches the VM from outside and cannot see a loopback-only listener. (Force it with `forward.sh start --lab`; force local-only with `--local`.)
 2. **Expose each port with your lab's port feature** and open the link it gives you:
 
 | Door | Port to expose | Killercoda |

@@ -45,17 +45,17 @@ In a hurry? Do the two projects: each one has a ⭐ live path.
 | the 60 scenarios | the **drills**: each game-day failure echoes one (`gameday.sh`) |
 
 ## 🏁 Run the two projects (the commands, in order)
-**Rules that prevent most problems:** run **one project at a time** and run its `cleanup` before the next (a small lab cannot hold two) · start from a healthy cluster (`kubectl get nodes` Ready, `kubectl -n kube-system get pods` all Running; every `up.sh` checks this) · Kubernetes **1.30 or newer** · `git pull` first · if a line shows ✖, read its `→` hint, and if you are stuck, copy that line and everything after it.
+**Open a terminal in the course folder (the one with `cicd-observability/` and `cloud-native-ops/` inside) and stay there: every command below runs from it.** **Rules that prevent most problems:** run **one project at a time** and run its `cleanup` before the next (a small lab cannot hold two) · start from a healthy cluster (`kubectl get nodes` Ready, `kubectl -n kube-system get pods` all Running; every `up.sh` checks this) · Kubernetes **1.30 or newer** · `git pull` first · if a line shows ✖, read its `→` hint, and if you are stuck, copy that line and everything after it.
 
 ### Infra Factory (Terraform): about 1.5 GB free
 ```bash
 ./cloud-native-ops/projects/infra-factory/scripts/up.sh             # start (~3 min): installs Terraform for you, no sudo
-cd cloud-native-ops/projects/infra-factory/infra-repo
-./scripts/tf.sh dev plan          # read what WILL happen
-./scripts/tf.sh dev apply         # build exactly that
-../scripts/verify.sh dev          # prove it
+TF=./cloud-native-ops/projects/infra-factory/infra-repo/scripts/tf.sh      # a short name for the long path
+$TF dev plan          # read what WILL happen
+$TF dev apply         # build exactly that
+./cloud-native-ops/projects/infra-factory/scripts/verify.sh dev          # prove it
 ```
-**Break it:** change the quota by hand with `kubectl`, then `./scripts/tf.sh dev drift` finds it, and plan + apply puts it back (steps in the [project README](projects/infra-factory/README.md)).
+**Break it:** change the quota by hand with `kubectl`, then `$TF dev drift` finds it, and plan + apply puts it back (steps in the [project README](projects/infra-factory/README.md)).
 **Clean up:** `./cloud-native-ops/projects/infra-factory/scripts/cleanup.sh -y`
 
 ### Production Ready (operations): about 3 GB free
@@ -78,7 +78,7 @@ git clone https://github.com/vellankikoti/docker-k8s-zero-to-hero.git     # skip
 cd docker-k8s-zero-to-hero
 kubectl get nodes                                                          # your cluster answers
 ```
-Terraform is installed for you (no sudo, checksum-verified) by the first `up.sh`. Docker is optional (it runs the policy checker `conftest`; without it the scripts tell you what to do).
+Terraform is installed for you (no sudo, checksum-verified) by the first `up.sh`. Docker is needed only for the policy checker `conftest` (`$TF dev policy`); without it the scripts tell you what to do.
 **Cluster size:** Infra Factory about 1.5 GB free memory; Production Ready about 3 GB; See Everything (CI/CD track) about 2.5 GB. **Run one project at a time on a small lab** (two nodes of ~2 GB cannot hold two of them): `cleanup.sh` one before starting the next. Kubernetes **1.30+** for the admission policies.
 
 ## ✅ Every script checks itself, and cleans up after itself

@@ -6,10 +6,10 @@
 ## 1. State: the architect's notebook
 Terraform keeps a record of everything it built. Without it, it cannot tell *"build this"* from *"it is already built"*.
 ```bash
-cd cloud-native-ops/projects/infra-factory/infra-repo
-./scripts/tf.sh dev plan && ./scripts/tf.sh dev apply
+TF=./cloud-native-ops/projects/infra-factory/infra-repo/scripts/tf.sh   # a short name for the long path (paste again in a new terminal)
+$TF dev plan && $TF dev apply
 kubectl -n tfstate get secret                   # tfstate-default-iac-dev
-./scripts/tf.sh dev status                      # what it remembers: 8 resources
+$TF dev status                      # what it remembers: 8 resources
 ```
 **Where should the notebook live?**
 | Place | Verdict |
@@ -26,7 +26,7 @@ terraform apply -var-file=envs/dev.tfvars -var replicas=2        # stops at "Ent
 ```
 In **terminal 2**:
 ```bash
-cd cloud-native-ops/projects/infra-factory/infra-repo && ./scripts/tf.sh dev plan
+$TF dev plan                                    # (paste the TF= line from above in this terminal first)
 ```
 ```
 Error: Error acquiring the state lock     Lock Info:  Operation: OperationTypeApply  Who: you@laptop

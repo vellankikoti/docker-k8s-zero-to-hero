@@ -5,6 +5,13 @@
 
 > ⚠️ **Memory:** see-everything (~2.5 GB) and production-ready (~3 GB) are **not meant to run at the same time on a small lab** (two nodes of ~2 GB each cannot hold both). Run one, `cleanup.sh` it, then the other. If the cluster's `kube-controller-manager` or `kube-scheduler` starts crash-looping, the cluster ran out of memory: every `up.sh` checks for that and tells you what to do.
 
+> 🧭 **Before you begin (30 seconds, same for every project)**
+> 1. Open a terminal **in the course folder** (the one that contains `cicd-observability/` and `cloud-native-ops/`). Check with `ls`. Every command below is written to run from there, so you never need `cd`.
+> 2. `kubectl get nodes` must show every node **Ready**. If it errors, fix your cluster first (kind, minikube, Docker Desktop, Killercoda or iximuz all work).
+> 3. Run **one project at a time**. Finished? Run its `cleanup.sh` before starting another.
+> 4. Every step ends with a ✔ or ✖ line. If you see a ✖, read the `→` hint under it. Still stuck? Copy that line and what is printed after it, and ask.
+> 5. In a browser lab (Killercoda, iximuz) pages like Grafana open through the lab's **port / Traffic** panel, not `localhost`; each step says which port.
+
 ## 🧠 The idea, in one chai stall
 A chai stall owner who can't see his stall is guessing. Give him five things:
 
@@ -42,10 +49,22 @@ Then open the doors (they stay open in the background):
 ```bash
 ./cicd-observability/scripts/forward.sh start observability
 ```
-On Killercoda / iximuz it listens on every interface; use the lab's port feature with 3000, 9090, 9093, 16686, 8025 and 8083.
+The last lines show a table: every door, its port, and ✔ when it answers. On your own computer open `http://localhost:PORT`.
+**In Killercoda / iximuz** the script detects the lab and listens on every interface; then open the lab's port panel (Killercoda: menu → **Traffic / Ports**), type the port and open the link:
+
+| Door | Port |
+|---|---|
+| Grafana (the notice board) | `3000` |
+| Prometheus | `9090` |
+| Alertmanager | `9093` |
+| Jaeger (traces) | `16686` |
+| Inbox (Mailpit) | `8025` |
+| The Chai Stall app | `8083` |
+
+A **502 Bad Gateway** from the lab link means the door is closed or listening on `127.0.0.1` only: run `./cicd-observability/scripts/forward.sh stop` then `./cicd-observability/scripts/forward.sh start observability --lab`.
 
 ## 🔭 Step 1: the notice board ⭐ (5 minutes)
-Open **Grafana** http://localhost:3000 (admin / `z2h-grafana`) → **Dashboards → Chai Stall: Service Overview**. Set refresh **5s**, range **15 minutes**.
+Open **Grafana** http://localhost:3000 (in a lab: port 3000; login admin / `z2h-grafana`) → **Dashboards → Chai Stall: Service Overview**. Set refresh **5s**, range **15 minutes**.
 Read it top to bottom: *Is it up?* → *Traffic, errors, latency* → *The SLO* → *Logs*. Those are the **four golden signals** (traffic, errors, latency, saturation). One look should tell you "fine" or "not fine".
 
 ## 📒 Step 2: ask Prometheus yourself (10 minutes)
