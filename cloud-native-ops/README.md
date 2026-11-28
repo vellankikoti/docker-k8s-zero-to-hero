@@ -45,6 +45,12 @@ In a hurry? Do the two projects: each one has a ⭐ live path.
 | the 60 scenarios | the **drills**: each game-day failure echoes one (`gameday.sh`) |
 
 ## 🏁 Run the two projects (the commands, in order)
+**First time on this machine?** Get the course (if the folder already exists, git says so and you can ignore that) and go into it. Do NOT use `--depth`: Jenkins needs the full history.
+```bash
+git clone https://github.com/vellankikoti/docker-k8s-zero-to-hero.git
+cd docker-k8s-zero-to-hero
+git pull
+```
 **Open a terminal in the course folder (the one with `cicd-observability/` and `cloud-native-ops/` inside) and stay there: every command below runs from it.** **Rules that prevent most problems:** run **one project at a time** and run its `cleanup` before the next (a small lab cannot hold two) · start from a healthy cluster (`kubectl get nodes` Ready, `kubectl -n kube-system get pods` all Running; every `up.sh` checks this) · Kubernetes **1.30 or newer** · `git pull` first · if a line shows ✖, read its `→` hint, and if you are stuck, copy that line and everything after it.
 
 ### Infra Factory (Terraform): about 1.5 GB free
