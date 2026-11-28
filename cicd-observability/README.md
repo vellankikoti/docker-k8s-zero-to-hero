@@ -20,8 +20,6 @@ You will build a small delivery factory (Git → Jenkins → registry → stagin
 
 > The ten labs below teach the concepts; the projects below run fully on Kubernetes. The lab steps still use the Compose edition and are being moved over.
 
-> **Just want the commands, in order?** [PROJECTS.md](../PROJECTS.md) has one page for all four projects.
-
 ## 🎯 Who this is for
 Anyone can follow this track. If you can run `docker run` ([D01](../docker/01-first-steps/README.md)) and `git commit` ([G01](../git/01-first-repo/README.md)), you are ready. Never used Compose? Skim [D08](../docker/08-compose/README.md) first (20 minutes).
 
@@ -66,6 +64,29 @@ Anyone can follow this track. If you can run `docker run` ([D01](../docker/01-fi
 | Incident response practices | [C09](C09-slo-incident-response/README.md) · [runbook](compose-edition/see-everything/docs/runbook.md) · [postmortem template](compose-edition/see-everything/docs/postmortem-template.md) |
 | CI/CD pipelines with Jenkins and GitHub Actions or GitLab CI | [Ship It](compose-edition/ship-it/README.md) |
 | Prometheus, Alertmanager and Grafana for application observability | [See Everything](compose-edition/see-everything/README.md) |
+
+## 🏁 Run the two projects (the commands, in order)
+**Rules that prevent most problems:** run **one project at a time** and run its `cleanup` before the next (a small lab cannot hold both) · start from a healthy cluster (`kubectl get nodes` Ready, `kubectl -n kube-system get pods` all Running; every `up.sh` checks this) · `git pull` first · if a line shows ✖, read its `→` hint, and if you are stuck, copy that line and everything after it.
+
+### Ship It (CI/CD): about 3 GB free
+```bash
+./cicd-observability/scripts/doctor.sh --k8s           # ready?
+./cicd-observability/scripts/k8s-up.sh                 # start: Jenkins, Git server, registry (~15 min)
+./cicd-observability/scripts/forward.sh start          # open the doors: Jenkins :8081, Git :3001
+./cicd-observability/scripts/new-app-repo.sh           # your own repo, pushed to the in-cluster Git server
+```
+Then open Jenkins (http://localhost:8081, admin / `z2h-jenkins`) → **chai-stall → ci-cd → Build with Parameters** and follow [the project's phases](projects/ship-it/README.md#-the-phases).
+**Check:** `./cicd-observability/projects/ship-it/scripts/verify.sh 3` · **Clean up:** `./cicd-observability/scripts/k8s-down.sh -y`
+
+### See Everything (observability): about 2.5 GB free
+```bash
+./cicd-observability/projects/see-everything/scripts/up.sh          # start (~8 min); it checks itself at the end
+./cicd-observability/scripts/forward.sh start observability         # Grafana :3000, Prometheus :9090, inbox :8025
+```
+**Break it:** `gameday.sh list` (in the project's `scripts/`), then `gameday.sh start errors` → `gameday.sh watch OrderSLOFastBurn` (about 4 minutes) → `gameday.sh recover`.
+**Check:** `./cicd-observability/projects/see-everything/scripts/verify.sh` · **Clean up:** `./cicd-observability/projects/see-everything/scripts/cleanup.sh -y`
+
+**Confirmed on a real cluster so far:** Ship It through the staging deploy (the approval, production release, blue/green and canary stages are not yet confirmed); See Everything: install, every check, and the `errors` incident with its alert email (the other four incidents are not yet confirmed).
 
 ## 🧰 Before you start (10 minutes)
 ```bash
