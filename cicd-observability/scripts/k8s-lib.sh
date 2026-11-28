@@ -22,12 +22,32 @@ need_cluster() {
   command -v kubectl >/dev/null 2>&1 || die "kubectl is not installed. See 00-setup/README.md"
   kubectl get --raw /readyz >/dev/null 2>&1 || die "Can't reach a cluster. Check: kubectl config current-context"
 }
+# keep_off_control_plane: on a multi-node cluster, ask the scheduler to PREFER worker nodes for our (heavy) Pods.
+# Why: kubeadm labs (Killercoda, iximuz) leave the control-plane node untainted, and a 2 GB control plane that also hosts
+# Prometheus runs out of memory: kube-controller-manager and kube-scheduler then crash-loop and the API server stops answering.
+# A PreferNoSchedule taint is SOFT: nothing is evicted, nothing is blocked (if workers are full, the Pod still fits here),
+# DaemonSets are unaffected, single-node clusters are left alone. Undo: kubectl taint nodes NODE node-role.kubernetes.io/control-plane:PreferNoSchedule-
+keep_off_control_plane() {
+  local cps workers n
+  cps=$(kubectl get nodes -l node-role.kubernetes.io/control-plane -o name 2>/dev/null | sed 's|^node/||' || true)
+  [ -n "$cps" ] || return 0
+  workers=$(kubectl get nodes -l '!node-role.kubernetes.io/control-plane' --no-headers 2>/dev/null | grep -c ' Ready' || true)
+  [ "${workers:-0}" -ge 1 ] || return 0
+  for n in $cps; do
+    kubectl get node "$n" -o jsonpath='{.spec.taints[*].key}' 2>/dev/null | grep -q 'node-role.kubernetes.io/control-plane' && continue
+    if kubectl taint node "$n" node-role.kubernetes.io/control-plane=:PreferNoSchedule >/dev/null 2>&1; then
+      warn "control-plane node $n had no taint, so heavy Pods could land on it and starve the cluster. Set a SOFT preference for worker nodes (undo: kubectl taint nodes $n node-role.kubernetes.io/control-plane:PreferNoSchedule-)"
+    fi
+  done
+}
+
 # cluster_healthy: is the cluster's OWN brain working? If kube-controller-manager or kube-scheduler is crash-looping, Pods are never
 # scheduled and ResourceQuotas are never computed, so every install "hangs" for a reason that has nothing to do with our scripts.
 # The usual cause on a small lab VM is memory: the heavy monitoring stack landed on the control-plane node and starved it.
 # (Managed clusters and k3s have no such Pods in kube-system: the loop finds nothing and passes.)
 cluster_healthy() {
   local bad="" c ready mem
+  keep_off_control_plane || true
   for c in kube-controller-manager kube-scheduler; do
     ready=$(kubectl -n kube-system get pods -l "component=$c" -o jsonpath='{range .items[*]}{.status.containerStatuses[0].ready}{"\n"}{end}' 2>/dev/null || true)
     [ -z "$ready" ] && continue
