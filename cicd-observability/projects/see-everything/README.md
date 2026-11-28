@@ -3,6 +3,8 @@
 > ⏱ about 2 hours (the ⭐ steps are a 40-minute live path) · 🟡→🔴 · Needs: any cluster you already used for the Kubernetes labs (kind, minikube, Docker Desktop, Killercoda, iximuz), 2.5 GB free memory, `kubectl`, `helm`, `python3`
 > **The goal:** watch a real app with Prometheus, Alertmanager and Grafana; add logs (Loki) and traces (Jaeger); then **break it five ways and get the email before a customer complains.**
 
+> ⚠️ **Memory:** see-everything (~2.5 GB) and production-ready (~3 GB) are **not meant to run at the same time on a small lab** (two nodes of ~2 GB each cannot hold both). Run one, `cleanup.sh` it, then the other. If the cluster's `kube-controller-manager` or `kube-scheduler` starts crash-looping, the cluster ran out of memory: every `up.sh` checks for that and tells you what to do.
+
 ## 🧠 The idea, in one chai stall
 A chai stall owner who can't see his stall is guessing. Give him five things:
 
