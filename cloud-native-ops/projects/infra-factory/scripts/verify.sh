@@ -20,7 +20,7 @@ chk "the state store exists (namespace tfstate)" "run up.sh" kubectl get ns tfst
 chk "the pipeline's runner may create namespaces" "run up.sh" can create namespaces
 chk "...but may NOT touch nodes (least privilege)" "the ClusterRole terraform-runner is too wide" bash -c '! kubectl auth can-i delete nodes --as=system:serviceaccount:cicd:terraform-runner | grep -q yes'
 chk "...and may NOT read Secrets in kube-system" "the ClusterRole terraform-runner is too wide" bash -c '! kubectl auth can-i get secrets -n kube-system --as=system:serviceaccount:cicd:terraform-runner | grep -q yes'
-chk "the Chai Stall image is in the registry" "./cicd-observability/scripts/ensure-image.sh" bash -c "kubectl -n cicd exec deploy/registry -- wget -qO- http://localhost:5000/v2/chai-stall/tags/list | grep -q 1.0.0"
+chk "the Chai Stall image is in the registry" "./cicd-observability/scripts/ensure-image.sh" bash -c "kubectl -n cicd exec deploy/registry -- wget -qO- http://localhost:5000/v2/chai-stall/tags/list | grep -q \"\$CHAI_IMAGE_TAG\""
 
 [ "$PLATFORM_ONLY" = 1 ] && ENVS=""
 [ ${#WANT[@]} -eq 0 ] && for e in $ENVS; do kubectl get ns "$(ns_of $e)" >/dev/null 2>&1 && WANT+=("$e"); done

@@ -101,7 +101,7 @@ The night shift is a **CronJob in Indian time** (`timeZone: Asia/Kolkata`): 22:0
 Ship a few changes first, so there is history. For example, from the Infra Factory:
 ```bash
 cd cloud-native-ops/projects/infra-factory/infra-repo
-TF_VAR_image_tag=1.0.0 ./scripts/tf.sh prod plan && ./scripts/tf.sh prod apply     # a deployment is one Helm revision
+TF_VAR_image_tag=1.5.0 ./scripts/tf.sh prod plan && ./scripts/tf.sh prod apply     # a deployment is one Helm revision
 cd - >/dev/null
 ./cloud-native-ops/projects/production-ready/scripts/dora.py --ns iac-prod --days 30
 ```
