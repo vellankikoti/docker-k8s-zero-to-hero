@@ -44,6 +44,30 @@ In a hurry? Do the two projects: each one has a ⭐ live path.
 | See Everything | **Prometheus scraping** the prod app (turned on by Terraform) and the alerts that watch it |
 | the 60 scenarios | the **drills**: each game-day failure echoes one (`gameday.sh`) |
 
+## 🏁 Run the two projects (the commands, in order)
+**Rules that prevent most problems:** run **one project at a time** and run its `cleanup` before the next (a small lab cannot hold two) · start from a healthy cluster (`kubectl get nodes` Ready, `kubectl -n kube-system get pods` all Running; every `up.sh` checks this) · Kubernetes **1.30 or newer** · `git pull` first · if a line shows ✖, read its `→` hint, and if you are stuck, copy that line and everything after it.
+
+### Infra Factory (Terraform): about 1.5 GB free
+```bash
+./cloud-native-ops/projects/infra-factory/scripts/up.sh             # start (~3 min): installs Terraform for you, no sudo
+cd cloud-native-ops/projects/infra-factory/infra-repo
+./scripts/tf.sh dev plan          # read what WILL happen
+./scripts/tf.sh dev apply         # build exactly that
+../scripts/verify.sh dev          # prove it
+```
+**Break it:** change the quota by hand with `kubectl`, then `./scripts/tf.sh dev drift` finds it, and plan + apply puts it back (steps in the [project README](projects/infra-factory/README.md)).
+**Clean up:** `./cloud-native-ops/projects/infra-factory/scripts/cleanup.sh -y`
+
+### Production Ready (operations): about 3 GB free
+```bash
+./cloud-native-ops/projects/production-ready/scripts/up.sh          # start (~8 min): dev + prod with Terraform, policies, backup
+./cloud-native-ops/projects/production-ready/scripts/verify.sh --full 2>&1 | tee /tmp/verify-full.txt     # check + all drills (~5 min)
+```
+**Break it:** `gameday.sh list` (in the project's `scripts/`): `rush`, `kill`, `policy`, `restore`, `skew`.
+**Clean up:** `./cloud-native-ops/projects/production-ready/scripts/cleanup.sh -y`
+
+**Confirmed on a real cluster so far:** Terraform (plan, apply, state, policy, drift, destroy) and Production Ready (install, every check, rush, Pod kill). Not yet confirmed: the Infra Factory Jenkins pipeline (`up.sh --pipeline`).
+
 ## 🧰 Before you start
 ```bash
 git clone https://github.com/vellankikoti/docker-k8s-zero-to-hero.git     # skip if you already have it
