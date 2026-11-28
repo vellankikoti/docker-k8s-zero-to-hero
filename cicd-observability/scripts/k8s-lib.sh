@@ -21,7 +21,7 @@ need_cluster() {
 cluster_healthy() {
   local bad="" c ready mem
   for c in kube-controller-manager kube-scheduler; do
-    ready=$(kubectl -n kube-system get pods -l "component=$c" -o jsonpath='{range .items[*]}{.status.containerStatuses[0].ready}{"\n"}{end}' 2>/dev/null)
+    ready=$(kubectl -n kube-system get pods -l "component=$c" -o jsonpath='{range .items[*]}{.status.containerStatuses[0].ready}{"\n"}{end}' 2>/dev/null || true)
     [ -z "$ready" ] && continue
     echo "$ready" | grep -q true || bad="$bad $c"
   done
@@ -38,7 +38,8 @@ cluster_healthy() {
 MSG
     exit 1
   fi
-  mem=$(kubectl top nodes --no-headers 2>/dev/null | awk '{p=$5; gsub("%","",p); if (p+0 >= 90) printf "%s (%s memory) ", $1, $5}')
+  # (kubectl top fails on a cluster without metrics-server: that is normal here, and under "set -e" must never end the script)
+  mem=$(kubectl top nodes --no-headers 2>/dev/null | awk '{p=$5; gsub("%","",p); if (p+0 >= 90) printf "%s (%s memory) ", $1, $5}' || true)
   [ -z "$mem" ] || warn "these nodes are almost out of memory: $mem. If an install hangs, free memory first (see-everything/scripts/cleanup.sh)."
 }
 need_helm() {

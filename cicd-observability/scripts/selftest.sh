@@ -30,6 +30,7 @@ if command -v helm >/dev/null; then
   run "helm template renders every optional resource" bash -c "helm template t $U/k8s/chart/chai-stall --set image.tag=selftest -f $U/k8s/chart/chai-stall/values-prod.yaml --set serviceMonitor.enabled=true --set autoscaling.enabled=true | grep -c '^kind:' | grep -qE '^[7-9]|^[1-9][0-9]'"
 else echo "  • helm not installed: skipped the chart checks"; fi
 run "stage.sh is valid POSIX sh (dash)" bash -c "command -v dash >/dev/null || exit 0; dash -n $U/k8s/pipeline/stage.sh"
+run "the health check survives a cluster without metrics-server under set -e" bash -c 'T=$(mktemp -d); printf "#!/bin/sh\ncase \"\$*\" in *top*) exit 1 ;; esac\nexit 0\n" > $T/kubectl; chmod +x $T/kubectl; PATH=$T:$PATH bash -c "set -euo pipefail; . '$PWD'/'$U'/scripts/k8s-lib.sh; cluster_healthy; echo still-running" | grep -q still-running'
 run "Job DSL files exist" bash -c "ls $U/projects/ship-it/app-repo/jenkins/jobs/*.groovy >/dev/null"
 run "Pipeline stage exit codes (deploy + scan)" bash "$U/k8s/tests/stage-exit-codes.sh"
 if command -v kubectl >/dev/null && kubectl get --raw /readyz >/dev/null 2>&1; then
